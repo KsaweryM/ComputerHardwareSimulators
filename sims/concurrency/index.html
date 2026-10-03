@@ -80,6 +80,14 @@ button.primary:hover{opacity:.9;background:var(--ink)}
 .note{font-size:13px;color:var(--muted);margin:8px 0 0}
 .mono{font-family:var(--mono)}
 
+/* an interrupt: the three stages */
+.phases{display:flex;flex-direction:column;gap:6px}
+.ph{display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:8px;background:var(--sunken);opacity:.5;font-size:14px;transition:opacity .15s}
+.ph .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--isr);color:var(--on-color);font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center}
+.ph.main .n{background:var(--work)}
+.ph.on{opacity:1;background:var(--isr-bg);box-shadow:inset 0 0 0 2px var(--isr)}
+.ph.main.on{background:var(--work-bg);box-shadow:inset 0 0 0 2px var(--work)}
+
 /* sidebar layout */
 .layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;margin-top:22px;align-items:start}
 .layout>.stack{margin-top:0}
@@ -283,6 +291,7 @@ svg .m{font-family:var(--mono)}
     <button class="gh" data-grp="g6" aria-expanded="false"><span class="gnum">6</span><span><small data-i="lect6"></small><b data-i="g6n"></b></span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="items">
       <button data-mod="poll"><span data-i="tp_poll"></span><small data-i="tp_poll_s"></small></button>
+      <button data-mod="intr"><span data-i="tp_intr"></span><small data-i="tp_intr_s"></small></button>
       <button data-mod="irq"><span data-i="tp_irq"></span><small data-i="tp_irq_s"></small></button>
       <button data-mod="tick"><span data-i="tp_tick"></span><small data-i="tp_tick_s"></small></button>
       <button data-mod="slice"><span data-i="tp_slice"></span><small data-i="tp_slice_s"></small></button>
@@ -308,6 +317,35 @@ svg .m{font-family:var(--mono)}
 </aside>
 <div class="stack main">
   <div class="modhead"><span id="mhGrp"></span><h2 id="mhTitle"></h2><p id="mhSub"></p></div>
+
+  <!-- ================= AN INTERRUPT ================= -->
+  <div class="stack mod" id="mod-intr" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="in_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="in_l_slow"></label><label class="chk"><input type="checkbox" id="inSlow" checked><span data-i="in_slow"></span></label></div>
+      </div>
+      <div class="grid2e" style="margin-top:14px">
+        <div><h3 data-i="in_main"></h3><pre class="code" id="inMain"></pre></div>
+        <div><h3 data-i="in_isr"></h3><pre class="code" id="inIsr"></pre></div>
+      </div>
+    </section>
+    <div class="ctrlbar" data-ctrl="intr"></div>
+    <section class="panel">
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div class="bigbtn"><button id="inBtn" aria-label="A">A</button><span class="note" style="margin:0" data-i="in_hold"></span></div>
+        <div class="lcd"><pre id="inLcd"></pre></div>
+        <div style="flex:1;min-width:260px"><div class="phases" id="inPhase"></div></div>
+      </div>
+      <div class="expl" id="inExpl" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="in_h_time"></h2>
+      <div class="scroll"><svg id="inSvg" viewBox="0 0 1000 210" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="legend" id="inLegend"></div>
+      <div class="stats" id="inStats" style="margin-top:12px"></div>
+    </section>
+  </div>
 
   <!-- ================= POLLING vs INTERRUPT ================= -->
   <div class="stack mod" id="mod-poll" hidden style="margin-top:0">
@@ -620,6 +658,7 @@ pl:{
   intro:'Interaktywne ćwiczenia do wykładów 6, 7 i 8: polling i przerwania, tick timera, kwanty czasu, przełączanie kontekstu, stany zadań, wyścig, mutex, zakleszczenie oraz producent i konsument. Najpierw przewiduj, potem sprawdzaj.',
   h_topics:'Temat',
   g6:'Wykład 6: przerwania i planista', g6n:'Przerwania i planista', g7n:'Wątki i synchronizacja', g8n:'Zakleszczenie i współpraca', lect6:'Wykład 6', lect7:'Wykład 7', lect8:'Wykład 8', g7:'Wykład 7: wątki i synchronizacja', g8:'Wykład 8: zakleszczenie i współpraca',
+  tp_intr:'Przerwanie', tp_intr_s:'płytka pracuje, przerwanie jej przerywa',
   tp_poll:'Polling a przerwanie', tp_poll_s:'Symulator 1: naciskaj i porównaj',
   tp_irq:'Przerwanie krok po kroku', tp_irq_s:'Symulator 1: mepc, ISR, mret',
   tp_tick:'Timer i tick', tp_tick_s:'Symulatory 2 i 3: trzy diody',
@@ -637,6 +676,20 @@ pl:{
   keys_note_poll:'Przycisk A: przytrzymaj myszą albo spacją',
   st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'gotowe',
 
+  in_h_setup:'Program', in_l_slow:'Tempo', in_slow:'zwolnij ISR do 0,6 s (naprawdę trwa kilka µs)',
+  in_main:'Program główny: loop()', in_isr:'Przerwanie: ISR', in_hold:'naciśnij myszą lub spacją', in_h_time:'Oś czasu: ostatnie 10 sekund',
+  in_r_btn:'Przycisk A', in_r_main:'Program główny', in_r_isr:'ISR',
+  in_ph0:'Program główny pracuje', in_ph1:'Wstrzymaj program główny', in_ph2:'Wykonaj ISR', in_ph3:'Wróć do programu głównego',
+  in_x0_t:'Gotowe do startu', in_x0:'Kliknij <b>Start</b>. Program główny liczy w pętli. Potem naciśnij przycisk A i patrz, co się dzieje.',
+  in_xm_t:'Program główny pracuje', in_xm:'loop() liczy dalej. Nie sprawdza przycisku: nie musi.',
+  in_x1_t:'1. Przerwanie!', in_x1:'Przycisk A wysłał sygnał. Procesor od razu wstrzymuje program główny w miejscu, w którym był.',
+  in_x2_t:'2. ISR działa', in_x2:'Procesor wykonuje krótką funkcję onButtonA: presses++. W tym czasie program główny czeka: licznik pracy stoi.',
+  in_x3_t:'3. Powrót', in_x3:'ISR się skończyła. Procesor wraca dokładnie tam, gdzie przerwał, i program główny liczy dalej, jakby nic się nie stało.',
+  in_slow_note:'ISR jest tu zwolniona, żeby było ją widać.', in_real_note:'Prawdziwe tempo: ISR trwa kilka µs, na osi czasu to cienka kreska.',
+  in_s_press:'Naciśnięcia (presses)', in_s_work:'Praca programu głównego', in_s_isr:'Czas w ISR', in_s_pct:'Czas CPU w ISR',
+  in_lg_main:'program główny pracuje', in_lg_wait:'program główny wstrzymany', in_lg_isr:'ISR', in_lg_btn:'naciśnięcie przycisku',
+  in_c_work:'praca: liczymy', in_c_lcd:'pokaż na LCD', in_c_isr:'ISR', lcd_work:'Praca:', lcd_press:'Presses:',
+  in_keys:'Przycisk A: kliknij myszą albo spacją',
   po_h_setup:'Program', po_l_mode:'Co robi loop() przy pollingu', po_m_work:'2 s pracy, potem jedno sprawdzenie', po_m_spin:'tylko sprawdza',
   po_code_isr:'Przerwanie', po_code_work:'Polling: 2 s pracy, jedno sprawdzenie', po_code_spin:'Polling: tylko sprawdza',
   po_hold:'przytrzymaj myszą lub spacją', po_h_time:'Oś czasu: 10 sekund, te same naciśnięcia dla obu programów',
@@ -793,6 +846,7 @@ en:{
   intro:'Interactive exercises for Lectures 6, 7 and 8: polling and interrupts, the timer tick, time slices, the context switch, task states, the race, the mutex, deadlock, and the producer and consumer. Predict first, then check.',
   h_topics:'Topic',
   g6:'Lecture 6: interrupts and the scheduler', g6n:'Interrupts and the scheduler', g7n:'Threads and synchronisation', g8n:'Deadlock and cooperation', lect6:'Lecture 6', lect7:'Lecture 7', lect8:'Lecture 8', g7:'Lecture 7: threads and synchronisation', g8:'Lecture 8: deadlock and cooperation',
+  tp_intr:'An interrupt', tp_intr_s:'the board works, an interrupt breaks in',
   tp_poll:'Polling vs interrupt', tp_poll_s:'Simulator 1: press and compare',
   tp_irq:'Interrupt step by step', tp_irq_s:'Simulator 1: mepc, ISR, mret',
   tp_tick:'Timer and tick', tp_tick_s:'Simulators 2 and 3: three LEDs',
@@ -810,6 +864,20 @@ en:{
   keys_note_poll:'Button A: hold with the mouse or space',
   st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'done',
 
+  in_h_setup:'The program', in_l_slow:'Speed', in_slow:'slow the ISR down to 0.6 s (really it takes a few µs)',
+  in_main:'Main program: loop()', in_isr:'Interrupt: the ISR', in_hold:'press with the mouse or space', in_h_time:'Timeline: the last 10 seconds',
+  in_r_btn:'Button A', in_r_main:'Main program', in_r_isr:'ISR',
+  in_ph0:'The main program runs', in_ph1:'Suspend the main program', in_ph2:'Run the ISR', in_ph3:'Return to the main program',
+  in_x0_t:'Ready to start', in_x0:'Click <b>Start</b>. The main program counts in a loop. Then press button A and watch what happens.',
+  in_xm_t:'The main program runs', in_xm:'loop() keeps counting. It does not check the button: it does not have to.',
+  in_x1_t:'1. An interrupt!', in_x1:'Button A sent a signal. The processor suspends the main program at once, right where it was.',
+  in_x2_t:'2. The ISR runs', in_x2:'The processor runs the short function onButtonA: presses++. Meanwhile the main program waits: the work counter stops.',
+  in_x3_t:'3. Return', in_x3:'The ISR has ended. The processor returns exactly where it stopped, and the main program keeps counting as if nothing happened.',
+  in_slow_note:'The ISR is slowed down here, so that you can see it.', in_real_note:'Real speed: the ISR takes a few µs, a thin line on the timeline.',
+  in_s_press:'Presses', in_s_work:'Work of the main program', in_s_isr:'Time in the ISR', in_s_pct:'CPU time in the ISR',
+  in_lg_main:'main program runs', in_lg_wait:'main program suspended', in_lg_isr:'ISR', in_lg_btn:'button pressed',
+  in_c_work:'work: count', in_c_lcd:'show it on the LCD', in_c_isr:'the ISR', lcd_work:'Work:', lcd_press:'Presses:',
+  in_keys:'Button A: click with the mouse or space',
   po_h_setup:'The program', po_l_mode:'What loop() does with polling', po_m_work:'2 s of work, then one check', po_m_spin:'only checks',
   po_code_isr:'Interrupt', po_code_work:'Polling: 2 s of work, one check', po_code_spin:'Polling: only checks',
   po_hold:'hold with the mouse or space', po_h_time:'Timeline: 10 seconds, the same presses for both programs',
@@ -1034,6 +1102,93 @@ const legendItem=(c,l,style)=>`<span><span class="sw" style="${style||`backgroun
 const HATCH=id=>`<pattern id="${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--blk-bg)"/><rect width="2.2" height="7" fill="var(--blk)" opacity=".55"/></pattern>`;
 const TASKC={A:'var(--ta)',B:'var(--tb)',C:'var(--tc)',H:'var(--th)',IDLE:'var(--idle)'};
 const secs=ms=>fix(ms/1000,1)+' s';
+
+/* =====================================================================
+   0. Przerwanie / an interrupt: the board works, an interrupt breaks in
+   ===================================================================== */
+const IN_WIN=10000,IN_ISR_SLOW=600,IN_ISR_REAL=0.005,IN_RATE=0.2;  // work counter: 200 per second
+const IN={t:0,playing:false,raf:0,lastTs:0,work:0,presses:0,pending:0,isrLeft:0,cur:null,events:[],slow:true,bar:null};
+function inReset(){Object.assign(IN,{t:0,work:0,presses:0,pending:0,isrLeft:0,cur:null,events:[]});inPause();}
+function inAdvance(dt){
+  let rem=dt;
+  while(rem>1e-9){
+    if(IN.isrLeft>0){
+      const d=Math.min(rem,IN.isrLeft);IN.isrLeft-=d;rem-=d;IN.t+=d;
+      if(IN.isrLeft<=1e-9){IN.isrLeft=0;IN.presses++;IN.cur.b=IN.t;IN.cur=null;}
+    }else if(IN.pending>0){
+      IN.pending--;const dur=IN.slow?IN_ISR_SLOW:IN_ISR_REAL;
+      IN.isrLeft=dur;IN.cur={a:IN.t,b:null};IN.events.push(IN.cur);
+    }else{IN.t+=rem;IN.work+=rem*IN_RATE;rem=0;}
+  }
+  while(IN.events.length&&IN.events[0].b!==null&&IN.events[0].b<IN.t-IN_WIN-1000)IN.events.shift();
+}
+function inPhase(){
+  if(IN.t===0&&!IN.playing)return -1;
+  if(IN.cur)return IN.slow&&IN.t-IN.cur.a<150?1:2;
+  const last=IN.events.length?IN.events[IN.events.length-1]:null;
+  if(last&&last.b!==null&&IN.t-last.b<(IN.slow?700:400))return 3;
+  return 0;
+}
+function inRender(){
+  const ph=inPhase();
+  $('inPhase').innerHTML=[0,1,2,3].map(k=>`<div class="ph${k===0?' main':''}${ph===k?' on':''}"><span class="n">${k||'▶'}</span><span>${esc(t('in_ph'+k))}</span></div>`).join('');
+  $('inLcd').textContent=(t('lcd_work').padEnd(10)+String(Math.floor(IN.work)).padStart(6)).slice(0,16)+'\n'+(t('lcd_press').padEnd(10)+String(IN.presses).padStart(6)).slice(0,16);
+  const inMain=ph===0||ph===3,inIsr=ph===1||ph===2;
+  $('inMain').innerHTML=codeLines([['long work = 0;',''],['',''],['void loop() {',''],[`  work++;                   // ${t('in_c_work')}`,inMain&&IN.playing?'act w':''],
+    [`  lcd.print(work);          // ${t('in_c_lcd')}`,inMain&&IN.playing?'act w':''],['}','']]);
+  $('inIsr').innerHTML=codeLines([['volatile int presses = 0;',''],['',''],[`void IRAM_ATTR onButtonA() {    // ${t('in_c_isr')}`,inIsr?'act':''],['  presses++;',inIsr?'act':''],['}',''],
+    ['attachInterrupt(digitalPinToInterrupt(BUTTON_A),',''],['                onButtonA, FALLING);','']]);
+  let e;
+  if(ph<0)e=[t('in_x0_t'),t('in_x0')];
+  else if(ph===0)e=[t('in_xm_t'),t('in_xm')];
+  else e=[t('in_x'+ph+'_t'),t('in_x'+ph)];
+  $('inExpl').innerHTML=explHTML(e[0],e[1]+' <span class="note" style="display:inline">'+esc(IN.slow?t('in_slow_note'):t('in_real_note'))+'</span>',ph>0?ph:'');
+  // timeline
+  const X0=150,W=830,t1=Math.max(IN.t,IN_WIN),t0=t1-IN_WIN,X=x=>X0+(x-t0)/IN_WIN*W;
+  const yB=34,yM=86,yI=140,H=30;let o='';
+  o+=txt(10,yB+5,t('in_r_btn'),{'font-weight':600});o+=txt(10,yM+20,t('in_r_main'),{'font-weight':600});o+=txt(10,yI+20,t('in_r_isr'),{'font-weight':600,fill:'var(--isr)'});
+  o+=rect(X0,yM,W,H,'var(--sunken)');o+=rect(X0,yI,W,H,'var(--sunken)');
+  o+=svgEl('line',{x1:X0,y1:yB,x2:X0+W,y2:yB,stroke:'var(--rule)'});
+  // main program: work except during the ISRs
+  let from=Math.max(0,t0);
+  const segs=IN.events.filter(ev=>(ev.b===null?IN.t:ev.b)>t0);
+  segs.forEach(ev=>{
+    const a=Math.max(ev.a,t0),b=Math.min(ev.b===null?IN.t:ev.b,IN.t);
+    if(a>from)o+=rect(X(from),yM,X(a)-X(from),H,'var(--work)');
+    o+=svgEl('line',{x1:X(a),y1:yM+H/2,x2:X(b),y2:yM+H/2,stroke:'var(--work)','stroke-width':2,'stroke-dasharray':'4 3'});
+    o+=rect(X(a),yI,Math.max(2,X(b)-X(a)),H,'var(--isr)');
+    o+=svgEl('circle',{cx:X(ev.a),cy:yB,r:6,fill:'var(--th)'});
+    o+=svgEl('line',{x1:X(ev.a),y1:yB+6,x2:X(ev.a),y2:yM,stroke:'var(--th)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+    from=Math.max(from,b);
+  });
+  if(IN.t>from)o+=rect(X(from),yM,X(IN.t)-X(from),H,'var(--work)');
+  for(let sec=Math.ceil(t0/1000);sec*1000<=t1;sec++)o+=txt(X(sec*1000),yI+H+22,sec+' s',{'text-anchor':'middle','font-size':11,fill:'var(--muted)'});
+  o+=svgEl('line',{x1:X(IN.t),y1:yB-12,x2:X(IN.t),y2:yI+H+6,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+  $('inSvg').innerHTML=o;
+  $('inLegend').innerHTML=legendItem('var(--work)',t('in_lg_main'))+legendItem('',t('in_lg_wait'),'border-top:2px dashed var(--work);border-radius:0;height:0;width:14px')+
+    legendItem('var(--isr)',t('in_lg_isr'))+legendItem('',t('in_lg_btn'),'background:var(--th);border-radius:50%');
+  const isrT=IN.events.reduce((m,ev)=>m+((ev.b===null?IN.t:ev.b)-ev.a),0);
+  const st=(k,v)=>`<div class="stat"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  const isrStr=IN.slow?num(isrT/1000,2)+' s':num(isrT*1000,0)+' µs';
+  $('inStats').innerHTML=st('in_s_press',IN.presses)+st('in_s_work',num(Math.floor(IN.work),0))+st('in_s_isr',isrStr)+st('in_s_pct',pct(IN.t>0?isrT/IN.t*100:0));
+  IN.bar.sync(IN.playing,IN.t===0?'a_start':'a_play',fix(IN.t/1000,1)+' s');
+}
+function inFrame(ts){
+  if(!IN.playing)return;
+  const dt=IN.lastTs?Math.min(100,ts-IN.lastTs):0;IN.lastTs=ts;
+  inAdvance(dt);inRender();
+  IN.raf=requestAnimationFrame(inFrame);
+}
+function inPlay(){IN.playing=true;IN.lastTs=0;cancelAnimationFrame(IN.raf);IN.raf=requestAnimationFrame(inFrame);inRender();}
+function inPause(){IN.playing=false;cancelAnimationFrame(IN.raf);inRender();}
+function inPress(){if(!IN.playing)inPlay();IN.pending++;$('inBtn').classList.add('down');setTimeout(()=>$('inBtn').classList.remove('down'),120);}
+function inInit(){
+  IN.bar=RunBar(document.querySelector('[data-ctrl="intr"]'),'in_keys');
+  IN.bar.on('play',()=>IN.playing?inPause():inPlay());
+  IN.bar.on('reset',inReset);
+  $('inSlow').addEventListener('change',e=>{IN.slow=e.target.checked;inRender();});
+  $('inBtn').addEventListener('click',inPress);
+}
 
 /* =====================================================================
    1. Polling a przerwanie / polling vs interrupt
@@ -2123,8 +2278,8 @@ function pcInit(){
 /* =====================================================================
    aplikacja / app
    ===================================================================== */
-const MODS=['poll','irq','tick','slice','ctx','states','shared','race','mutex','dead','pc'];
-const GRPS={g6:['poll','irq','tick','slice','ctx','states','shared'],g7:['race','mutex'],g8:['dead','pc']};
+const MODS=['poll','intr','irq','tick','slice','ctx','states','shared','race','mutex','dead','pc'];
+const GRPS={g6:['poll','intr','irq','tick','slice','ctx','states','shared'],g7:['race','mutex'],g8:['dead','pc']};
 const GRP_OF={};for(const g in GRPS)GRPS[g].forEach(m=>GRP_OF[m]=g);
 const lastIn={g6:'poll',g7:'race',g8:'dead'};
 function openGrp(g){document.querySelectorAll('#topics .grp').forEach(el=>{const on=el.dataset.grp===g;el.classList.toggle('open',on);el.querySelector('.gh').setAttribute('aria-expanded',String(on));});}
@@ -2132,6 +2287,7 @@ function modHead(){const g=GRP_OF[cur];$('mhGrp').textContent=t('lect'+g.slice(1
 let cur='poll';
 try{const h=location.hash.slice(1);if(MODS.includes(h))cur=h;else{const s=localStorage.getItem('ccSimMod');if(MODS.includes(s))cur=s;}}catch(e){}
 function renderAll(){
+  inRender();
   poLegend();poRender();
   irFill();S.irq.go(S.irq.i);
   tkCode();segSync($('tkHow'),TK.how);S.tick.go(S.tick.i);
@@ -2151,6 +2307,7 @@ function applyLang(){
 function showMod(m){
   ['irq','tick','ctx','states'].forEach(k=>S[k].stop());
   if(cur==='poll'&&m!=='poll'){poUp();poPause();}
+  if(cur==='intr'&&m!=='intr')inPause();
   if(cur==='slice'&&m!=='slice')slPause();
   if(cur==='shared'&&m!=='shared'){scStop();scRender();}
   if(cur==='pc'&&m!=='pc')pcPause();
@@ -2174,6 +2331,7 @@ const typing=e=>{const tg=e.target;return tg&&(tg.tagName==='INPUT'||tg.tagName=
 document.addEventListener('keydown',e=>{
   if(typing(e)||e.ctrlKey||e.metaKey||e.altKey)return;
   if(cur==='poll'){if(e.key===' '){e.preventDefault();if(!e.repeat)poDown();}return;}
+  if(cur==='intr'){if(e.key===' '&&!e.repeat){e.preventDefault();inPress();}return;}
   if(cur==='race'||cur==='mutex'||cur==='dead'){
     const k=e.key.toUpperCase();
     if(k==='A'||k==='B'){e.preventDefault();({race:rcStep,mutex:mxStep,dead:dlStep})[cur](k);}
@@ -2198,7 +2356,7 @@ function thrBar(id,reset,note){
 thrBar('race',rcReset,'th_keys');thrBar('mutex',mxReset,'th_keys');thrBar('dead',dlReset,'th_keys');
 segInit($('dlOrder'),v=>{DL.b=v;dlReset();});
 
-poInit();irInit();tkInit();slInit();cxInit();stInit();scInit();pcInit();
+inInit();poInit();irInit();tkInit();slInit();cxInit();stInit();scInit();pcInit();
 rcReset();mxReset();dlReset();
 applyLang();
 showMod(cur);
