@@ -643,8 +643,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const hexN=(n,w)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w||4,'0');
 let lang='pl';
-try{const s=localStorage.getItem('ccSimLang');if(s==='pl'||s==='en')lang=s;}catch(e){}
-try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')lang=q;}catch(e){}
+try{const s=localStorage.getItem('ccSimLang');if(s==='pl'||s==='en')lang=s;}catch(e){}try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')lang=q;}catch(e){}
 const loc=()=>lang==='pl'?'pl-PL':'en-US';
 const num=(n,d)=>Number(n).toLocaleString(loc(),{maximumFractionDigits:d===undefined?2:d,minimumFractionDigits:0});
 const fix=(n,d)=>Number(n).toLocaleString(loc(),{maximumFractionDigits:d,minimumFractionDigits:d});
@@ -708,22 +707,22 @@ pl:{
   pc_work:'praca', pc_check:'jedno sprawdzenie', pc_spin:'pytaj w kółko', pc_isr:'ISR',
   lg_work:'program główny (użyteczna praca)', lg_poll:'sprawdzanie przycisku', lg_isr:'procedura obsługi przerwania (ISR)', lg_hit:'naciśnięcie policzone', lg_miss:'naciśnięcie zgubione',
 
-  ir_h_setup:'Kiedy przychodzi sygnał', ir_l_at:'Sygnał z przycisku A przychodzi w trakcie instrukcji', ir_setup_note:'Program główny zwiększa t0 w pętli i zapisuje je do x. ISR zlicza naciśnięcia w zmiennej presses i używa przy tym rejestru t0.',
+  ir_h_setup:'Kiedy przychodzi sygnał', ir_l_at:'Sygnał z przycisku A przychodzi w trakcie instrukcji', ir_setup_note:'Program główny zwiększa t0 w pętli i zapisuje je do x. ISR zlicza naciśnięcia w zmiennej presses i używa przy tym rejestrów t0 i t1, więc najpierw zapisuje je na stosie.',
   ir_main:'Program główny', ir_isr:'ISR: onButtonA', ir_h_regs:'Rejestry', ir_h_mem:'Pamięć', ir_regs_note:'Czerwona ramka: wartość zmieniona w tym kroku. mtvec to adres ISR.', ir_h_trace:'Co wykonał procesor',
-  ir_c_room:'miejsce na t0', ir_c_save:'zapisz t0', ir_c_load:'t0 = presses', ir_c_store:'presses++', ir_c_rest:'przywróć t0', ir_c_mret:'PC = mepc',
+  ir_c_room:'miejsce na stosie', ir_c_save0:'zapisz t0', ir_c_save1:'zapisz t1', ir_c_la:'t0 = adres presses', ir_c_load:'t1 = presses', ir_c_store:'presses = t1', ir_c_rest1:'przywróć t1', ir_c_rest0:'przywróć t0', ir_c_mret:'PC = mepc',
   ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x w pamięci ← t0 = ${v}.`, ir_e_j:'Skok z powrotem do 0x0104: pętla trwa dalej.',
-  ir_e_room:sp=>`Robimy miejsce na stosie na jeden rejestr: sp ← sp − 4 = ${sp}.`,
-  ir_e_save:(v,sp)=>`Zapisujemy t0 programu głównego na stosie: [${sp}] ← ${v}. ISR zaraz użyje t0 do własnej pracy.`,
-  ir_e_load:v=>`t0 ← presses = ${v}. Wartość t0 programu głównego zniknęła z rejestru, ale jest bezpieczna na stosie.`,
-  ir_e_inc:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: naciśnięcie policzone.`,
-  ir_e_rest:v=>`Przywracamy t0 programu głównego ze stosu: t0 ← ${v}.`, ir_e_free:sp=>`sp ← sp + 4 = ${sp}: stos jest taki jak przed przerwaniem.`,
+  ir_e_room:sp=>`Prolog: robimy miejsce na stosie, sp ← sp − 16 = ${sp}. 16, a nie 8, bo sp musi być wielokrotnością 16.`,
+  ir_e_save:(r,v,a)=>`Zapisujemy ${r} programu głównego na stosie: [${a}] ← ${v}. ISR zaraz użyje ${r} do własnej pracy.`, ir_e_la:'t0 ← adres zmiennej presses (0x1004). ISR nie wie, co program główny trzyma w rejestrach, więc sama bierze adres. la to dwie prawdziwe instrukcje (8 bajtów).',
+  ir_e_load:v=>`t1 ← presses = ${v}. Wartość t1 programu głównego zniknęła z rejestru, ale jest bezpieczna na stosie.`,
+  ir_e_inc:v=>`t1 ← t1 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: naciśnięcie policzone.`,
+  ir_e_rest:(r,v)=>`Epilog: przywracamy ${r} programu głównego ze stosu: ${r} ← ${v}.`, ir_e_free:sp=>`sp ← sp + 16 = ${sp}: stos jest taki jak przed przerwaniem.`,
   ir_e_mret:pc=>`mret: PC ← mepc = ${pc}.`,
   ir_x_start_t:'Start', ir_x_start:at=>`Program główny zaczyna od 0x0100. Sygnał z przycisku A przyjdzie w trakcie instrukcji pod adresem ${at}.`,
   ir_q_pc:'<b>Przewiduj:</b> jaki PC procesor zapisze w mepc?',
   ir_x_enter_t:'Przerwanie!', ir_x_enter:m=>`Procesor dokończył instrukcję. Teraz zapisuje adres <b>następnej</b> instrukcji: mepc ← ${m}, i skacze do ISR: PC ← mtvec = 0x0200.`,
-  ir_q_t0:'<b>Przewiduj:</b> ile będzie wynosić t0 w programie głównym po powrocie?',
+  ir_q_t0:'<b>Przewiduj:</b> ile będą wynosić t0 i t1 w programie głównym po powrocie?',
   ir_x_sig:'<b>W trakcie tej instrukcji przychodzi sygnał z przycisku A.</b> Procesor nie przerywa w połowie: najpierw kończy instrukcję.',
-  ir_x_back:'Program główny wraca dokładnie tam, gdzie przerwał.', ir_x_t0:v=>`t0 = ${v}, tak samo jak przed przerwaniem.`,
+  ir_x_back:'Program główny wraca dokładnie tam, gdzie przerwał.', ir_x_t0:(a,b)=>`t0 = ${a} i t1 = ${b}, tak samo jak przed przerwaniem.`,
   ir_saved_pc:'zapisany PC', ir_stack:'stos', ir_trace_empty:'Jeszcze nic. Kliknij Dalej.',
   lg_main:'program główny', lg_irq:'wejście do przerwania',
 
@@ -807,15 +806,15 @@ pl:{
 
   th_thread:k=>`Wątek ${k}`, th_own:k=>`własny rejestr ${k}`, th_run:k=>`${k}: wykonaj następną instrukcję`, th_mem:'pamięć', th_waits:'czeka (Blocked)', th_waits_for:m=>`czeka na ${m} (Blocked)`, th_step:k=>`${k}: następny krok`,
   th_keys:'Klawisze: A, B wykonują krok, R od nowa',
-  rc_h_setup:'Dwa wątki, jeden counter', rc_note:'Wątki A i B wykonują raz lw, addi, sw na counter = 5. Każdy wątek ma własny rejestr t0. Ty wybierasz, który wątek wykona następną instrukcję.',
+  rc_h_setup:'Dwa wątki, jeden counter', rc_note:'Wątki A i B wykonują raz lw, addi, sw na counter = 5. Oba wątki wykonały już la t0, counter: t0 = 0x2000, adres counter. Każdy wątek ma własne rejestry t0 i t1. Ty wybierasz, który wątek wykona następną instrukcję.',
   rc_h_tried:'Wypróbowane kolejności', rc_tried:'Wypróbowane kolejności', rc_k_of:(n,m)=>`${n} z ${m}`, rc_tried_empty:'Dokończ pierwszą kolejność.',
   rc_order:'Kolejność', rc_order_empty:'jeszcze nic', rc_ok:'counter = 7: poprawnie', rc_lost:v=>`counter = ${v}: zgubiona aktualizacja`,
   rc_x0_t:'Start: counter = 5', rc_x0:'Klikaj A albo B. Po sześciu instrukcjach zobaczysz wynik.', rc_q:'Znajdź kolejność, która daje 7, potem taką, która daje 6. Czy da się dostać 5?',
-  rc_e_lw:(k,v)=>`${k} czyta counter do własnego t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} zwiększa własne t0: t0 = ${v}. counter w pamięci się nie zmienia.`,
-  rc_e_sw:(k,v,b)=>`${k} zapisuje t0 do pamięci: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Uwaga: ${o} ma już w t0 starą wartość (${v}) i zaraz ją zapisze.`,
+  rc_e_lw:(k,v)=>`${k} czyta counter (adres w t0) do własnego t1: t1 = ${v}.`, rc_e_addi:(k,v)=>`${k} zwiększa własne t1: t1 = ${v}. counter w pamięci się nie zmienia.`,
+  rc_e_sw:(k,v,b)=>`${k} zapisuje t1 do pamięci: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Uwaga: ${o} ma już w t1 starą wartość (${v}) i zaraz ją zapisze.`,
   rc_e_ok:'Jeden wątek skończył, zanim drugi zaczął: wynik jest poprawny.', rc_e_lost:'Oba wątki przeczytały, zanim drugi zapisał: jedna aktualizacja zginęła.',
   rc_q_again:'Kliknij Od nowa (R) i spróbuj innej kolejności.', rc_res:v=>`counter = ${v}`,
-  mx_h_setup:'Te same wątki, ale z mutexem', mx_note:'Teraz każdy wątek wykonuje lock, lw, addi, sw, unlock. counter = 5. Jeśli wątek kliknie lock, gdy mutex trzyma drugi, staje się Blocked aż do unlock.',
+  mx_h_setup:'Te same wątki, ale z mutexem', mx_note:'Teraz każdy wątek wykonuje lock, lw, addi, sw, unlock. counter = 5, t0 = 0x2000 (adres counter). Jeśli wątek kliknie lock, gdy mutex trzyma drugi, staje się Blocked aż do unlock.',
   mx_done:v=>`counter = ${v}: poprawnie`, mx_held:k=>`trzyma ${k}`, mx_free:'wolny',
   mx_x0_t:'Start: counter = 5', mx_x0:'Klikaj A albo B.', mx_q:'Spróbuj znaleźć kolejność, która daje 6.',
   mx_e_blk:(k,o)=>`Mutex trzyma ${o}. ${k} staje się <b>Blocked</b>: nie dostaje czasu CPU, dopóki ${o} nie wywoła unlock.`, mx_q_blk:'Ile instrukcji wątku B może teraz wejść między lw a sw wątku A?',
@@ -896,22 +895,22 @@ en:{
   pc_work:'work', pc_check:'one check', pc_spin:'ask again and again', pc_isr:'the ISR',
   lg_work:'main program (useful work)', lg_poll:'checking the button', lg_isr:'interrupt service routine (ISR)', lg_hit:'press counted', lg_miss:'press lost',
 
-  ir_h_setup:'When the signal arrives', ir_l_at:'The signal from button A arrives during the instruction at', ir_setup_note:'The main program increases t0 in a loop and stores it in x. The ISR counts the presses in the variable presses, and it uses the register t0 to do it.',
+  ir_h_setup:'When the signal arrives', ir_l_at:'The signal from button A arrives during the instruction at', ir_setup_note:'The main program increases t0 in a loop and stores it in x. The ISR counts the presses in the variable presses. It uses the registers t0 and t1, so it first saves them on the stack.',
   ir_main:'Main program', ir_isr:'ISR: onButtonA', ir_h_regs:'Registers', ir_h_mem:'Memory', ir_regs_note:'Red frame: the value changed in this step. mtvec is the address of the ISR.', ir_h_trace:'What the processor ran',
-  ir_c_room:'room for t0', ir_c_save:'save t0', ir_c_load:'t0 = presses', ir_c_store:'presses++', ir_c_rest:'restore t0', ir_c_mret:'PC = mepc',
+  ir_c_room:'room on the stack', ir_c_save0:'save t0', ir_c_save1:'save t1', ir_c_la:'t0 = address of presses', ir_c_load:'t1 = presses', ir_c_store:'presses = t1', ir_c_rest1:'restore t1', ir_c_rest0:'restore t0', ir_c_mret:'PC = mepc',
   ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x in memory ← t0 = ${v}.`, ir_e_j:'Jump back to 0x0104: the loop goes on.',
-  ir_e_room:sp=>`Make room on the stack for one register: sp ← sp − 4 = ${sp}.`,
-  ir_e_save:(v,sp)=>`Save t0 of the main program on the stack: [${sp}] ← ${v}. The ISR is about to use t0 for its own work.`,
-  ir_e_load:v=>`t0 ← presses = ${v}. The main program's t0 is gone from the register, but it is safe on the stack.`,
-  ir_e_inc:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: the press is counted.`,
-  ir_e_rest:v=>`Restore t0 of the main program from the stack: t0 ← ${v}.`, ir_e_free:sp=>`sp ← sp + 4 = ${sp}: the stack is as before the interrupt.`,
+  ir_e_room:sp=>`Prologue: make room on the stack, sp ← sp − 16 = ${sp}. 16 and not 8, because sp must stay a multiple of 16.`,
+  ir_e_save:(r,v,a)=>`Save ${r} of the main program on the stack: [${a}] ← ${v}. The ISR is about to use ${r} for its own work.`, ir_e_la:'t0 ← the address of presses (0x1004). The ISR cannot know what the main program keeps in its registers, so it gets the address itself. la is two real instructions (8 bytes).',
+  ir_e_load:v=>`t1 ← presses = ${v}. The main program's t1 is gone from the register, but it is safe on the stack.`,
+  ir_e_inc:v=>`t1 ← t1 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: the press is counted.`,
+  ir_e_rest:(r,v)=>`Epilogue: restore ${r} of the main program from the stack: ${r} ← ${v}.`, ir_e_free:sp=>`sp ← sp + 16 = ${sp}: the stack is as before the interrupt.`,
   ir_e_mret:pc=>`mret: PC ← mepc = ${pc}.`,
   ir_x_start_t:'Start', ir_x_start:at=>`The main program starts at 0x0100. The signal from button A will arrive during the instruction at ${at}.`,
   ir_q_pc:'<b>Predict:</b> which PC will the processor save in mepc?',
   ir_x_enter_t:'Interrupt!', ir_x_enter:m=>`The processor has finished the instruction. Now it saves the address of the <b>next</b> instruction, mepc ← ${m}, and jumps to the ISR: PC ← mtvec = 0x0200.`,
-  ir_q_t0:'<b>Predict:</b> what will t0 be in the main program after the return?',
+  ir_q_t0:'<b>Predict:</b> what will t0 and t1 be in the main program after the return?',
   ir_x_sig:'<b>During this instruction the signal from button A arrives.</b> The processor does not stop halfway: it first finishes the instruction.',
-  ir_x_back:'The main program continues exactly where it stopped.', ir_x_t0:v=>`t0 = ${v}, the same as before the interrupt.`,
+  ir_x_back:'The main program continues exactly where it stopped.', ir_x_t0:(a,b)=>`t0 = ${a} and t1 = ${b}, the same as before the interrupt.`,
   ir_saved_pc:'saved PC', ir_stack:'stack', ir_trace_empty:'Nothing yet. Click Next.',
   lg_main:'main program', lg_irq:'entering the interrupt',
 
@@ -995,15 +994,15 @@ en:{
 
   th_thread:k=>`Thread ${k}`, th_own:k=>`${k}'s own register`, th_run:k=>`${k}: run the next instruction`, th_mem:'memory', th_waits:'waits (Blocked)', th_waits_for:m=>`waits for ${m} (Blocked)`, th_step:k=>`${k}: next step`,
   th_keys:'Keys: A, B run a step, R resets',
-  rc_h_setup:'Two threads, one counter', rc_note:'Threads A and B each run lw, addi, sw once on counter = 5. Each thread has its own register t0. You choose which thread runs the next instruction.',
+  rc_h_setup:'Two threads, one counter', rc_note:'Threads A and B each run lw, addi, sw once on counter = 5. Both threads already ran la t0, counter: t0 = 0x2000, the address of counter. Each thread has its own registers t0 and t1. You choose which thread runs the next instruction.',
   rc_h_tried:'Orders tried', rc_tried:'Orders tried', rc_k_of:(n,m)=>`${n} of ${m}`, rc_tried_empty:'Finish your first order.',
   rc_order:'Order', rc_order_empty:'nothing yet', rc_ok:'counter = 7: correct', rc_lost:v=>`counter = ${v}: lost update`,
   rc_x0_t:'Start: counter = 5', rc_x0:'Click A or B. After six instructions you will see the result.', rc_q:'Find an order that gives 7, then one that gives 6. Can you get 5?',
-  rc_e_lw:(k,v)=>`${k} reads counter into its own t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} increases its own t0: t0 = ${v}. counter in memory does not change.`,
-  rc_e_sw:(k,v,b)=>`${k} writes t0 to memory: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Note: ${o} already holds an old value in its t0 (${v}) and will write it soon.`,
+  rc_e_lw:(k,v)=>`${k} reads counter (address in t0) into its own t1: t1 = ${v}.`, rc_e_addi:(k,v)=>`${k} increases its own t1: t1 = ${v}. counter in memory does not change.`,
+  rc_e_sw:(k,v,b)=>`${k} writes t1 to memory: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Note: ${o} already holds an old value in its t1 (${v}) and will write it soon.`,
   rc_e_ok:'One thread finished before the other started: the result is correct.', rc_e_lost:'Both threads read before the other wrote: one update was lost.',
   rc_q_again:'Click Reset (R) and try another order.', rc_res:v=>`counter = ${v}`,
-  mx_h_setup:'The same threads, with a mutex', mx_note:'Now each thread runs lock, lw, addi, sw, unlock. counter = 5. If a thread clicks lock while the other one holds the mutex, it becomes Blocked until unlock.',
+  mx_h_setup:'The same threads, with a mutex', mx_note:'Now each thread runs lock, lw, addi, sw, unlock. counter = 5, t0 = 0x2000 (the address of counter). If a thread clicks lock while the other one holds the mutex, it becomes Blocked until unlock.',
   mx_done:v=>`counter = ${v}: correct`, mx_held:k=>`held by ${k}`, mx_free:'free',
   mx_x0_t:'Start: counter = 5', mx_x0:'Click A or B.', mx_q:'Try to find an order that gives 6.',
   mx_e_blk:(k,o)=>`${o} holds the mutex. ${k} becomes <b>Blocked</b>: it gets no CPU time until ${o} calls unlock.`, mx_q_blk:'How many instructions of thread B can come between A\'s lw and A\'s sw now?',
@@ -1357,35 +1356,38 @@ const IR_MAIN=[
   {a:0x108,s:'sw   t0, 0(a0)',x:s=>{s.x=s.t0;return['x'];},e:s=>t('ir_e_sw',s.t0)},
   {a:0x10C,s:'j    0x0104',x:s=>{s.pc=0x104;return['pc'];},jump:1,e:s=>t('ir_e_j')}];
 const IR_ISR=[
-  {a:0x200,s:'addi sp, sp, -4',c:'ir_c_room',x:s=>{s.sp-=4;return['sp'];},e:s=>t('ir_e_room',hexN(s.sp))},
-  {a:0x204,s:'sw   t0, 0(sp)',c:'ir_c_save',x:s=>{s.stk=s.t0;return['stk'];},e:s=>t('ir_e_save',s.t0,hexN(s.sp))},
-  {a:0x208,s:'lw   t0, 0(a1)',c:'ir_c_load',x:s=>{s.t0=s.presses;return['t0'];},e:s=>t('ir_e_load',s.t0)},
-  {a:0x20C,s:'addi t0, t0, 1',x:s=>{s.t0++;return['t0'];},e:s=>t('ir_e_inc',s.t0)},
-  {a:0x210,s:'sw   t0, 0(a1)',c:'ir_c_store',x:s=>{s.presses=s.t0;return['presses'];},e:s=>t('ir_e_store',s.t0)},
-  {a:0x214,s:'lw   t0, 0(sp)',c:'ir_c_rest',x:s=>{s.t0=s.stk;return['t0'];},e:s=>t('ir_e_rest',s.t0)},
-  {a:0x218,s:'addi sp, sp, 4',x:s=>{s.sp+=4;return['sp'];},e:s=>t('ir_e_free',hexN(s.sp))},
-  {a:0x21C,s:'mret',c:'ir_c_mret',x:s=>{s.pc=s.mepc;s.mode='main';return['pc'];},jump:1,e:s=>t('ir_e_mret',hexN(s.pc))}];
+  {a:0x200,s:'addi sp, sp, -16',c:'ir_c_room',x:s=>{s.sp-=16;return['sp'];},e:s=>t('ir_e_room',hexN(s.sp))},
+  {a:0x204,s:'sw   t0, 12(sp)',c:'ir_c_save0',x:s=>{s.stkA=s.t0;return['stkA'];},e:s=>t('ir_e_save','t0',s.t0,hexN(s.sp+12))},
+  {a:0x208,s:'sw   t1, 8(sp)',c:'ir_c_save1',x:s=>{s.stkB=s.t1;return['stkB'];},e:s=>t('ir_e_save','t1',s.t1,hexN(s.sp+8))},
+  {a:0x20C,s:'la   t0, presses',c:'ir_c_la',n:8,x:s=>{s.t0=0x1004;return['t0'];},e:s=>t('ir_e_la')},
+  {a:0x214,s:'lw   t1, 0(t0)',c:'ir_c_load',x:s=>{s.t1=s.presses;return['t1'];},e:s=>t('ir_e_load',s.t1)},
+  {a:0x218,s:'addi t1, t1, 1',x:s=>{s.t1++;return['t1'];},e:s=>t('ir_e_inc',s.t1)},
+  {a:0x21C,s:'sw   t1, 0(t0)',c:'ir_c_store',x:s=>{s.presses=s.t1;return['presses'];},e:s=>t('ir_e_store',s.t1)},
+  {a:0x220,s:'lw   t1, 8(sp)',c:'ir_c_rest1',x:s=>{s.t1=s.stkB;return['t1'];},e:s=>t('ir_e_rest','t1',s.t1)},
+  {a:0x224,s:'lw   t0, 12(sp)',c:'ir_c_rest0',x:s=>{s.t0=s.stkA;return['t0'];},e:s=>t('ir_e_rest','t0',s.t0)},
+  {a:0x228,s:'addi sp, sp, 16',x:s=>{s.sp+=16;return['sp'];},e:s=>t('ir_e_free',hexN(s.sp))},
+  {a:0x22C,s:'mret',c:'ir_c_mret',x:s=>{s.pc=s.mepc;s.mode='main';return['pc'];},jump:1,e:s=>t('ir_e_mret',hexN(s.pc))}];
 const IR={at:0x108,steps:[]};
 const irFind=a=>IR_MAIN.find(i=>i.a===a)||IR_ISR.find(i=>i.a===a);
 function irBuild(){
-  const s={pc:0x100,t0:0,sp:0x2000,mepc:null,x:0,presses:2,stk:null,mode:'main'};
+  const s={pc:0x100,t0:0,t1:5,sp:0x2000,mepc:null,x:0,presses:2,stkA:null,stkB:null,mode:'main'};
   const cl=o=>Object.assign({},o);
   const st=[{s:cl(s),k:'start',chg:[]}];
-  let pending=false,taken=false,after=0,t0before=null;
+  let pending=false,taken=false,after=0,t0before=null,t1before=null;
   for(let g=0;g<40&&after<3;g++){
     if(pending){
-      t0before=s.t0;
+      t0before=s.t0;t1before=s.t1;
       s.mepc=s.pc;s.pc=IR_MTVEC;s.mode='isr';pending=false;taken=true;
       st.push({s:cl(s),k:'enter',chg:['pc','mepc']});continue;
     }
     const at=s.pc,mode=s.mode,ins=irFind(at);
     const chg=ins.x(s);
-    if(!ins.jump)s.pc=at+4;
+    if(!ins.jump)s.pc=at+(ins.n||4);
     let k='exec';
     if(!taken&&at===IR.at){pending=true;k='sig';}
-    if(at===0x21C)k='mret';
+    if(at===0x22C)k='mret';
     else if(taken&&mode==='main')after++;
-    st.push({s:cl(s),k,chg,at,mode,e:ins.e(s),t0b:t0before});
+    st.push({s:cl(s),k,chg,at,mode,e:ins.e(s),t0b:t0before,t1b:t1before});
   }
   IR.steps=st;
 }
@@ -1400,7 +1402,7 @@ function irRender(){
     title=hexN(cur.at)+'  '+ins.s.replace(/\s+/g,' ');
     text=cur.e;
     if(cur.k==='sig'){text+=' '+t('ir_x_sig');q=t('ir_q_pc');}
-    if(cur.k==='mret'){text+=' '+t('ir_x_back')+' '+t('ir_x_t0',cur.t0b);}
+    if(cur.k==='mret'){text+=' '+t('ir_x_back')+' '+t('ir_x_t0',cur.t0b,cur.t1b);}
   }
   const badge=cur.k==='start'?'':i;
   $('irExpl').innerHTML=explHTML(title,text,badge,q);
@@ -1419,10 +1421,10 @@ function irRender(){
   // registers and memory
   const ch=new Set(cur.chg);
   const reg=(n,v,c)=>`<div class="reg${ch.has(c||n)?' chg':''}"><span>${esc(n)}</span><b>${esc(v)}</b></div>`;
-  $('irRegs').innerHTML=reg('PC',hexN(s.pc),'pc')+reg('t0',String(s.t0))+reg('sp',hexN(s.sp))+
-    reg('mepc ('+t('ir_saved_pc')+')',s.mepc===null?'-':hexN(s.mepc),'mepc')+reg('mtvec',hexN(IR_MTVEC),'-')+reg('a0','0x1000','-')+reg('a1','0x1004','-');
+  $('irRegs').innerHTML=reg('PC',hexN(s.pc),'pc')+reg('t0',s.t0>255?hexN(s.t0):String(s.t0))+reg('t1',String(s.t1))+reg('sp',hexN(s.sp))+
+    reg('mepc ('+t('ir_saved_pc')+')',s.mepc===null?'-':hexN(s.mepc),'mepc')+reg('mtvec',hexN(IR_MTVEC),'-')+reg('a0','0x1000','-');
   $('irMem').innerHTML=reg('x  [0x1000]',String(s.x),'x')+reg('presses  [0x1004]',String(s.presses),'presses')+
-    reg(t('ir_stack')+'  [0x1FFC]',s.stk===null?'-':String(s.stk),'stk');
+    reg(t('ir_stack')+'  [0x1FF8]',s.stkB===null?'-':String(s.stkB),'stkB')+reg(t('ir_stack')+'  [0x1FFC]',s.stkA===null?'-':String(s.stkA),'stkA');
   // trace
   $('irStrip').innerHTML=IR.steps.slice(1,i+1).map(x=>x.k==='enter'?`<span class="t">IRQ</span>`:`<span class="${x.mode==='isr'?'i':'m'}">${hexN(x.at).slice(2)}</span>`).join('')||`<span class="note" style="margin:0">${esc(t('ir_trace_empty'))}</span>`;
   $('irLegend').innerHTML=legendItem('var(--work)',t('lg_main'))+legendItem('',t('lg_irq'),'border:1.5px dashed var(--isr)')+legendItem('var(--isr)',t('lg_isr'));
@@ -2011,7 +2013,7 @@ function triedHTML(map,total,fmtRes){
 const orderChips=o=>o.length?o.map(x=>`<span class="chip${x.endsWith('*')?' x':''}" style="--c:${THC[x[0]]}">${esc(x.endsWith('*')?x[0]+' ✕':x)}</span>`).join(''):`<span class="note" style="margin:0">${esc(t('rc_order_empty'))}</span>`;
 
 /* ---------- race step by step ---------- */
-const RC_INS=['lw   t0, counter','addi t0, t0, 1','sw   t0, counter'];
+const RC_INS=['lw   t1, 0(t0)','addi t1, t1, 1','sw   t1, 0(t0)'];
 const RC={pc:{A:0,B:0},t0:{A:null,B:null},counter:5,order:[],tried:new Map(),last:null};
 function rcReset(){RC.pc={A:0,B:0};RC.t0={A:null,B:null};RC.counter=5;RC.order=[];RC.last=null;rcRender();}
 function rcStep(k){
@@ -2025,7 +2027,7 @@ function rcStep(k){
 function rcRender(){
   const done=RC.pc.A===3&&RC.pc.B===3;
   const card=k=>thrCard(k,RC_INS,RC.pc[k],RC.pc[k]>=3?'done':'ready',
-    `<div class="reg ${RC.last&&RC.last.k===k&&RC.last.i<2?'chg':''}"><span>t0 (${esc(t('th_own',k))})</span><b>${RC.t0[k]===null?'-':RC.t0[k]}</b></div>`,
+    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>0x2000</b></div><div class="reg ${RC.last&&RC.last.k===k&&RC.last.i<2?'chg':''}"><span>t1 (${esc(t('th_own',k))})</span><b>${RC.t0[k]===null?'-':RC.t0[k]}</b></div>`,
     RC.pc[k]>=3,t('th_run',k),'rcGo'+k);
   const l=RC.last,flash=l&&l.i===0?'flash-r':l&&l.i===2?'flash-w':'';
   let banner='';
@@ -2050,7 +2052,7 @@ function rcRender(){
 }
 
 /* ---------- mutex ---------- */
-const MX_INS=['lock(m)','lw   t0, counter','addi t0, t0, 1','sw   t0, counter','unlock(m)'];
+const MX_INS=['lock(m)','lw   t1, 0(t0)','addi t1, t1, 1','sw   t1, 0(t0)','unlock(m)'];
 const MX={};
 function mxReset(){Object.assign(MX,{pc:{A:0,B:0},t0:{A:null,B:null},st:{A:'ready',B:'ready'},owner:null,counter:5,order:[],last:null});if(!MX.tried)MX.tried=new Map();mxRender();}
 function mxStep(k){
@@ -2072,7 +2074,7 @@ function mxStep(k){
 function mxRender(){
   const done=MX.pc.A>=5&&MX.pc.B>=5;
   const card=k=>thrCard(k,MX_INS,MX.pc[k],MX.st[k],
-    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>${MX.t0[k]===null?'-':MX.t0[k]}</b></div>`,
+    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>0x2000</b></div><div class="reg"><span>t1 (${esc(t('th_own',k))})</span><b>${MX.t0[k]===null?'-':MX.t0[k]}</b></div>`,
     MX.st[k]!=='ready',MX.st[k]==='blk'?t('th_waits'):t('th_run',k),'mxGo'+k);
   const own=MX.owner;
   let banner='';
