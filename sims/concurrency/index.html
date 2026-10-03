@@ -1,0 +1,2208 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<script>(function(){try{if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');}catch(e){}})();</script>
+<style>html.embed .wrap{max-width:none;padding:14px 18px 48px}html.embed header.topbar,html.embed .side,html.embed .modhead{display:none}html.embed .layout{grid-template-columns:minmax(0,1fr);margin-top:0}</style>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulator współbieżności: przerwania, planista, wątki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --sunken:#EAEEF2; --ink:#16202B; --muted:#5B6673; --rule:#D5DBE1; --focus:#2F6FDB;
+  --ok:#1E7E4F; --ok-bg:#E2F3EA; --bad:#B8372B; --bad-bg:#FBE7E4;
+  --work:#23914F; --work-bg:#DFF2E6; --poll:#C8453A; --poll-bg:#FBE4E1; --isr:#D9621C; --isr-bg:#FCE8DA;
+  --idle:#BCC4CC; --idle-bg:#EEF1F4;
+  --ta:#1E78C8; --tb:#7C3AB4; --tc:#23914F; --th:#D23F4A; --sched:#D9621C; --shared:#B07A12;
+  --run:#23914F; --run-bg:#DFF2E6; --ready:#1E78C8; --ready-bg:#DDEAF8; --blk:#7D8792; --blk-bg:#E6E9ED;
+  --rd:#1E96E6; --wr:#DC3250;
+  --led1:#E5484D; --led2:#E2A60E; --led3:#2FA84F; --led-off:#CFD5DB;
+  --lcd-bg:#A6CC4A; --lcd-ink:#1D3409; --lcd-frame:#2A3440;
+  --on-color:#FFFFFF;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;
+    --ok:#5FD19A; --ok-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19;
+    --work:#4CC283; --work-bg:#163427; --poll:#EE7F72; --poll-bg:#3E1C19; --isr:#F29A5C; --isr-bg:#3D2414;
+    --idle:#4A5663; --idle-bg:#222C37;
+    --ta:#5AA7EE; --tb:#B98BEA; --tc:#4CC283; --th:#F07C84; --sched:#F29A5C; --shared:#E0B44E;
+    --run:#4CC283; --run-bg:#163427; --ready:#5AA7EE; --ready-bg:#14293D; --blk:#8994A0; --blk-bg:#262F3A;
+    --rd:#5AB8F5; --wr:#F27390;
+    --led1:#FF6B6F; --led2:#F5C044; --led3:#4CC877; --led-off:#3A4552;
+    --lcd-bg:#7FA52E; --lcd-ink:#10200A; --lcd-frame:#0A0E12; --on-color:#0F1419;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;
+  --ok:#5FD19A; --ok-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19;
+  --work:#4CC283; --work-bg:#163427; --poll:#EE7F72; --poll-bg:#3E1C19; --isr:#F29A5C; --isr-bg:#3D2414;
+  --idle:#4A5663; --idle-bg:#222C37;
+  --ta:#5AA7EE; --tb:#B98BEA; --tc:#4CC283; --th:#F07C84; --sched:#F29A5C; --shared:#E0B44E;
+  --run:#4CC283; --run-bg:#163427; --ready:#5AA7EE; --ready-bg:#14293D; --blk:#8994A0; --blk-bg:#262F3A;
+  --rd:#5AB8F5; --wr:#F27390;
+  --led1:#FF6B6F; --led2:#F5C044; --led3:#4CC877; --led-off:#3A4552;
+  --lcd-bg:#7FA52E; --lcd-ink:#10200A; --lcd-frame:#0A0E12; --on-color:#0F1419;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}
+@media (max-width:620px){.wrap{padding:20px 16px 48px}}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+header p{margin:0;color:var(--muted);max-width:78ch}
+.langs{display:flex;gap:6px}
+.langs button{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:13px}
+.langs button svg{width:22px;height:14px;border-radius:2px;box-shadow:0 0 0 1px var(--rule);display:block}
+.langs button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+.stack{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;min-width:0}
+h2{font-size:16px;font-weight:600;margin:0 0 10px}
+h3{font-size:14px;font-weight:600;margin:0 0 6px}
+label{font-size:13px;color:var(--muted)}
+select,input[type=text]{font:inherit;font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--sunken);border:1px solid var(--rule);border-radius:6px;padding:6px 9px}
+input[type=range]{accent-color:var(--ink);width:180px}
+button{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{background:var(--sunken)}
+button:disabled{opacity:.45;cursor:default}
+button:disabled:hover{background:var(--surface)}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.primary:hover{opacity:.9;background:var(--ink)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.mono{font-family:var(--mono)}
+
+/* sidebar layout */
+.layout{display:grid;grid-template-columns:270px minmax(0,1fr);gap:18px;margin-top:22px;align-items:start}
+.layout>.stack{margin-top:0}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.side{position:sticky;top:12px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:8px;display:flex;flex-direction:column;gap:4px;max-height:calc(100vh - 24px);overflow:auto}
+@media (max-width:900px){.side{position:static;max-height:none}}
+.grp .gh{width:100%;display:flex;align-items:center;gap:11px;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px}
+.grp .gh:hover{background:var(--sunken)}
+.grp .gh b{display:block;font-size:14.5px;font-weight:600;line-height:1.3}
+.grp .gh small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.grp .gnum{flex:none;width:30px;height:30px;border-radius:8px;background:var(--sunken);color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:15px}
+.grp .chev{width:14px;height:14px;margin-left:auto;color:var(--muted);transition:transform .15s}
+.grp.open .gh{background:var(--sunken)}
+.grp.open .gnum{background:var(--ink);color:var(--surface)}
+.grp.open .chev{transform:rotate(90deg)}
+.grp .items{display:none;flex-direction:column;gap:2px;margin:4px 0 8px 24px;padding-left:10px;border-left:2px solid var(--rule)}
+.grp.open .items{display:flex}
+.items button{border:0;background:none;text-align:left;padding:6px 10px;border-radius:6px;font-weight:500;line-height:1.3}
+.items button small{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:1px}
+.items button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.items button[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+.modhead{padding:2px 2px 0}
+.modhead span{font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.modhead h2{font-size:22px;margin:2px 0 2px}
+.modhead p{margin:0;color:var(--muted);font-size:14px}
+
+/* control bar */
+.ctrlbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 16px}
+.ctrlbar button{display:inline-flex;align-items:center;gap:8px}
+.ctrlbar svg{width:14px;height:14px}
+.cyc{font-family:var(--mono);font-size:18px;font-weight:500}
+.opts{display:flex;gap:14px 22px;flex-wrap:wrap;align-items:flex-end}
+.opt{display:flex;flex-direction:column;gap:4px}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 11px;font-size:13px}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--ink)}
+
+/* explanation box */
+.expl{display:flex;gap:12px;align-items:flex-start;background:var(--sunken);border-radius:8px;padding:12px 14px;border-left:4px solid var(--ink)}
+.expl .bn{flex:none;width:26px;height:26px;border-radius:50%;background:var(--isr);color:var(--on-color);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center}
+.expl .bn:empty{display:none}
+.expl b.t{display:block;font-size:15px}
+.expl p{margin:2px 0 0;font-size:14.5px}
+.expl code,.note code,.tbl code,.key code{font-family:var(--mono);font-size:.92em}
+.expl .q{display:block;margin-top:8px;padding-top:8px;border-top:1px dashed var(--rule);color:var(--muted);font-size:14px}
+.expl .q b{color:var(--ink)}
+.expl.bad{border-left-color:var(--bad);background:var(--bad-bg)}
+.expl.good{border-left-color:var(--ok);background:var(--ok-bg)}
+.key{margin-top:10px;font-size:13.5px;padding:8px 12px;border:1px dashed var(--rule);border-radius:8px}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+.grid2e{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.grid2,.grid2e,.grid3{grid-template-columns:minmax(0,1fr)}}
+.scroll{overflow-x:auto}
+svg text{font-family:var(--sans)}
+svg .m{font-family:var(--mono)}
+
+.code{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--sunken);border-radius:8px;padding:10px 0;overflow-x:auto;white-space:pre}
+.code .l{display:block;padding:0 14px;border-left:3px solid transparent}
+.code .l.act{background:color-mix(in srgb,var(--isr) 16%,transparent);border-left-color:var(--isr)}
+.code .l.act.w{background:color-mix(in srgb,var(--work) 16%,transparent);border-left-color:var(--work)}
+.code .l.act.p{background:color-mix(in srgb,var(--poll) 16%,transparent);border-left-color:var(--poll)}
+.code .l.act.k{background:var(--ink);color:var(--surface);border-left-color:var(--ink)}
+.code .l.act.k .c{color:var(--surface);opacity:.8}
+.code .l.seen{background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.code .l.dim{opacity:.45}
+.code .c{color:var(--muted)}
+.code .pcm{display:inline-block;width:1.4em;color:var(--isr);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--sunken);border-radius:8px;padding:7px 10px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:18px;font-weight:500}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)}
+
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;margin-top:8px;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td{padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td.mono{font-family:var(--mono)}
+
+/* status pills */
+.pill{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunken);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.act{background:var(--isr-bg);color:var(--isr)}
+.pill.run{background:var(--run-bg);color:var(--run)} .pill.ready{background:var(--ready-bg);color:var(--ready)} .pill.blk{background:var(--blk-bg);color:var(--blk)}
+
+/* registers */
+.regs{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px}
+.reg{background:var(--sunken);border-radius:7px;padding:6px 10px;border:2px solid transparent}
+.reg span{display:block;font-size:12px;color:var(--muted)}
+.reg b{font-family:var(--mono);font-size:15px;font-weight:500}
+.reg.chg{border-color:var(--wr);background:color-mix(in srgb,var(--wr) 10%,var(--sunken))}
+.reg.rd{border-color:var(--rd);background:color-mix(in srgb,var(--rd) 10%,var(--sunken))}
+.reg.sel{border-color:var(--sched);background:color-mix(in srgb,var(--sched) 12%,var(--sunken))}
+.reg.dim{opacity:.5}
+
+/* LCD and big button */
+.lcd{display:inline-block;background:var(--lcd-frame);padding:9px;border-radius:8px}
+.lcd pre{margin:0;background:var(--lcd-bg);color:var(--lcd-ink);font-family:var(--mono);font-weight:600;font-size:16px;line-height:1.35;padding:6px 10px;border-radius:3px;letter-spacing:.06em}
+.bigbtn{display:inline-flex;flex-direction:column;align-items:center;gap:6px;user-select:none;-webkit-user-select:none;touch-action:none}
+.bigbtn button{width:92px;height:92px;border-radius:50%;border:8px solid var(--lcd-frame);background:var(--work);color:var(--on-color);font-weight:600;font-size:15px;box-shadow:0 5px 0 color-mix(in srgb,var(--work) 55%,#000);transition:transform .05s,box-shadow .05s}
+.bigbtn button:hover{background:var(--work);filter:brightness(1.05)}
+.bigbtn button.down{transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--work) 55%,#000)}
+.bigbtn.sm button{width:64px;height:64px;border-width:6px;font-size:13px}
+
+/* trace strip */
+.strip{display:flex;gap:3px;flex-wrap:wrap}
+.strip span{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;color:var(--on-color)}
+.strip .m{background:var(--work)} .strip .t{background:transparent;color:var(--isr);border:1.5px dashed var(--isr);padding:1px 5px}
+.strip .i{background:var(--isr)}
+
+/* LEDs */
+.leds{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end}
+.led{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:13px;min-width:92px}
+.led i{display:block;width:38px;height:38px;border-radius:50%;background:var(--led-off);border:3px solid color-mix(in srgb,var(--ink) 18%,transparent);transition:background .12s}
+.led.on i{background:var(--c);box-shadow:0 0 16px 3px color-mix(in srgb,var(--c) 60%,transparent)}
+.led.chg i{outline:3px solid var(--isr);outline-offset:3px}
+.led small{color:var(--muted);font-size:12px;text-align:center}
+.bignum{font-family:var(--mono);font-size:30px;font-weight:600;line-height:1.1}
+
+/* stacks and memory cells */
+.mem{display:flex;flex-direction:column;gap:3px;font-family:var(--mono);font-size:13px}
+.cell{display:grid;grid-template-columns:76px minmax(0,1fr) 54px;align-items:center;gap:6px}
+.cell .ad{color:var(--muted);font-size:12px}
+.cell .v{padding:5px 9px;border-radius:5px;background:var(--sunken);border:2px solid transparent;min-height:31px}
+.cell .v.a{background:color-mix(in srgb,var(--ta) 16%,var(--sunken))}
+.cell .v.b{background:color-mix(in srgb,var(--tb) 16%,var(--sunken))}
+.cell .v.empty{background:transparent;border:1.5px dashed var(--rule)}
+.cell .v.old{opacity:.5}
+.cell .v.chg{border-color:var(--wr)} .cell .v.rd{border-color:var(--rd)}
+.cell .tp{font-family:var(--sans);font-size:12px;font-weight:600;white-space:nowrap}
+
+/* threads (race, mutex, deadlock) */
+.threads{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.threads{grid-template-columns:minmax(0,1fr)}}
+.thr{border:2px solid var(--c);border-radius:10px;padding:12px 14px;background:color-mix(in srgb,var(--c) 6%,var(--surface));transition:opacity .2s,filter .2s}
+.thr.blocked{filter:grayscale(1);opacity:.6;border-style:dashed}
+.thr .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.thr .hd b{font-size:16px;color:var(--c)}
+.thr button.go{width:100%;margin-top:10px;background:var(--c);color:var(--on-color);border-color:var(--c);font-weight:600}
+.thr button.go:hover{filter:brightness(1.07);background:var(--c)}
+.thr button.go:disabled{filter:grayscale(1)}
+.mid{display:flex;flex-direction:column;gap:10px;align-items:stretch}
+.memcell{border:2px solid var(--shared);border-radius:10px;padding:10px 12px;text-align:center;background:color-mix(in srgb,var(--shared) 7%,var(--surface))}
+.memcell span{display:block;font-size:12.5px;color:var(--muted)}
+.memcell b{font-family:var(--mono);font-size:30px;font-weight:600}
+.memcell.flash-w{border-color:var(--wr)} .memcell.flash-r{border-color:var(--rd)}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 7px;border-radius:4px;color:var(--on-color);background:var(--c)}
+.chip.x{background:transparent;color:var(--c);border:1.5px dashed var(--c);padding:1px 6px}
+.tried{display:flex;flex-direction:column;gap:4px;margin-top:8px;max-height:260px;overflow:auto}
+.tried div{display:flex;gap:10px;align-items:center;font-family:var(--mono);font-size:12.5px;padding:3px 8px;border-radius:5px;background:var(--sunken)}
+.tried div b{margin-left:auto}
+.ok-t{color:var(--ok)} .bad-t{color:var(--bad)}
+.banner{border-radius:8px;padding:10px 14px;font-weight:600;text-align:center}
+.banner.bad{background:var(--bad);color:var(--on-color)}
+.banner.ok{background:var(--ok-bg);color:var(--ok)}
+.banner.info{background:var(--sunken);color:var(--muted);font-weight:500}
+
+/* producer-consumer */
+.pcrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) minmax(0,1fr);gap:14px;align-items:center}
+@media (max-width:900px){.pcrow{grid-template-columns:minmax(0,1fr)}}
+.slots{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.slot{width:42px;height:42px;border-radius:7px;border:2px dashed var(--rule);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:600}
+.slot.full{border:2px solid var(--shared);background:color-mix(in srgb,var(--shared) 22%,var(--surface))}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--sunken)}
+.bar i{display:block;height:100%}
+.ctl{display:flex;flex-direction:column;gap:4px;min-width:200px}
+.ctl output{font-family:var(--mono);font-size:13px;color:var(--ink)}
+
+@media (prefers-reduced-motion:no-preference){
+  .flash{animation:fl .6s ease-out}
+  @keyframes fl{from{box-shadow:0 0 0 3px var(--isr)}to{box-shadow:0 0 0 3px transparent}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div>
+    <h1 data-i="title"></h1>
+    <p data-i="intro"></p>
+  </div>
+  <div class="langs" role="group" aria-label="Język / Language">
+    <button data-lang="pl" aria-pressed="false"><svg viewBox="0 0 16 10" aria-hidden="true"><rect width="16" height="5" fill="#fff"/><rect y="5" width="16" height="5" fill="#DC143C"/></svg>PL</button>
+    <button data-lang="en" aria-pressed="false"><svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="side" id="topics" aria-label="Topics">
+  <div class="grp" data-grp="g6">
+    <button class="gh" data-grp="g6" aria-expanded="false"><span class="gnum">6</span><span><small data-i="lect6"></small><b data-i="g6n"></b></span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="items">
+      <button data-mod="poll"><span data-i="tp_poll"></span><small data-i="tp_poll_s"></small></button>
+      <button data-mod="irq"><span data-i="tp_irq"></span><small data-i="tp_irq_s"></small></button>
+      <button data-mod="tick"><span data-i="tp_tick"></span><small data-i="tp_tick_s"></small></button>
+      <button data-mod="slice"><span data-i="tp_slice"></span><small data-i="tp_slice_s"></small></button>
+      <button data-mod="ctx"><span data-i="tp_ctx"></span><small data-i="tp_ctx_s"></small></button>
+      <button data-mod="states"><span data-i="tp_states"></span><small data-i="tp_states_s"></small></button>
+      <button data-mod="shared"><span data-i="tp_shared"></span><small data-i="tp_shared_s"></small></button>
+    </div>
+  </div>
+  <div class="grp" data-grp="g7">
+    <button class="gh" data-grp="g7" aria-expanded="false"><span class="gnum">7</span><span><small data-i="lect7"></small><b data-i="g7n"></b></span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="items">
+      <button data-mod="race"><span data-i="tp_race"></span><small data-i="tp_race_s"></small></button>
+      <button data-mod="mutex"><span data-i="tp_mutex"></span><small data-i="tp_mutex_s"></small></button>
+    </div>
+  </div>
+  <div class="grp" data-grp="g8">
+    <button class="gh" data-grp="g8" aria-expanded="false"><span class="gnum">8</span><span><small data-i="lect8"></small><b data-i="g8n"></b></span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="items">
+      <button data-mod="dead"><span data-i="tp_dead"></span><small data-i="tp_dead_s"></small></button>
+      <button data-mod="pc"><span data-i="tp_pc"></span><small data-i="tp_pc_s"></small></button>
+    </div>
+  </div>
+</aside>
+<div class="stack main">
+  <div class="modhead"><span id="mhGrp"></span><h2 id="mhTitle"></h2><p id="mhSub"></p></div>
+
+  <!-- ================= POLLING vs INTERRUPT ================= -->
+  <div class="stack mod" id="mod-poll" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="po_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="po_l_mode"></label><div class="seg" id="poMode"><button data-v="work" data-i="po_m_work"></button><button data-v="spin" data-i="po_m_spin"></button></div></div>
+      </div>
+      <div class="grid2e" style="margin-top:14px">
+        <div><h3 id="poCodeH1"></h3><pre class="code" id="poCode1"></pre></div>
+        <div><h3 data-i="po_code_isr"></h3><pre class="code" id="poCode2"></pre></div>
+      </div>
+    </section>
+    <div class="ctrlbar" data-ctrl="poll"></div>
+    <section class="panel">
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div class="bigbtn"><button id="poBtn" aria-label="A">A</button><span class="note" style="margin:0" data-i="po_hold"></span></div>
+        <div class="lcd"><pre id="poLcd"></pre></div>
+        <div style="flex:1;min-width:240px"><div class="stats" id="poStats"></div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2 data-i="po_h_time"></h2>
+      <div class="scroll"><svg id="poSvg" viewBox="0 0 1000 250" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="legend" id="poLegend"></div>
+      <div class="expl" id="poExpl" style="margin-top:12px"></div>
+    </section>
+  </div>
+
+  <!-- ================= INTERRUPT STEP BY STEP ================= -->
+  <div class="stack mod" id="mod-irq" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="ir_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label for="irAt" data-i="ir_l_at"></label><select id="irAt"></select></div>
+      </div>
+      <p class="note" data-i="ir_setup_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="irq"></div>
+    <section class="panel">
+      <div class="expl" id="irExpl"></div>
+      <div class="grid2e" style="margin-top:14px">
+        <div><h3 data-i="ir_main"></h3><pre class="code" id="irMain"></pre></div>
+        <div><h3 data-i="ir_isr"></h3><pre class="code" id="irIsr"></pre></div>
+      </div>
+    </section>
+    <div class="grid2">
+      <section class="panel">
+        <h2 data-i="ir_h_regs"></h2>
+        <div class="regs" id="irRegs"></div>
+        <h3 style="margin-top:12px" data-i="ir_h_mem"></h3>
+        <div class="regs" id="irMem"></div>
+        <p class="note" data-i="ir_regs_note"></p>
+      </section>
+      <section class="panel">
+        <h2 data-i="ir_h_trace"></h2>
+        <div class="strip" id="irStrip"></div>
+        <div class="legend" id="irLegend"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= TIMER AND TICK ================= -->
+  <div class="stack mod" id="mod-tick" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="tk_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="tk_l_how"></label><div class="seg" id="tkHow"><button data-v="timer" data-i="tk_m_timer"></button><button data-v="delay">delay()</button><button data-v="millis" data-i="tk_m_millis"></button></div></div>
+        <div class="opt"><label data-i="tk_l_lcd"></label><label class="chk"><input type="checkbox" id="tkLcd"><span data-i="tk_lcd"></span></label></div>
+      </div>
+      <pre class="code" id="tkCode" style="margin-top:14px"></pre>
+    </section>
+    <div class="ctrlbar" data-ctrl="tick"></div>
+    <section class="panel">
+      <div style="display:flex;gap:28px;align-items:center;flex-wrap:wrap">
+        <div class="leds" id="tkLeds"></div>
+        <div><span class="note" style="margin:0" id="tkNumL"></span><div class="bignum" id="tkNum"></div></div>
+      </div>
+      <div class="expl" id="tkExpl" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="tk_h_time"></h2>
+      <div class="scroll"><svg id="tkSvg" viewBox="0 0 1000 290" style="width:100%;min-width:700px;display:block" role="img"></svg></div>
+      <div class="legend" id="tkLegend"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="tk_h_stats"></h2>
+      <div class="scroll"><table class="tbl" id="tkStats"></table></div>
+      <p class="note" data-i="tk_stats_note"></p>
+    </section>
+  </div>
+
+  <!-- ================= TIME SLICE ================= -->
+  <div class="stack mod" id="mod-slice" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="sl_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="sl_l_slice"></label><div class="seg" id="slSlice"></div></div>
+      </div>
+      <p class="note" data-i="sl_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="slice"></div>
+    <section class="panel">
+      <h2 data-i="sl_h_core"></h2>
+      <div class="scroll"><svg id="slZoom" viewBox="0 0 1000 96" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="scroll" style="margin-top:6px"><svg id="slCore" viewBox="0 0 1000 78" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="stats" id="slStats" style="margin-top:10px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="sl_h_us"></h2>
+      <div class="grid3">
+        <div class="thr" style="--c:var(--ta)"><div class="hd"><b data-i="sl_a"></b><span id="slStA"></span></div>
+          <div class="leds"><div class="led" id="slLed" style="--c:var(--led1)"><i></i><small>LED</small></div></div></div>
+        <div class="thr" style="--c:var(--tb)"><div class="hd"><b data-i="sl_b"></b><span id="slStB"></span></div>
+          <div class="bignum" id="slCnt">0</div></div>
+        <div class="thr" style="--c:var(--tc)"><div class="hd"><b data-i="sl_c"></b><span id="slStC"></span></div>
+          <div class="row"><div class="bigbtn sm"><button id="slBtn" aria-label="button">btn</button></div><div id="slSeen" class="note" style="margin:0;flex:1;min-width:120px"></div></div></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><svg id="slUs" viewBox="0 0 1000 150" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="expl" id="slExpl" style="margin-top:12px"></div>
+    </section>
+  </div>
+
+  <!-- ================= CONTEXT SWITCH ================= -->
+  <div class="stack mod" id="mod-ctx" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="cx_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="cx_l_names"></label><label class="chk"><input type="checkbox" id="cxFr"><span data-i="cx_fr"></span></label></div>
+      </div>
+      <p class="note" data-i="cx_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="ctx"></div>
+    <section class="panel">
+      <div class="expl" id="cxExpl"></div>
+      <div class="grid3" style="margin-top:14px">
+        <div><h3 id="cxCpuH"></h3><div class="regs" id="cxCpu" style="grid-template-columns:minmax(0,1fr)"></div></div>
+        <div><h3 data-i="cx_stacks"></h3><div id="cxStacks"></div></div>
+        <div><h3 id="cxTblH"></h3><div id="cxTbl"></div></div>
+      </div>
+      <div class="legend" id="cxLegend"></div>
+    </section>
+    <section class="panel" id="cxAsmP">
+      <h2 data-i="cx_h_asm"></h2>
+      <div class="grid2e">
+        <div><h3 data-i="cx_asm_save"></h3><pre class="code" id="cxAsm1"></pre></div>
+        <div><h3 data-i="cx_asm_rest"></h3><pre class="code" id="cxAsm3"></pre></div>
+      </div>
+      <h3 style="margin-top:12px" data-i="cx_asm_pick"></h3><pre class="code" id="cxAsm2"></pre>
+      <p class="note" data-i="cx_asm_note"></p>
+    </section>
+  </div>
+
+  <!-- ================= STATES AND PRIORITIES ================= -->
+  <div class="stack mod" id="mod-states" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="st_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="st_l_scn"></label><div class="seg" id="stScn"><button data-v="c" data-i="st_s_c"></button><button data-v="h" data-i="st_s_h"></button><button data-v="all" data-i="st_s_all"></button></div></div>
+        <div class="opt"><label data-i="st_l_btn"></label><button id="stPress" class="primary" data-i="st_press"></button></div>
+      </div>
+      <pre class="code" id="stCode" style="margin-top:14px"></pre>
+    </section>
+    <div class="ctrlbar" data-ctrl="states"></div>
+    <section class="panel">
+      <div class="expl" id="stExpl"></div>
+      <div class="scroll" style="margin-top:12px"><svg id="stSvg" viewBox="0 0 1000 300" style="width:100%;min-width:700px;display:block" role="img"></svg></div>
+      <div class="legend" id="stLegend"></div>
+    </section>
+    <div class="grid2e">
+      <section class="panel">
+        <h2 data-i="st_h_lists"></h2>
+        <div id="stLists"></div>
+      </section>
+      <section class="panel">
+        <h2 data-i="st_h_cpu"></h2>
+        <div class="bar" id="stBar"></div>
+        <div class="legend" id="stBarLegend"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= SHARED COUNTER ================= -->
+  <div class="stack mod" id="mod-shared" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="sc_h_setup"></h2>
+      <pre class="code" id="scCode"></pre>
+      <p class="note" data-i="sc_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="shared"></div>
+    <section class="panel">
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div class="memcell" style="min-width:150px"><span>counter</span><b id="scVal">0</b></div>
+        <div style="flex:1;min-width:240px"><div class="stats" id="scStats"></div></div>
+      </div>
+      <div class="scroll" style="margin-top:12px"><svg id="scSvg" viewBox="0 0 1000 150" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="legend" id="scLegend"></div>
+      <div class="expl" id="scExpl" style="margin-top:12px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="sc_h_hist"></h2>
+      <div class="chips" id="scHist"></div>
+    </section>
+  </div>
+
+  <!-- ================= RACE STEP BY STEP ================= -->
+  <div class="stack mod" id="mod-race" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="rc_h_setup"></h2>
+      <p class="note" style="margin:0" data-i="rc_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="race"></div>
+    <section class="panel">
+      <div class="threads" id="rcThreads"></div>
+      <div class="expl" id="rcExpl" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="rc_h_tried"></h2>
+      <div id="rcTried"></div>
+    </section>
+  </div>
+
+  <!-- ================= MUTEX ================= -->
+  <div class="stack mod" id="mod-mutex" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="mx_h_setup"></h2>
+      <p class="note" style="margin:0" data-i="mx_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="mutex"></div>
+    <section class="panel">
+      <div class="threads" id="mxThreads"></div>
+      <div class="expl" id="mxExpl" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="rc_h_tried"></h2>
+      <div id="mxTried"></div>
+    </section>
+  </div>
+
+  <!-- ================= DEADLOCK ================= -->
+  <div class="stack mod" id="mod-dead" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="dl_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="dl_l_b"></label><div class="seg" id="dlOrder"><button data-v="XY" data-i="dl_xy"></button><button data-v="YX" data-i="dl_yx"></button></div></div>
+      </div>
+      <p class="note" data-i="dl_note"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="dead"></div>
+    <section class="panel">
+      <div class="threads" id="dlThreads"></div>
+      <div class="expl" id="dlExpl" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="rc_h_tried"></h2>
+      <div id="dlTried"></div>
+    </section>
+  </div>
+
+  <!-- ================= PRODUCER-CONSUMER ================= -->
+  <div class="stack mod" id="mod-pc" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="pc_h_setup"></h2>
+      <div class="opts">
+        <div class="ctl"><label for="pcSize" data-i="pc_l_size"></label><input type="range" id="pcSize" min="1" max="8" step="1" value="5"><output id="pcSizeO"></output></div>
+        <div class="ctl"><label for="pcPr" data-i="pc_l_pr"></label><input type="range" id="pcPr" min="1" max="10" step="1" value="3"><output id="pcPrO"></output></div>
+        <div class="ctl"><label for="pcCr" data-i="pc_l_cr"></label><input type="range" id="pcCr" min="1" max="10" step="1" value="3"><output id="pcCrO"></output></div>
+        <div class="opt"><label data-i="pc_l_rnd"></label><label class="chk"><input type="checkbox" id="pcRnd"><span data-i="pc_rnd"></span></label></div>
+      </div>
+      <div class="grid2e" style="margin-top:14px"><pre class="code" id="pcCode1"></pre><pre class="code" id="pcCode2"></pre></div>
+    </section>
+    <div class="ctrlbar" data-ctrl="pc"></div>
+    <section class="panel">
+      <div class="pcrow">
+        <div class="thr" style="--c:var(--ta)"><div class="hd"><b data-i="pc_prod"></b><span id="pcStP"></span></div><div class="note" style="margin:0" id="pcInfoP"></div></div>
+        <div><div class="slots" id="pcSlots"></div><p class="note" style="text-align:center" id="pcBufInfo"></p></div>
+        <div class="thr" style="--c:var(--tb)"><div class="hd"><b data-i="pc_cons"></b><span id="pcStC"></span></div><div class="note" style="margin:0" id="pcInfoC"></div></div>
+      </div>
+      <div class="stats" id="pcStats" style="margin-top:14px"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="pc_h_chart"></h2>
+      <div class="scroll"><svg id="pcSvg" viewBox="0 0 1000 250" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="legend" id="pcLegend"></div>
+      <div class="key" data-i="pc_key"></div>
+    </section>
+  </div>
+</div>
+</div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const hexN=(n,w)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w||4,'0');
+let lang='pl';
+try{const s=localStorage.getItem('ccSimLang');if(s==='pl'||s==='en')lang=s;}catch(e){}
+try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')lang=q;}catch(e){}
+const loc=()=>lang==='pl'?'pl-PL':'en-US';
+const num=(n,d)=>Number(n).toLocaleString(loc(),{maximumFractionDigits:d===undefined?2:d,minimumFractionDigits:0});
+const fix=(n,d)=>Number(n).toLocaleString(loc(),{maximumFractionDigits:d,minimumFractionDigits:d});
+const pct=n=>{const a=Math.abs(n);const d=a===0?0:a<0.001?5:a<0.01?4:a<0.1?3:a<10?1:0;return num(n,d)+'%';};
+const S={};
+
+const T={
+pl:{
+  doc_title:'Symulator współbieżności: przerwania, planista, wątki',
+  title:'Od przycisku do puli wątków',
+  intro:'Interaktywne ćwiczenia do wykładów 6, 7 i 8: polling i przerwania, tick timera, kwanty czasu, przełączanie kontekstu, stany zadań, wyścig, mutex, zakleszczenie oraz producent i konsument. Najpierw przewiduj, potem sprawdzaj.',
+  h_topics:'Temat',
+  g6:'Wykład 6: przerwania i planista', g6n:'Przerwania i planista', g7n:'Wątki i synchronizacja', g8n:'Zakleszczenie i współpraca', lect6:'Wykład 6', lect7:'Wykład 7', lect8:'Wykład 8', g7:'Wykład 7: wątki i synchronizacja', g8:'Wykład 8: zakleszczenie i współpraca',
+  tp_poll:'Polling a przerwanie', tp_poll_s:'Symulator 1: naciskaj i porównaj',
+  tp_irq:'Przerwanie krok po kroku', tp_irq_s:'Symulator 1: mepc, ISR, mret',
+  tp_tick:'Timer i tick', tp_tick_s:'Symulatory 2 i 3: trzy diody',
+  tp_slice:'Kwant czasu', tp_slice_s:'Symulator 4: A, B, C na zmianę',
+  tp_ctx:'Przełączanie kontekstu', tp_ctx_s:'Symulatory 5 i 7: stosy i TCB',
+  tp_states:'Stany i priorytety', tp_states_s:'Symulator 6: Ready, Blocked, IDLE',
+  tp_shared:'Wspólny licznik', tp_shared_s:'Symulator 6: 3 + 3 = ?',
+  tp_race:'Wyścig krok po kroku', tp_race_s:'Symulator 8: lw, addi, sw',
+  tp_mutex:'Mutex', tp_mutex_s:'Symulator 9: jeden wątek naraz',
+  tp_dead:'Zakleszczenie', tp_dead_s:'Symulator 10: graf oczekiwania',
+  tp_pc:'Producent-konsument', tp_pc_s:'Symulator 11: bufor o rozmiarze 1 do 8',
+  a_prev:'Wstecz', a_next:'Dalej', a_play:'Odtwarzaj', a_pause:'Pauza', a_reset:'Od nowa', a_start:'Start',
+  step:(i,n)=>`krok ${i} / ${n}`,
+  keys_note:'Klawisze: ← → kroki, spacja odtwarza',
+  keys_note_poll:'Przycisk A: przytrzymaj myszą albo spacją',
+  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'gotowe',
+
+  po_h_setup:'Program', po_l_mode:'Co robi loop() przy pollingu', po_m_work:'2 s pracy, potem jedno sprawdzenie', po_m_spin:'tylko sprawdza',
+  po_code_isr:'Przerwanie', po_code_work:'Polling: 2 s pracy, jedno sprawdzenie', po_code_spin:'Polling: tylko sprawdza',
+  po_hold:'przytrzymaj myszą lub spacją', po_h_time:'Oś czasu: 10 sekund, te same naciśnięcia dla obu programów',
+  po_r_btn:'Przycisk A', po_r_poll:'CPU: polling', po_r_irq:'CPU: przerwania',
+  lcd1:'Polling:', lcd2:'Przerwanie:',
+  po_s_press:'Naciśnięcia', po_s_poll:'Policzył polling', po_s_irq:'Policzyło przerwanie', po_s_isr:'Czas CPU w ISR',
+  po_s_isr_sub:(n,us)=>`${n} × ${us} µs`, po_s_checks:n=>`sprawdzeń: ${n}`,
+  px_start_t:'Gotowe do startu', px_start:'Kliknij <b>Start</b> i naciskaj przycisk A, na przykład 5 krótkich kliknięć. Oba programy dostają dokładnie te same naciśnięcia.',
+  px_run_t:'Trwa pomiar', px_run:'Naciskaj przycisk A, krótko i długo. Obserwuj, kiedy CPU sprawdza przycisk, a kiedy wchodzi do ISR (cienka pomarańczowa kreska).',
+  px_end:'Wynik po 10 s',
+  px_work:(p,n)=>`Polling policzył ${p} z ${n}. Naciśnięcie liczy się tylko wtedy, gdy przycisk jest wciśnięty dokładnie w chwili sprawdzenia; krótkie kliknięcie w czasie 2 s pracy przepada.`,
+  px_twice:'Długie przytrzymanie, które trwało przez dwa sprawdzenia, zostało policzone dwa razy.',
+  px_spin:(c,p,pr)=>`Polling niczego nie zgubił, ale wykonał ${c} sprawdzeń, a tylko ${p} z nich trafiło na nowe naciśnięcie (${pr}). Prawie cały czas CPU poszedł na pytanie „czy już?”.`,
+  px_irq:(n,pr)=>`Przerwanie policzyło każde naciśnięcie: ${n}. ISR zajęła ${pr} czasu CPU.`,
+  px_key:'Przerwanie niczego nie gubi, prawie nic nie kosztuje, a program główny wraca dokładnie tam, gdzie przerwał.',
+  pc_work:'praca', pc_check:'jedno sprawdzenie', pc_spin:'pytaj w kółko', pc_isr:'ISR',
+  lg_work:'program główny (użyteczna praca)', lg_poll:'sprawdzanie przycisku', lg_isr:'procedura obsługi przerwania (ISR)', lg_hit:'naciśnięcie policzone', lg_miss:'naciśnięcie zgubione',
+
+  ir_h_setup:'Kiedy przychodzi sygnał', ir_l_at:'Sygnał z przycisku A przychodzi w trakcie instrukcji', ir_setup_note:'Program główny zwiększa t0 w pętli i zapisuje je do x. ISR zlicza naciśnięcia w zmiennej presses i używa przy tym rejestru t0.',
+  ir_main:'Program główny', ir_isr:'ISR: onButtonA', ir_h_regs:'Rejestry', ir_h_mem:'Pamięć', ir_regs_note:'Czerwona ramka: wartość zmieniona w tym kroku. mtvec to adres ISR.', ir_h_trace:'Co wykonał procesor',
+  ir_c_room:'miejsce na t0', ir_c_save:'zapisz t0', ir_c_load:'t0 = presses', ir_c_store:'presses++', ir_c_rest:'przywróć t0', ir_c_mret:'PC = mepc',
+  ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x w pamięci ← t0 = ${v}.`, ir_e_j:'Skok z powrotem do 0x0104: pętla trwa dalej.',
+  ir_e_room:sp=>`Robimy miejsce na stosie na jeden rejestr: sp ← sp − 4 = ${sp}.`,
+  ir_e_save:(v,sp)=>`Zapisujemy t0 programu głównego na stosie: [${sp}] ← ${v}. ISR zaraz użyje t0 do własnej pracy.`,
+  ir_e_load:v=>`t0 ← presses = ${v}. Wartość t0 programu głównego zniknęła z rejestru, ale jest bezpieczna na stosie.`,
+  ir_e_inc:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: naciśnięcie policzone.`,
+  ir_e_rest:v=>`Przywracamy t0 programu głównego ze stosu: t0 ← ${v}.`, ir_e_free:sp=>`sp ← sp + 4 = ${sp}: stos jest taki jak przed przerwaniem.`,
+  ir_e_mret:pc=>`mret: PC ← mepc = ${pc}.`,
+  ir_x_start_t:'Start', ir_x_start:at=>`Program główny zaczyna od 0x0100. Sygnał z przycisku A przyjdzie w trakcie instrukcji pod adresem ${at}.`,
+  ir_q_pc:'<b>Przewiduj:</b> jaki PC procesor zapisze w mepc?',
+  ir_x_enter_t:'Przerwanie!', ir_x_enter:m=>`Procesor dokończył instrukcję. Teraz zapisuje adres <b>następnej</b> instrukcji: mepc ← ${m}, i skacze do ISR: PC ← mtvec = 0x0200.`,
+  ir_q_t0:'<b>Przewiduj:</b> ile będzie wynosić t0 w programie głównym po powrocie?',
+  ir_x_sig:'<b>W trakcie tej instrukcji przychodzi sygnał z przycisku A.</b> Procesor nie przerywa w połowie: najpierw kończy instrukcję.',
+  ir_x_back:'Program główny wraca dokładnie tam, gdzie przerwał.', ir_x_t0:v=>`t0 = ${v}, tak samo jak przed przerwaniem.`,
+  ir_saved_pc:'zapisany PC', ir_stack:'stos', ir_trace_empty:'Jeszcze nic. Kliknij Dalej.',
+  lg_main:'program główny', lg_irq:'wejście do przerwania',
+
+  tk_h_setup:'Jak migają diody', tk_l_how:'Jak', tk_m_timer:'przerwanie timera', tk_m_millis:'millis() w loop()', tk_l_lcd:'Dodatkowa praca', tk_lcd:'loop() pisze na LCD (jeden zapis to kilka ms)',
+  tk_h_time:'Oś czasu', tk_h_stats:'Czy diody trzymają rytm?', tk_stats_note:'Spóźnienie: o ile ms później dioda zmieniła stan, niż powinna (300, 600, 900, … ms dla LED 1).',
+  tk_every:(n,ms)=>`co ${n} ticki (${ms} ms)`, tk_every_s:ms=>`co ${ms} ms`,
+  tk_x0_t:'Tick 0', tk_x0:'Timer zgłasza przerwanie co 100 ms. Na każdym ticku ISR decyduje: LED 1 co 3 ticki, LED 2 co 5, LED 3 co 7. Na początku wszystkie są zgaszone. <b>Najpierw przewiduj</b>, potem sprawdzaj.',
+  tk_x_tick_t:(n,s)=>`Tick ${n} (${s})`, tk_x_tick:p=>`ISR: ticks++, a potem ${p}.`, tk_x_changed:l=>`Zmienia się: <b>${l}</b>.`, tk_x_none:'Żadna dioda się nie zmienia.',
+  tk_x_all:'Wszystkie trzy zmieniają się razem: 3 × 5 × 7 = 105.',
+  tk_x_time_t:s=>`Czas ${s}`, tk_x_in_delay:ms=>`loop() czeka w delay(${ms}): w tym czasie nic innego się nie dzieje.`, tk_x_in_lcd:'loop() pisze na LCD: przez kilka ms nikt nie patrzy na zegar.', tk_x_in_loop:'loop() kręci się i sprawdza millis().',
+  tk_x_late:(l,ms)=>`LED ${l} zmieniła się ${ms} ms za późno.`,
+  tk_x_start_delay:'Każde delay() zatrzymuje cały program. Czy LED 1 zmieni się po 300 ms, a potem po 600 ms?', tk_x_start_millis:'loop() w kółko pyta millis(), czy już czas. Spójrz, kiedy naprawdę zmieniają się diody.',
+  tk_r_tick:'tick', tk_r_cpu:'CPU',
+  tk_lg_ideal:'kiedy dioda powinna się zmienić', tk_lg_change:'zmiana diody', tk_lg_late:'spóźnienie', tk_lg_loop:'loop()', tk_lg_lcd:'zapis na LCD', tk_lg_delay:'czekanie w delay()', tk_lg_isr:'ISR timera',
+  tk_th_want:'powinna co', tk_th_n:'zmian', tk_th_iv:'odstępy między zmianami', tk_th_late:'największe spóźnienie', tk_range:(a,b)=>`od ${a} do ${b} ms`,
+  tk_c_every:'co 100 ms', tk_c_lcd:'kilka ms', tk_c_empty:'nic: diody obsługuje ISR', tk_lbl:(i,s)=>`tick ${i} · ${s}`, tk_ticks:'ticki', tk_time:'czas',
+
+  sl_h_setup:'Planista', sl_l_slice:'Kwant czasu', sl_note:'Zadania A, B i C mają ten sam priorytet i zawsze są Ready. Dostają rdzeń po kolei (round robin). A zaczyna w chwili 0.',
+  sl_h_core:'Co naprawdę robi rdzeń', sl_h_us:'Jak to wygląda dla nas',
+  sl_a:'A miga diodą', sl_b:'B liczy', sl_c:'C czyta przyciski',
+  sl_zoom:'Pierwsze 12 ms', sl_zoom_s:'kto ma rdzeń?', sl_reveal:'Pokaż odpowiedź', sl_core:'3 sekundy', sl_core_s:'każdy pasek to kwant',
+  sl_s_slice:'Kwant', sl_s_per:'Przełączeń na sekundę', sl_s_done:'Przełączeń do tej pory', sl_s_now:'Teraz działa',
+  sl_press_hint:'Kliknij przycisk w trakcie odtwarzania.', sl_wait:'C jeszcze nie zauważyło naciśnięcia…', sl_seen:ms=>`C zauważyło naciśnięcie po ${ms} ms.`,
+  sl_r_led:'dioda (A)', sl_r_cnt:'licznik (B)', sl_r_btn:'przyciski (C)',
+  sl_x0_t:'Trzy zadania, jeden rdzeń', sl_x0:'Kliknij <b>Start</b>. Rdzeń wykonuje naraz tylko jedno zadanie. Czy będzie to widać?',
+  sl_x_short_t:'Wygląda na to, że wszystko działa naraz', sl_x_short:s=>`Każde zadanie dostaje rdzeń na ${s} ms, potem następne. To dużo krócej niż cokolwiek, co zauważymy: dioda miga równo, licznik rośnie płynnie, a przycisk reaguje od razu.`,
+  sl_x_long_t:'Teraz widać, że zadania się zmieniają', sl_x_long:(s,w)=>`Kwant to ${s} ms. Dioda miga tylko w kwancie A, a potem stoi przez ${w} ms, gdy działają B i C. Licznik rośnie schodkami, a C zauważa przycisk dopiero w swoim kwancie.`,
+  sl_keys:'Przycisk C działa w trakcie odtwarzania',
+
+  cx_h_setup:'Ustawienia', cx_l_names:'Nazwy', cx_fr:'nazwy z FreeRTOS', cx_note:'Kontekst to 3 rejestry: PC, t0 i t1, po 4 bajty. Przed każdym krokiem przewiduj, co się zmieni, potem kliknij Dalej.',
+  cx_stacks:'Stosy', cx_h_asm:'Zapis i odtworzenie rejestrów (uproszczone)', cx_asm_save:'Zapisz stare zadanie (krok 2)', cx_asm_pick:'Wybierz (krok 3)', cx_asm_rest:'Odtwórz nowe zadanie (krok 4)',
+  cx_asm_note:'Na podstawie portu FreeRTOS dla RISC-V (portASM.S), skrócone do naszych trzech rejestrów.',
+  cx_sched:'planista', cx_task:k=>`zadanie ${k}`, cx_cpu:'CPU', cx_sched_pc:'kod planisty', cx_savedpc:'zapisany PC', cx_top:'szczyt', cx_data:k=>`dane ${k}`, cx_stack:k=>`Stos zadania ${k}`,
+  cx_tbl:'Zapisane sp', cx_next_b:'Następne zadanie: B.', cx_next_q:'Następne zadanie: ?', cx_tcbs:'TCB i pxCurrentTCB', cx_tcb_note:'pxTopOfStack to pierwsze pole TCB: zapisany sp.',
+  cx_lg_rd:'odczytane', cx_lg_wr:'zapisane',
+  cx_t0:'Działa zadanie A', cx_t1:'1. Tick', cx_t2:'2. Zapisz A', cx_t3:'3. Wybierz B', cx_t4:'4. Odtwórz B',
+  cx_s0:'Rejestry CPU należą teraz do A: PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000. Na stosie B czeka zapisany kontekst B.',
+  cx_s1:'Przychodzi przerwanie timera. CPU zapisuje PC zadania A w mepc (0x0210) i skacze do planisty.',
+  cx_s2:'PC (z mepc), t0 i t1 idą na stos A: 3 rejestry × 4 bajty = 12 = 0xC. sp ← 0x2000 − 0xC = 0x1FF4. Ten nowy szczyt stosu A trafia do tabeli zapisanych sp.',
+  cx_s3:'Planista wybiera następne zadanie: B. Zmienia się tylko to, które zadanie jest bieżące.',
+  cx_s4:'sp ← zapisany sp B = 0x2FF4. Ze stosu B wracają PC = 0x0308, t0 = 42, t1 = 9, a sp ← 0x2FF4 + 0xC = 0x3000. B działa dalej, jakby nic się nie stało.',
+  cx_fr0:'Działa A, więc pxCurrentTCB wskazuje na TCB A (0x4000). PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000.',
+  cx_fr1:'Przerwanie timera: mepc ← 0x0210 i skok do obsługi przerwania FreeRTOS.',
+  cx_fr2:'Kod z lewej: rejestry i PC (przez csrr t0, mepc) idą na stos A, a potem <code>sw sp, 0(t0)</code> zapisuje sp = 0x1FF4 w polu pxTopOfStack w TCB A. Uwaga: t0 trzyma teraz adres TCB A.',
+  cx_fr3:'<code>vTaskSwitchContext</code> wybiera zadanie o najwyższym priorytecie, które jest Ready. Zmienia tylko pxCurrentTCB: teraz wskazuje na TCB B (0x4100).',
+  cx_fr4:'<code>lw sp, 0(t0)</code> z t0 = adres TCB B: sp ← pxTopOfStack B = 0x2FF4. Potem wracają PC (przez mepc), t0 = 42, t1 = 9, a sp = 0x3000. mret: B działa dalej.',
+  cx_q_s1:'<b>Przewiduj:</b> gdzie trafi PC zadania A, gdy przyjdzie przerwanie?',
+  cx_q_s2:'<b>Przewiduj:</b> jakie wartości trafią na stos A? Ile wyniesie zapisany sp A?',
+  cx_q_s3:'<b>Przewiduj:</b> co zmieni wybór następnego zadania?',
+  cx_q_s4:'<b>Przewiduj:</b> ile wyniosą PC, t0, t1 i sp po odtworzeniu B? Gdzie jest teraz t0 = 7 zadania A?',
+  cx_q_fr1:'<b>Przewiduj:</b> na które TCB wskazuje pxCurrentTCB?',
+  cx_q_fr2:'<b>Przewiduj:</b> jaka będzie wartość pxTopOfStack w TCB A?',
+  cx_q_fr3:'<b>Przewiduj:</b> co zmienia vTaskSwitchContext?',
+  cx_q_fr4:'<b>Przewiduj:</b> która linia asemblera ustawia nowy sp? Na jaką wartość?',
+  cx_q_end:'t0 = 7 zadania A czeka na stosie A. Planista odtworzy je przy następnym przełączeniu na A, dokładnie tak jak teraz wartości B.',
+
+  st_h_setup:'Zadania', st_l_scn:'Scenariusz', st_s_c:'C czeka 3 ms', st_s_h:'+ przycisk w 7,5 ms', st_s_all:'A, B i C czekają',
+  st_l_btn:'Przycisk dla H', st_press:'Naciśnij przycisk',
+  st_h_lists:'Listy planisty', st_h_cpu:'Użycie CPU', st_prio:n=>`priorytet ${n}`, st_axis:'czas; co 1 ms tick, A, B i C zmieniają się na każdym ticku',
+  st_lg_run:'Running', st_lg_ready:'Ready', st_lg_blk:'Blocked', st_lg_idle:'IDLE', st_lg_press:'naciśnięcie przycisku',
+  st_x0_t:'0 ms', st_x0:'A, B i C mają priorytet 1 i biorą rdzeń po kolei co 1 ms. H ma priorytet 2 i czeka na przycisk (Blocked). Klikaj Dalej co 1 ms albo naciśnij przycisk.',
+  st_ran1:k=>`Działało ${k}.`, st_ran2:(a,b)=>`Najpierw działało ${a}, potem ${b}.`, st_x_t:(a,b)=>`Od ${a} do ${b} ms`,
+  st_x_idle:'Nikt nie był Ready, więc procesor wykonywał zadanie IDLE.',
+  st_e_wake:(k,ms)=>`W ${ms} ${k} skończyło czekać i jest znowu Ready.`, st_e_press:ms=>`W ${ms} naciśnięto przycisk: H staje się Ready.`,
+  st_e_preempt:k=>`H ma wyższy priorytet, więc od razu wywłaszcza ${k}: ${k} wraca do Ready.`,
+  st_e_delay:(k,ms,u)=>`W ${ms} ${k} wywołuje vTaskDelay(3) i jest Blocked do ${u}: nie dostaje kwantów.`,
+  st_e_hdone:ms=>`W ${ms} H skończyło i znowu czeka na przycisk; reszta działa dalej.`,
+  st_empty:'pusto', st_l_run:'Running', st_l_r2:'Ready, priorytet 2', st_l_r1:'Ready, priorytet 1', st_l_blk:'Blocked',
+  st_w_btn:'czeka na przycisk', st_w_until:ms=>`do ${ms}`, st_cpu_empty:'Kliknij Dalej.',
+  st_c_p1:'priorytet 1', st_c_p2:'priorytet 2', st_c_at2:'w 2 ms:', st_c_blk:'Blocked na 3 ms', st_c_wait:'Blocked, dopóki nikt nie naciśnie', st_c_work:'około 1 ms pracy',
+
+  sc_h_setup:'Dwa zadania, jeden licznik', sc_note:'Oba zadania wykonują ten sam kod. Planista przełącza je w losowych chwilach. Najpierw przewiduj wynik, potem kliknij Uruchom kilka razy.',
+  sc_h_hist:'Wyniki', sc_s_adds:'Dodawań', sc_s_exp:'Oczekiwany wynik', sc_s_runs:'Uruchomień', sc_s_bad:'Złych wyników',
+  sc_task:n=>`Zadanie ${n}`, sc_task_s:'counter++ × 3', sc_empty:'Kliknij Uruchom.', sc_axis:'czas',
+  sc_lg_run:n=>`działa zadanie ${n}`, sc_lg_sw:'przełączenie przez planistę', sc_lg_plus:'+1: koniec jednego counter++',
+  sc_x0_t:'Przewiduj', sc_x0:'Dwa zadania, każde dodaje 1 do counter trzy razy. Licznik zaczyna od 0. Jaki będzie wynik?',
+  sc_xr_t:'Zadania działają', sc_xr:'Planista przełącza zadania w losowych chwilach.',
+  sc_xok_t:'counter = 6', sc_xok:'Tym razem wszystko się zgadza. Uruchom jeszcze kilka razy.',
+  sc_xbad_t:v=>`counter = ${v}`, sc_xbad:v=>`Sześć dodawań, a licznik pokazuje ${v}. Część dodawań zginęła. Dlaczego? Zatrzymaj to pytanie: wrócimy do niego.`,
+  sc_run:n=>`#${n}`, sc_hist_empty:'Jeszcze nic.', sc_run_btn:'Uruchom', sc_keys:'Od nowa czyści wyniki', sc_c_two:'dwa zadania z tym kodem',
+
+  th_thread:k=>`Wątek ${k}`, th_own:k=>`własny rejestr ${k}`, th_run:k=>`${k}: wykonaj następną instrukcję`, th_mem:'pamięć', th_waits:'czeka (Blocked)', th_waits_for:m=>`czeka na ${m} (Blocked)`, th_step:k=>`${k}: następny krok`,
+  th_keys:'Klawisze: A, B wykonują krok, R od nowa',
+  rc_h_setup:'Dwa wątki, jeden counter', rc_note:'Wątki A i B wykonują raz lw, addi, sw na counter = 5. Każdy wątek ma własny rejestr t0. Ty wybierasz, który wątek wykona następną instrukcję.',
+  rc_h_tried:'Wypróbowane kolejności', rc_tried:'Wypróbowane kolejności', rc_k_of:(n,m)=>`${n} z ${m}`, rc_tried_empty:'Dokończ pierwszą kolejność.',
+  rc_order:'Kolejność', rc_order_empty:'jeszcze nic', rc_ok:'counter = 7: poprawnie', rc_lost:v=>`counter = ${v}: zgubiona aktualizacja`,
+  rc_x0_t:'Start: counter = 5', rc_x0:'Klikaj A albo B. Po sześciu instrukcjach zobaczysz wynik.', rc_q:'Znajdź kolejność, która daje 7, potem taką, która daje 6. Czy da się dostać 5?',
+  rc_e_lw:(k,v)=>`${k} czyta counter do własnego t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} zwiększa własne t0: t0 = ${v}. counter w pamięci się nie zmienia.`,
+  rc_e_sw:(k,v,b)=>`${k} zapisuje t0 do pamięci: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Uwaga: ${o} ma już w t0 starą wartość (${v}) i zaraz ją zapisze.`,
+  rc_e_ok:'Jeden wątek skończył, zanim drugi zaczął: wynik jest poprawny.', rc_e_lost:'Oba wątki przeczytały, zanim drugi zapisał: jedna aktualizacja zginęła.',
+  rc_q_again:'Kliknij Od nowa (R) i spróbuj innej kolejności.', rc_res:v=>`counter = ${v}`,
+  mx_h_setup:'Te same wątki, ale z mutexem', mx_note:'Teraz każdy wątek wykonuje lock, lw, addi, sw, unlock. counter = 5. Jeśli wątek kliknie lock, gdy mutex trzyma drugi, staje się Blocked aż do unlock.',
+  mx_done:v=>`counter = ${v}: poprawnie`, mx_held:k=>`trzyma ${k}`, mx_free:'wolny',
+  mx_x0_t:'Start: counter = 5', mx_x0:'Klikaj A albo B.', mx_q:'Spróbuj znaleźć kolejność, która daje 6.',
+  mx_e_blk:(k,o)=>`Mutex trzyma ${o}. ${k} staje się <b>Blocked</b>: nie dostaje czasu CPU, dopóki ${o} nie wywoła unlock.`, mx_q_blk:'Ile instrukcji wątku B może teraz wejść między lw a sw wątku A?',
+  mx_e_lock:k=>`${k} bierze wolny mutex. Teraz tylko ${k} może wejść do sekcji krytycznej.`, mx_e_sw:(k,v)=>`${k} zapisuje: counter = ${v}.`,
+  mx_e_hand:(k,o)=>`${k} oddaje mutex. ${o} czekał na niego: dostaje mutex i znowu jest Ready.`, mx_e_unlock:k=>`${k} oddaje mutex.`,
+  mx_e_done:'Każda kolejność kończy się wynikiem 7: trzy kroki jednego wątku działają teraz jak jeden.',
+  dl_h_setup:'Dwa wątki, dwa mutexy', dl_l_b:'Kolejność blokad w wątku B', dl_xy:'X, potem Y', dl_yx:'Y, potem X',
+  dl_note:'Wątek A blokuje X, potem Y. Ty wybierasz, który wątek wykona następny krok. Obok: graf oczekiwania.',
+  dl_held:'trzymany przez', dl_waits:'czeka na', dl_circle:'cykl', dl_dead:'Zakleszczenie! Nikt nie może ruszyć dalej.', dl_ok:'Oba wątki skończyły.',
+  dl_lg_held:'mutex trzymany przez wątek', dl_lg_wait:'wątek czeka na mutex',
+  dl_x0_t:'Start', dl_x0:o=>`A: lock(X), lock(Y). B: ${o}. Klikaj A albo B.`, dl_q:'Znajdź kolejność, która kończy się zakleszczeniem. Ile kroków to zajmuje?',
+  dl_e_blk:(k,m,o)=>`${m} trzyma ${o}, więc ${k} staje się Blocked i czeka na ${m}.`, dl_e_lock:(k,m)=>`${k} bierze ${m}.`, dl_e_work:k=>`${k} pracuje, trzymając oba mutexy.`,
+  dl_e_hand:(k,m,o)=>`${k} oddaje ${m}. ${o} czekał na niego: dostaje ${m} i jest znowu Ready.`, dl_e_unlock:(k,m)=>`${k} oddaje ${m}.`,
+  dl_e_dead:n=>`W grafie jest cykl: A czeka na mutex, który trzyma B, a B na mutex, który trzyma A. Wykonanych kroków: ${n}.`,
+  dl_e_ok:'Bez zakleszczenia: jeden wątek wziął oba mutexy, zanim drugi zaczął.',
+  dl_q_dead:'Teraz przełącz wątek B na „X, potem Y”. Czy nadal da się zrobić zakleszczenie?', dl_r_ok:'bez zakleszczenia', dl_r_dead:'zakleszczenie',
+
+  pc_h_setup:'Bufor i prędkości', pc_l_size:'Rozmiar bufora', pc_l_pr:'Producent', pc_l_cr:'Konsument', pc_l_rnd:'Przerwy', pc_rnd:'losowe krótkie przerwy',
+  pc_prod:'Producent', pc_cons:'Konsument', pc_h_chart:'Zapełnienie bufora w czasie (ostatnie 30 s)',
+  pc_key:'Na dłuższą metę cały system pracuje w tempie wolniejszego. Bufor wygładza tylko krótkie różnice.',
+  pc_p_run:'produkuje następny element', pc_p_blk:'bufor pełny: czeka na notFull', pc_c_run:i=>`zużywa element ${i}`, pc_c_blk:'bufor pusty: czeka na notEmpty',
+  pc_buf:(n,s)=>`w buforze: ${n} z ${s}`, pc_s_prod:'Wyprodukowane', pc_s_cons:'Zużyte', pc_s_pblk:'Producent Blocked', pc_s_cblk:'Konsument Blocked',
+  pc_r_fill:'bufor', pc_r_fill_s:'elementów', pc_lg_fill:'elementy w buforze', pc_rate:n=>`${n} elem./s`, pc_c_time:'1 / prędkość s',
+},
+en:{
+  doc_title:'Concurrency simulator: interrupts, scheduler, threads',
+  title:'From a button to a thread pool',
+  intro:'Interactive exercises for Lectures 6, 7 and 8: polling and interrupts, the timer tick, time slices, the context switch, task states, the race, the mutex, deadlock, and the producer and consumer. Predict first, then check.',
+  h_topics:'Topic',
+  g6:'Lecture 6: interrupts and the scheduler', g6n:'Interrupts and the scheduler', g7n:'Threads and synchronisation', g8n:'Deadlock and cooperation', lect6:'Lecture 6', lect7:'Lecture 7', lect8:'Lecture 8', g7:'Lecture 7: threads and synchronisation', g8:'Lecture 8: deadlock and cooperation',
+  tp_poll:'Polling vs interrupt', tp_poll_s:'Simulator 1: press and compare',
+  tp_irq:'Interrupt step by step', tp_irq_s:'Simulator 1: mepc, ISR, mret',
+  tp_tick:'Timer and tick', tp_tick_s:'Simulators 2 and 3: three LEDs',
+  tp_slice:'Time slice', tp_slice_s:'Simulator 4: A, B, C take turns',
+  tp_ctx:'Context switch', tp_ctx_s:'Simulators 5 and 7: stacks and TCBs',
+  tp_states:'States and priorities', tp_states_s:'Simulator 6: Ready, Blocked, IDLE',
+  tp_shared:'Shared counter', tp_shared_s:'Simulator 6: 3 + 3 = ?',
+  tp_race:'Race step by step', tp_race_s:'Simulator 8: lw, addi, sw',
+  tp_mutex:'Mutex', tp_mutex_s:'Simulator 9: one thread at a time',
+  tp_dead:'Deadlock', tp_dead_s:'Simulator 10: the wait-for graph',
+  tp_pc:'Producer-consumer', tp_pc_s:'Simulator 11: a buffer of 1 to 8',
+  a_prev:'Back', a_next:'Next', a_play:'Play', a_pause:'Pause', a_reset:'Reset', a_start:'Start',
+  step:(i,n)=>`step ${i} / ${n}`,
+  keys_note:'Keys: ← → steps, space plays',
+  keys_note_poll:'Button A: hold with the mouse or space',
+  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'done',
+
+  po_h_setup:'The program', po_l_mode:'What loop() does with polling', po_m_work:'2 s of work, then one check', po_m_spin:'only checks',
+  po_code_isr:'Interrupt', po_code_work:'Polling: 2 s of work, one check', po_code_spin:'Polling: only checks',
+  po_hold:'hold with the mouse or space', po_h_time:'Timeline: 10 seconds, the same presses for both programs',
+  po_r_btn:'Button A', po_r_poll:'CPU: polling', po_r_irq:'CPU: interrupts',
+  lcd1:'Polling:', lcd2:'Interrupt:',
+  po_s_press:'Presses', po_s_poll:'Counted by polling', po_s_irq:'Counted by interrupt', po_s_isr:'CPU time in the ISR',
+  po_s_isr_sub:(n,us)=>`${n} × ${us} µs`, po_s_checks:n=>`checks: ${n}`,
+  px_start_t:'Ready to start', px_start:'Click <b>Start</b> and press button A, for example 5 short clicks. Both programs get exactly the same presses.',
+  px_run_t:'Measuring', px_run:'Press button A, short and long. Watch when the CPU checks the button and when it enters the ISR (a thin orange line).',
+  px_end:'Result after 10 s',
+  px_work:(p,n)=>`Polling counted ${p} of ${n}. A press counts only if the button is down exactly when the CPU checks it; a short click during the 2 s of work is lost.`,
+  px_twice:'A long hold that lasted over two checks was counted twice.',
+  px_spin:(c,p,pr)=>`Polling lost nothing, but it made ${c} checks, and only ${p} of them found a new press (${pr}). Almost all the CPU time went to asking “is it pressed yet?”.`,
+  px_irq:(n,pr)=>`The interrupt counted every press: ${n}. The ISR took ${pr} of the CPU time.`,
+  px_key:'An interrupt misses nothing, costs almost no CPU time, and the main program continues exactly where it stopped.',
+  pc_work:'work', pc_check:'one check', pc_spin:'ask again and again', pc_isr:'the ISR',
+  lg_work:'main program (useful work)', lg_poll:'checking the button', lg_isr:'interrupt service routine (ISR)', lg_hit:'press counted', lg_miss:'press lost',
+
+  ir_h_setup:'When the signal arrives', ir_l_at:'The signal from button A arrives during the instruction at', ir_setup_note:'The main program increases t0 in a loop and stores it in x. The ISR counts the presses in the variable presses, and it uses the register t0 to do it.',
+  ir_main:'Main program', ir_isr:'ISR: onButtonA', ir_h_regs:'Registers', ir_h_mem:'Memory', ir_regs_note:'Red frame: the value changed in this step. mtvec is the address of the ISR.', ir_h_trace:'What the processor ran',
+  ir_c_room:'room for t0', ir_c_save:'save t0', ir_c_load:'t0 = presses', ir_c_store:'presses++', ir_c_rest:'restore t0', ir_c_mret:'PC = mepc',
+  ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x in memory ← t0 = ${v}.`, ir_e_j:'Jump back to 0x0104: the loop goes on.',
+  ir_e_room:sp=>`Make room on the stack for one register: sp ← sp − 4 = ${sp}.`,
+  ir_e_save:(v,sp)=>`Save t0 of the main program on the stack: [${sp}] ← ${v}. The ISR is about to use t0 for its own work.`,
+  ir_e_load:v=>`t0 ← presses = ${v}. The main program's t0 is gone from the register, but it is safe on the stack.`,
+  ir_e_inc:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: the press is counted.`,
+  ir_e_rest:v=>`Restore t0 of the main program from the stack: t0 ← ${v}.`, ir_e_free:sp=>`sp ← sp + 4 = ${sp}: the stack is as before the interrupt.`,
+  ir_e_mret:pc=>`mret: PC ← mepc = ${pc}.`,
+  ir_x_start_t:'Start', ir_x_start:at=>`The main program starts at 0x0100. The signal from button A will arrive during the instruction at ${at}.`,
+  ir_q_pc:'<b>Predict:</b> which PC will the processor save in mepc?',
+  ir_x_enter_t:'Interrupt!', ir_x_enter:m=>`The processor has finished the instruction. Now it saves the address of the <b>next</b> instruction, mepc ← ${m}, and jumps to the ISR: PC ← mtvec = 0x0200.`,
+  ir_q_t0:'<b>Predict:</b> what will t0 be in the main program after the return?',
+  ir_x_sig:'<b>During this instruction the signal from button A arrives.</b> The processor does not stop halfway: it first finishes the instruction.',
+  ir_x_back:'The main program continues exactly where it stopped.', ir_x_t0:v=>`t0 = ${v}, the same as before the interrupt.`,
+  ir_saved_pc:'saved PC', ir_stack:'stack', ir_trace_empty:'Nothing yet. Click Next.',
+  lg_main:'main program', lg_irq:'entering the interrupt',
+
+  tk_h_setup:'How the LEDs blink', tk_l_how:'How', tk_m_timer:'timer interrupt', tk_m_millis:'millis() in loop()', tk_l_lcd:'Extra work', tk_lcd:'loop() writes to the LCD (one write = several ms)',
+  tk_h_time:'Timeline', tk_h_stats:'Do the LEDs keep their rhythm?', tk_stats_note:'Late by: how many ms after the right moment the LED changed (300, 600, 900, … ms for LED 1).',
+  tk_every:(n,ms)=>`every ${n} ticks (${ms} ms)`, tk_every_s:ms=>`every ${ms} ms`,
+  tk_x0_t:'Tick 0', tk_x0:'The timer raises an interrupt every 100 ms. At every tick, the ISR decides: LED 1 every 3 ticks, LED 2 every 5, LED 3 every 7. At the start all LEDs are off. <b>Predict first</b>, then check.',
+  tk_x_tick_t:(n,s)=>`Tick ${n} (${s})`, tk_x_tick:p=>`ISR: ticks++, then ${p}.`, tk_x_changed:l=>`Changes: <b>${l}</b>.`, tk_x_none:'No LED changes.',
+  tk_x_all:'All three change together: 3 × 5 × 7 = 105.',
+  tk_x_time_t:s=>`Time ${s}`, tk_x_in_delay:ms=>`loop() waits in delay(${ms}): nothing else happens meanwhile.`, tk_x_in_lcd:'loop() writes to the LCD: for several ms nobody looks at the clock.', tk_x_in_loop:'loop() spins and checks millis().',
+  tk_x_late:(l,ms)=>`LED ${l} changed ${ms} ms late.`,
+  tk_x_start_delay:'Each delay() stops the whole program. Will LED 1 change after 300 ms, and again after 600 ms?', tk_x_start_millis:'loop() keeps asking millis() whether it is time yet. Watch when the LEDs really change.',
+  tk_r_tick:'tick', tk_r_cpu:'CPU',
+  tk_lg_ideal:'when the LED should change', tk_lg_change:'the LED changes', tk_lg_late:'late', tk_lg_loop:'loop()', tk_lg_lcd:'LCD write', tk_lg_delay:'waiting in delay()', tk_lg_isr:'timer ISR',
+  tk_th_want:'should change every', tk_th_n:'changes', tk_th_iv:'time between changes', tk_th_late:'most late', tk_range:(a,b)=>`from ${a} to ${b} ms`,
+  tk_c_every:'every 100 ms', tk_c_lcd:'several ms', tk_c_empty:'nothing: the ISR handles the LEDs', tk_lbl:(i,s)=>`tick ${i} · ${s}`, tk_ticks:'ticks', tk_time:'time',
+
+  sl_h_setup:'The scheduler', sl_l_slice:'Time slice', sl_note:'Tasks A, B and C have the same priority and are always Ready. They take turns on the core (round robin). Task A starts at 0 ms.',
+  sl_h_core:'What the core really does', sl_h_us:'How it looks to us',
+  sl_a:'A blinks an LED', sl_b:'B counts', sl_c:'C reads buttons',
+  sl_zoom:'The first 12 ms', sl_zoom_s:'who has the core?', sl_reveal:'Show the answer', sl_core:'3 seconds', sl_core_s:'each bar is a time slice',
+  sl_s_slice:'Time slice', sl_s_per:'Switches per second', sl_s_done:'Switches so far', sl_s_now:'Running now',
+  sl_press_hint:'Click the button while it plays.', sl_wait:'C has not noticed the press yet…', sl_seen:ms=>`C noticed the press after ${ms} ms.`,
+  sl_r_led:'LED (A)', sl_r_cnt:'counter (B)', sl_r_btn:'buttons (C)',
+  sl_x0_t:'Three tasks, one core', sl_x0:'Click <b>Start</b>. The core runs only one task at a time. Will you see it?',
+  sl_x_short_t:'It looks as if everything runs at the same time', sl_x_short:s=>`Each task gets the core for ${s} ms, then the next one. That is much shorter than anything we can notice: the LED blinks evenly, the counter grows smoothly, the button reacts at once.`,
+  sl_x_long_t:'Now you can see them take turns', sl_x_long:(s,w)=>`The time slice is ${s} ms. The LED blinks only in A's slice, then it stops for ${w} ms while B and C run. The counter grows in steps, and C notices the button only in its own slice.`,
+  sl_keys:'The button of C works while it plays',
+
+  cx_h_setup:'Settings', cx_l_names:'Names', cx_fr:'FreeRTOS names', cx_note:'A context is 3 registers: PC, t0 and t1, 4 bytes each. Before each step, predict what will change, then click Next.',
+  cx_stacks:'Stacks', cx_h_asm:'Saving and restoring registers (simplified)', cx_asm_save:'Save the old task (step 2)', cx_asm_pick:'Choose (step 3)', cx_asm_rest:'Restore the new task (step 4)',
+  cx_asm_note:'Based on the FreeRTOS RISC-V port (portASM.S), cut down to our three registers.',
+  cx_sched:'scheduler', cx_task:k=>`task ${k}`, cx_cpu:'CPU', cx_sched_pc:'scheduler code', cx_savedpc:'saved PC', cx_top:'top', cx_data:k=>`data of ${k}`, cx_stack:k=>`Stack of task ${k}`,
+  cx_tbl:'Saved sp', cx_next_b:'Next task: B.', cx_next_q:'Next task: ?', cx_tcbs:'TCBs and pxCurrentTCB', cx_tcb_note:'pxTopOfStack is the first field of a TCB: the saved sp.',
+  cx_lg_rd:'read from here', cx_lg_wr:'written here',
+  cx_t0:'Task A runs', cx_t1:'1. Tick', cx_t2:'2. Save A', cx_t3:'3. Choose B', cx_t4:'4. Restore B',
+  cx_s0:'The CPU registers belong to A now: PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000. On stack B, the saved context of B is waiting.',
+  cx_s1:'The timer interrupt arrives. The CPU saves the PC of task A in mepc (0x0210) and jumps to the scheduler.',
+  cx_s2:'PC (from mepc), t0 and t1 go onto stack A: 3 registers × 4 bytes = 12 = 0xC. sp ← 0x2000 − 0xC = 0x1FF4. This new top of stack A goes into the table of saved stack pointers.',
+  cx_s3:'The scheduler picks the next task: B. Only the choice of the current task changes.',
+  cx_s4:'sp ← the saved sp of B = 0x2FF4. From stack B come back PC = 0x0308, t0 = 42, t1 = 9, and sp ← 0x2FF4 + 0xC = 0x3000. B continues as if nothing happened.',
+  cx_fr0:'A is running, so pxCurrentTCB points to TCB A (0x4000). PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000.',
+  cx_fr1:'The timer interrupt: mepc ← 0x0210 and a jump to the FreeRTOS interrupt handler.',
+  cx_fr2:'The code on the left: the registers and the PC (through csrr t0, mepc) go onto stack A, then <code>sw sp, 0(t0)</code> stores sp = 0x1FF4 in the field pxTopOfStack of TCB A. Note: t0 now holds the address of TCB A.',
+  cx_fr3:'<code>vTaskSwitchContext</code> picks the Ready task with the highest priority. It changes only pxCurrentTCB: now it points to TCB B (0x4100).',
+  cx_fr4:'<code>lw sp, 0(t0)</code>, with t0 = the address of TCB B: sp ← pxTopOfStack of B = 0x2FF4. Then PC (through mepc), t0 = 42 and t1 = 9 come back, and sp = 0x3000. mret: B continues.',
+  cx_q_s1:'<b>Predict:</b> where does the PC of task A go when the interrupt arrives?',
+  cx_q_s2:'<b>Predict:</b> which values go onto stack A? What is the saved sp of A?',
+  cx_q_s3:'<b>Predict:</b> what does choosing the next task change?',
+  cx_q_s4:'<b>Predict:</b> what are PC, t0, t1 and sp after B is restored? Where is A\'s t0 = 7 now?',
+  cx_q_fr1:'<b>Predict:</b> to which TCB does pxCurrentTCB point?',
+  cx_q_fr2:'<b>Predict:</b> what will pxTopOfStack in the TCB of A be?',
+  cx_q_fr3:'<b>Predict:</b> what does vTaskSwitchContext change?',
+  cx_q_fr4:'<b>Predict:</b> which line of the assembly gives sp its new value? What is that value?',
+  cx_q_end:'A\'s t0 = 7 waits on stack A. The scheduler restores it at the next switch back to A, exactly like B\'s values now.',
+
+  st_h_setup:'The tasks', st_l_scn:'Scenario', st_s_c:'C waits 3 ms', st_s_h:'+ button at 7.5 ms', st_s_all:'A, B and C wait',
+  st_l_btn:'Button for H', st_press:'Press the button',
+  st_h_lists:'The scheduler\'s lists', st_h_cpu:'CPU usage', st_prio:n=>`priority ${n}`, st_axis:'time; a tick every 1 ms, A, B and C take turns at every tick',
+  st_lg_run:'Running', st_lg_ready:'Ready', st_lg_blk:'Blocked', st_lg_idle:'IDLE', st_lg_press:'button pressed',
+  st_x0_t:'0 ms', st_x0:'A, B and C have priority 1 and take turns, 1 ms each. H has priority 2 and waits for the button (Blocked). Click Next, 1 ms at a time, or press the button.',
+  st_ran1:k=>`${k} ran.`, st_ran2:(a,b)=>`First ${a} ran, then ${b}.`, st_x_t:(a,b)=>`From ${a} to ${b} ms`,
+  st_x_idle:'Nobody was Ready, so the processor ran the IDLE task.',
+  st_e_wake:(k,ms)=>`At ${ms}, ${k} has finished waiting and is Ready again.`, st_e_press:ms=>`At ${ms}, the button is pressed: H becomes Ready.`,
+  st_e_preempt:k=>`H has a higher priority, so it stops ${k} at once: ${k} goes back to Ready.`,
+  st_e_delay:(k,ms,u)=>`At ${ms}, ${k} calls vTaskDelay(3) and is Blocked until ${u}: it gets no time slices.`,
+  st_e_hdone:ms=>`At ${ms}, H has finished and waits for the button again; the others continue.`,
+  st_empty:'empty', st_l_run:'Running', st_l_r2:'Ready, priority 2', st_l_r1:'Ready, priority 1', st_l_blk:'Blocked',
+  st_w_btn:'waits for the button', st_w_until:ms=>`until ${ms}`, st_cpu_empty:'Click Next.',
+  st_c_p1:'priority 1', st_c_p2:'priority 2', st_c_at2:'at 2 ms:', st_c_blk:'Blocked for 3 ms', st_c_wait:'Blocked until somebody presses it', st_c_work:'about 1 ms of work',
+
+  sc_h_setup:'Two tasks, one counter', sc_note:'Both tasks run the same code. The scheduler switches them at random moments. Predict the result first, then click Run a few times.',
+  sc_h_hist:'Results', sc_s_adds:'Additions', sc_s_exp:'Expected result', sc_s_runs:'Runs', sc_s_bad:'Wrong results',
+  sc_task:n=>`Task ${n}`, sc_task_s:'counter++ × 3', sc_empty:'Click Run.', sc_axis:'time',
+  sc_lg_run:n=>`task ${n} runs`, sc_lg_sw:'a switch by the scheduler', sc_lg_plus:'+1: one counter++ finished',
+  sc_x0_t:'Predict', sc_x0:'Two tasks, each adds 1 to counter three times. The counter starts at 0. What will the result be?',
+  sc_xr_t:'The tasks run', sc_xr:'The scheduler switches the tasks at random moments.',
+  sc_xok_t:'counter = 6', sc_xok:'This time everything adds up. Run it a few more times.',
+  sc_xbad_t:v=>`counter = ${v}`, sc_xbad:v=>`Six additions, but the counter shows ${v}. Some additions were lost. Why? Keep this question: we will come back to it.`,
+  sc_run:n=>`#${n}`, sc_hist_empty:'Nothing yet.', sc_run_btn:'Run', sc_keys:'Reset clears the results', sc_c_two:'two tasks with this code',
+
+  th_thread:k=>`Thread ${k}`, th_own:k=>`${k}'s own register`, th_run:k=>`${k}: run the next instruction`, th_mem:'memory', th_waits:'waits (Blocked)', th_waits_for:m=>`waits for ${m} (Blocked)`, th_step:k=>`${k}: next step`,
+  th_keys:'Keys: A, B run a step, R resets',
+  rc_h_setup:'Two threads, one counter', rc_note:'Threads A and B each run lw, addi, sw once on counter = 5. Each thread has its own register t0. You choose which thread runs the next instruction.',
+  rc_h_tried:'Orders tried', rc_tried:'Orders tried', rc_k_of:(n,m)=>`${n} of ${m}`, rc_tried_empty:'Finish your first order.',
+  rc_order:'Order', rc_order_empty:'nothing yet', rc_ok:'counter = 7: correct', rc_lost:v=>`counter = ${v}: lost update`,
+  rc_x0_t:'Start: counter = 5', rc_x0:'Click A or B. After six instructions you will see the result.', rc_q:'Find an order that gives 7, then one that gives 6. Can you get 5?',
+  rc_e_lw:(k,v)=>`${k} reads counter into its own t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} increases its own t0: t0 = ${v}. counter in memory does not change.`,
+  rc_e_sw:(k,v,b)=>`${k} writes t0 to memory: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Note: ${o} already holds an old value in its t0 (${v}) and will write it soon.`,
+  rc_e_ok:'One thread finished before the other started: the result is correct.', rc_e_lost:'Both threads read before the other wrote: one update was lost.',
+  rc_q_again:'Click Reset (R) and try another order.', rc_res:v=>`counter = ${v}`,
+  mx_h_setup:'The same threads, with a mutex', mx_note:'Now each thread runs lock, lw, addi, sw, unlock. counter = 5. If a thread clicks lock while the other one holds the mutex, it becomes Blocked until unlock.',
+  mx_done:v=>`counter = ${v}: correct`, mx_held:k=>`held by ${k}`, mx_free:'free',
+  mx_x0_t:'Start: counter = 5', mx_x0:'Click A or B.', mx_q:'Try to find an order that gives 6.',
+  mx_e_blk:(k,o)=>`${o} holds the mutex. ${k} becomes <b>Blocked</b>: it gets no CPU time until ${o} calls unlock.`, mx_q_blk:'How many instructions of thread B can come between A\'s lw and A\'s sw now?',
+  mx_e_lock:k=>`${k} takes the free mutex. Now only ${k} can enter the critical section.`, mx_e_sw:(k,v)=>`${k} writes: counter = ${v}.`,
+  mx_e_hand:(k,o)=>`${k} gives the mutex back. ${o} was waiting for it: it gets the mutex and is Ready again.`, mx_e_unlock:k=>`${k} gives the mutex back.`,
+  mx_e_done:'Every order ends with 7: the three steps of one thread now act like one step.',
+  dl_h_setup:'Two threads, two mutexes', dl_l_b:'Lock order of thread B', dl_xy:'X then Y', dl_yx:'Y then X',
+  dl_note:'Thread A locks X, then Y. You choose which thread runs the next step. Beside it: the wait-for graph.',
+  dl_held:'held by', dl_waits:'waits for', dl_circle:'a circle', dl_dead:'Deadlock! Nobody can move on.', dl_ok:'Both threads have finished.',
+  dl_lg_held:'mutex held by a thread', dl_lg_wait:'thread waits for a mutex',
+  dl_x0_t:'Start', dl_x0:o=>`A: lock(X), lock(Y). B: ${o}. Click A or B.`, dl_q:'Find an order of steps that ends in a deadlock. How many steps does it take?',
+  dl_e_blk:(k,m,o)=>`${o} holds ${m}, so ${k} becomes Blocked and waits for ${m}.`, dl_e_lock:(k,m)=>`${k} takes ${m}.`, dl_e_work:k=>`${k} works while it holds both mutexes.`,
+  dl_e_hand:(k,m,o)=>`${k} gives ${m} back. ${o} was waiting for it: it gets ${m} and is Ready again.`, dl_e_unlock:(k,m)=>`${k} gives ${m} back.`,
+  dl_e_dead:n=>`The graph has a circle: A waits for a mutex held by B, and B waits for a mutex held by A. Steps done: ${n}.`,
+  dl_e_ok:'No deadlock: one thread took both mutexes before the other one started.',
+  dl_q_dead:'Now switch thread B to “X then Y”. Can you still make a deadlock?', dl_r_ok:'no deadlock', dl_r_dead:'deadlock',
+
+  pc_h_setup:'Buffer and speeds', pc_l_size:'Buffer size', pc_l_pr:'Producer', pc_l_cr:'Consumer', pc_l_rnd:'Pauses', pc_rnd:'random short pauses',
+  pc_prod:'Producer', pc_cons:'Consumer', pc_h_chart:'Buffer fill over time (last 30 s)',
+  pc_key:'In the long run the whole system runs at the speed of the slower one. The buffer only smooths out short differences.',
+  pc_p_run:'produces the next item', pc_p_blk:'buffer full: waits on notFull', pc_c_run:i=>`consumes item ${i}`, pc_c_blk:'buffer empty: waits on notEmpty',
+  pc_buf:(n,s)=>`in the buffer: ${n} of ${s}`, pc_s_prod:'Produced', pc_s_cons:'Consumed', pc_s_pblk:'Producer Blocked', pc_s_cblk:'Consumer Blocked',
+  pc_r_fill:'buffer', pc_r_fill_s:'items', pc_lg_fill:'items in the buffer', pc_rate:n=>`${n} items/s`, pc_c_time:'1 / speed s',
+}};
+const t=(k,...a)=>{let v=T[lang][k];if(v===undefined)v=T.en[k];return typeof v==='function'?v(...a):(v===undefined?k:v);};
+
+/* ---------- wspólne / shared ---------- */
+const ICON={
+  prev:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2 4 8l7 6z" fill="currentColor"/></svg>',
+  next:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2l7 6-7 6z" fill="currentColor"/></svg>',
+  play:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="currentColor"/></svg>',
+  pause:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h4v12H3zM9 2h4v12H9z" fill="currentColor"/></svg>',
+  reset:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+function explHTML(title,text,badge,q){
+  return `<div class="bn">${badge===undefined||badge===null?'':badge}</div><div><b class="t">${esc(title)}</b><p>${text}</p>${q?`<span class="q">${q}</span>`:''}</div>`;
+}
+function codeHTML(v){return esc(v).replace(/(\/\/[^\n]*|#[^\n]*)/g,'<span class="c">$1</span>');}
+function codeLines(lines){return lines.map(([s,c])=>`<span class="l${c?' '+c:''}">${codeHTML(s)||' '}</span>`).join('');}
+const pill=k=>`<span class="pill ${k}">${esc(t('st_'+k))}</span>`;
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let x=a;x=Math.imul(x^(x>>>15),x|1);x^=x+Math.imul(x^(x>>>7),x|61);return((x^(x>>>14))>>>0)/4294967296;};}
+
+/* stepper: prev / next / play / reset */
+function Stepper(ctrlEl,getN,render,interval,label){
+  const s={i:0,playing:false,timer:null};
+  ctrlEl.innerHTML=`<div class="row">
+    <button data-a="prev">${ICON.prev}<span data-i="a_prev"></span></button>
+    <button data-a="next" class="primary"><span data-i="a_next"></span>${ICON.next}</button>
+    <button data-a="play"><span class="ic">${ICON.play}</span><span class="lb"></span></button>
+    <button data-a="reset">${ICON.reset}<span data-i="a_reset"></span></button></div>
+    <div class="cyc"></div><p class="note" style="margin:0" data-i="keys_note"></p>`;
+  const b=a=>ctrlEl.querySelector(`[data-a="${a}"]`);
+  s.last=()=>getN()-1;
+  s.sync=()=>{
+    b('prev').disabled=s.i<=0; b('next').disabled=s.i>=s.last();
+    b('play').querySelector('.ic').innerHTML=s.playing?ICON.pause:ICON.play;
+    b('play').querySelector('.lb').textContent=t(s.playing?'a_pause':'a_play');
+    ctrlEl.querySelector('.cyc').textContent=label?label(s.i):t('step',s.i,s.last());
+  };
+  s.go=i=>{s.i=Math.max(0,Math.min(s.last(),i));render();s.sync();};
+  s.stop=()=>{s.playing=false;clearInterval(s.timer);s.timer=null;s.sync();};
+  s.next=()=>{if(s.i<s.last())s.go(s.i+1);};
+  s.prev=()=>{s.stop();s.go(s.i-1);};
+  s.reset=()=>{s.stop();s.go(0);};
+  s.play=()=>{if(s.i>=s.last())s.go(0);s.playing=true;
+    s.timer=setInterval(()=>{if(s.i>=s.last())s.stop();else s.go(s.i+1);},interval||850);s.sync();};
+  s.toggle=()=>s.playing?s.stop():s.play();
+  b('prev').onclick=s.prev; b('next').onclick=()=>{s.stop();s.next();}; b('play').onclick=s.toggle; b('reset').onclick=s.reset;
+  return s;
+}
+/* play / pause / reset bar for the real-time modules */
+function RunBar(ctrlEl,noteKey,extra){
+  ctrlEl.innerHTML=`<div class="row"><button data-a="play" class="primary"><span class="ic">${ICON.play}</span><span class="lb"></span></button>
+    <button data-a="reset">${ICON.reset}<span data-i="a_reset"></span></button>${extra||''}</div><div class="cyc"></div>${noteKey?`<p class="note" style="margin:0" data-i="${noteKey}"></p>`:''}`;
+  return {
+    el:ctrlEl,
+    sync(playing,startKey,cyc,disabled){
+      const pb=ctrlEl.querySelector('[data-a="play"]');
+      pb.querySelector('.ic').innerHTML=playing?ICON.pause:ICON.play;
+      pb.querySelector('.lb').textContent=t(playing?'a_pause':startKey);
+      pb.disabled=!!disabled;
+      ctrlEl.querySelector('.cyc').textContent=cyc;
+    },
+    on(a,f){ctrlEl.querySelector(`[data-a="${a}"]`).onclick=f;}
+  };
+}
+function segInit(el,cb){el.querySelectorAll('button').forEach(bt=>bt.addEventListener('click',()=>cb(bt.dataset.v)));}
+function segSync(el,v){el.querySelectorAll('button').forEach(bt=>bt.setAttribute('aria-pressed',String(bt.dataset.v===String(v))));}
+function svgEl(tag,attrs,text){
+  let a='';for(const k in attrs)if(attrs[k]!==undefined&&attrs[k]!==null)a+=` ${k}="${attrs[k]}"`;
+  return `<${tag}${a}>${text!==undefined?text:''}</${tag}>`;
+}
+const txt=(x,y,s,o)=>svgEl('text',Object.assign({x,y,fill:'var(--ink)','font-size':13},o||{}),esc(s));
+const rect=(x,y,w,h,fill,o)=>svgEl('rect',Object.assign({x,y,width:Math.max(0,w),height:h,fill},o||{}));
+const legendItem=(c,l,style)=>`<span><span class="sw" style="${style||`background:${c}`}"></span>${esc(l)}</span>`;
+const HATCH=id=>`<pattern id="${id}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="7" height="7" fill="var(--blk-bg)"/><rect width="2.2" height="7" fill="var(--blk)" opacity=".55"/></pattern>`;
+const TASKC={A:'var(--ta)',B:'var(--tb)',C:'var(--tc)',H:'var(--th)',IDLE:'var(--idle)'};
+const secs=ms=>fix(ms/1000,1)+' s';
+
+/* =====================================================================
+   1. Polling a przerwanie / polling vs interrupt
+   ===================================================================== */
+const PDUR=10000,SPIN_RATE=40000,ISR_US=5;
+const P={t:0,playing:false,presses:[],hold:null,mode:'work',lastTs:0,raf:0,bar:null};
+function poCompute(tn){
+  const pr=P.presses.filter(p=>p.a<=tn).map(p=>({a:p.a,b:p.b===null?Infinity:p.b}));
+  const info=pr.map(()=>({poll:0}));
+  let poll=0,checks=0;const checkList=[];
+  if(P.mode==='work'){
+    for(let c=2000;c<=PDUR&&c<=tn;c+=2000){
+      const hit=pr.findIndex(p=>c>=p.a&&c<p.b);
+      checkList.push({t:c,hit:hit>=0});
+      if(hit>=0){poll++;info[hit].poll++;}
+    }
+    checks=checkList.length;
+  }else{
+    checks=Math.floor(tn/1000*SPIN_RATE);
+    pr.forEach((p,i)=>{poll++;info[i].poll=1;});
+  }
+  return {pr,irq:pr.length,poll,checks,checkList,info};
+}
+const PX=t0=>152+t0*0.082;
+function poSvg(C){
+  const tn=P.t;let o='';
+  const yH=32,yL=58,pY=84,iY=148,bh=30;
+  o+=txt(10,50,t('po_r_btn'),{'font-weight':600});
+  o+=txt(10,pY+20,t('po_r_poll'),{'font-weight':600});
+  o+=txt(10,iY+20,t('po_r_irq'),{'font-weight':600});
+  o+=svgEl('line',{x1:PX(0),y1:204,x2:PX(PDUR),y2:204,stroke:'var(--rule)','stroke-width':1.5});
+  for(let s=0;s<=10;s++){o+=svgEl('line',{x1:PX(s*1000),y1:200,x2:PX(s*1000),y2:208,stroke:'var(--muted)'});o+=txt(PX(s*1000),224,s+' s',{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});}
+  const pts=[[PX(0),yH]];
+  C.pr.forEach(p=>{
+    const x=PX(p.a);pts.push([x,yH],[x,yL]);
+    if(p.b!==Infinity&&p.b<=tn){const x2=PX(p.b);pts.push([x2,yL],[x2,yH]);}
+  });
+  pts.push([PX(tn),pts[pts.length-1][1]]);
+  o+=svgEl('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'var(--work)','stroke-width':2.4,'stroke-linejoin':'round'});
+  o+=txt(PX(0)-6,yH+4,'1',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
+  o+=txt(PX(0)-6,yL+4,'0',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
+  const blk=(x1,x2,y,c,op,ex)=>rect(x1,y,x2-x1,bh,c,Object.assign({opacity:op},ex||{}));
+  if(P.mode==='work'){
+    for(let k=0;k<5;k++){
+      const a=k*2000,b=a+2000;
+      o+=blk(PX(a),PX(b),pY,'var(--work)',.18);
+      if(a<tn)o+=blk(PX(a),PX(Math.min(b,tn)),pY,'var(--work)',.9);
+      const cx=PX(b)-7;
+      o+=blk(cx,cx+7,pY,'var(--poll)',b<=tn?1:.3);
+    }
+    C.checkList.forEach(c=>{o+=txt(PX(c.t)-4,pY-5,c.hit?'+1':'✕',{'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:c.hit?'var(--ok)':'var(--muted)'});});
+  }else{
+    o+=blk(PX(0),PX(PDUR),pY,'var(--poll)',.16);
+    if(tn>0){o+=blk(PX(0),PX(tn),pY,'var(--poll)',.9);o+=blk(PX(0),PX(tn),pY,'url(#poHatch)',1);}
+  }
+  o+=blk(PX(0),PX(PDUR),iY,'var(--work)',.18);
+  if(tn>0)o+=blk(PX(0),PX(tn),iY,'var(--work)',.9);
+  C.pr.forEach(p=>{const x=PX(p.a);o+=blk(x,x+5,iY,'var(--isr)',1);});
+  C.pr.forEach((p,i)=>{
+    const x=PX(p.a)+3,inf=C.info[i];
+    const nc=Math.ceil((p.a+1)/2000)*2000,decided=P.mode==='spin'||nc<=tn;
+    const pc=inf.poll>0?'var(--ok)':decided?'var(--bad)':'var(--muted)';
+    o+=svgEl('circle',{cx:x,cy:pY+bh+8,r:5,fill:pc});
+    o+=svgEl('circle',{cx:x,cy:iY+bh+8,r:5,fill:'var(--ok)'});
+    if(inf.poll>1)o+=txt(x+8,pY+bh+12,'×'+inf.poll,{'font-size':11,'font-weight':600,fill:'var(--isr)'});
+  });
+  o+=svgEl('line',{x1:PX(tn),y1:22,x2:PX(tn),y2:204,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+  const defs=`<defs><pattern id="poHatch" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="1.5" height="6" fill="var(--surface)" opacity=".45"/></pattern></defs>`;
+  $('poSvg').innerHTML=defs+o;
+}
+function poLcd(C){
+  const l1=t('lcd1').padEnd(12)+String(C.poll).padStart(4),l2=t('lcd2').padEnd(12)+String(C.irq).padStart(4);
+  $('poLcd').textContent=l1.slice(0,16)+'\n'+l2.slice(0,16);
+}
+function poStats(C){
+  const n=C.pr.length;
+  const st=(k,v,cl,sub)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b>${sub?`<span>${sub}</span>`:''}</div>`;
+  const isrPct=P.t>0?C.irq*ISR_US/1000/P.t*100:0;
+  const sub=P.mode==='spin'?esc(t('po_s_checks',num(C.checks,0))):'';
+  $('poStats').innerHTML=st('po_s_press',n)+st('po_s_poll',C.poll,n===0?'':C.poll===n?'good':'bad',sub)+
+    st('po_s_irq',C.irq,n===0?'':'good')+st('po_s_isr',pct(isrPct),'',esc(t('po_s_isr_sub',C.irq,ISR_US)));
+}
+function poExpl(C){
+  let e;
+  if(P.t===0&&!P.playing)e=[t('px_start_t'),t('px_start')];
+  else if(P.t<PDUR)e=[t('px_run_t'),t('px_run')];
+  else{
+    const n=C.pr.length;let s='';
+    if(P.mode==='work'){s+=t('px_work',C.poll,n);if(C.info.some(x=>x.poll>1))s+=' '+t('px_twice');}
+    else s+=t('px_spin',num(C.checks,0),C.poll,pct(C.checks?C.poll/C.checks*100:0));
+    s+='<br>'+t('px_irq',C.irq,pct(C.irq*ISR_US/1000/PDUR*100));
+    s+=`<br><b>${esc(t('px_key'))}</b>`;
+    e=[t('px_end'),s];
+  }
+  $('poExpl').innerHTML=explHTML(e[0],e[1]);
+}
+function poCode(C){
+  const tn=P.t,lastCheck=C.checkList.length?C.checkList[C.checkList.length-1].t:-1e9;
+  const recentCheck=P.mode==='work'&&tn-lastCheck<350&&tn>0;
+  const running=P.playing||(tn>0&&tn<PDUR);
+  let L;
+  if(P.mode==='work'){
+    L=[['void loop() {',''],[`  delay(2000);                        // ${t('pc_work')}`,running&&!recentCheck?'act w':''],
+       [`  if (digitalRead(BUTTON_A) == LOW)   // ${t('pc_check')}`,recentCheck?'act p':''],['    count++;',recentCheck&&C.checkList[C.checkList.length-1].hit?'act p':''],
+       ['  lcd.setCursor(0, 1); lcd.print(count);',''],['}','']];
+  }else{
+    L=[['void loop() {',''],[`  int now = digitalRead(BUTTON_A);    // ${t('pc_spin')}`,running?'act p':''],['  checks++;',running?'act p':''],
+       ['  if (last == HIGH && now == LOW) count++;',''],['  last = now;',running?'act p':''],['}','']];
+  }
+  $('poCodeH1').textContent=t(P.mode==='work'?'po_code_work':'po_code_spin');
+  $('poCode1').innerHTML=codeLines(L);
+  const lp=C.pr.length?C.pr[C.pr.length-1]:null;
+  const hot=lp&&tn-lp.a<400?'act':'';
+  $('poCode2').innerHTML=codeLines([['volatile int presses = 0;',''],['',''],[`void IRAM_ATTR onButtonA() {    // ${t('pc_isr')}`,hot],['  presses++;',hot],['}',''],['',''],
+    ['attachInterrupt(digitalPinToInterrupt(BUTTON_A),',''],['                onButtonA, FALLING);','']]);
+}
+function poLegend(){
+  $('poLegend').innerHTML=legendItem('var(--work)',t('lg_work'))+legendItem('var(--poll)',t('lg_poll'))+legendItem('var(--isr)',t('lg_isr'))+
+    legendItem('',t('lg_hit'),'background:var(--ok);border-radius:50%')+legendItem('',t('lg_miss'),'background:var(--bad);border-radius:50%');
+}
+function poRender(){
+  const C=poCompute(P.t);
+  poSvg(C);poLcd(C);poStats(C);poExpl(C);poCode(C);
+  P.bar.sync(P.playing,P.t===0?'a_start':'a_play',fix(P.t/1000,1)+' / 10 s',P.t>=PDUR);
+  segSync($('poMode'),P.mode);
+}
+function poTick(ts){
+  if(!P.playing)return;
+  const dt=P.lastTs?Math.min(100,ts-P.lastTs):0;P.lastTs=ts;
+  P.t=Math.min(PDUR,P.t+dt);
+  if(P.t>=PDUR){if(P.hold){P.hold.b=PDUR;P.hold=null;$('poBtn').classList.remove('down');}P.playing=false;}
+  poRender();
+  if(P.playing)P.raf=requestAnimationFrame(poTick);
+}
+function poPlay(){if(P.t>=PDUR)return;P.playing=true;P.lastTs=0;cancelAnimationFrame(P.raf);P.raf=requestAnimationFrame(poTick);poRender();}
+function poPause(){P.playing=false;cancelAnimationFrame(P.raf);poRender();}
+function poReset(){poPause();P.t=0;P.hold=null;P.presses=[];poRender();}
+function poDown(){
+  if(P.hold||P.t>=PDUR)return;
+  if(!P.playing)poPlay();
+  P.hold={a:P.t,b:null};P.presses.push(P.hold);$('poBtn').classList.add('down');
+}
+function poUp(){
+  if(!P.hold)return;
+  P.hold.b=Math.max(P.t,P.hold.a+60);P.hold=null;$('poBtn').classList.remove('down');
+}
+function poInit(){
+  P.bar=RunBar(document.querySelector('[data-ctrl="poll"]'),'keys_note_poll');
+  P.bar.on('play',()=>P.playing?poPause():poPlay());
+  P.bar.on('reset',poReset);
+  segInit($('poMode'),v=>{P.mode=v;poRender();});
+  const b=$('poBtn');
+  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}poDown();});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,poUp));
+  b.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();poDown();}});
+  b.addEventListener('keyup',e=>{if(e.key==='Enter')poUp();});
+}
+
+/* =====================================================================
+   2. Przerwanie krok po kroku / interrupt step by step
+   ===================================================================== */
+const IR_MTVEC=0x0200;
+const IR_MAIN=[
+  {a:0x100,s:'li   t0, 0',x:s=>{s.t0=0;return['t0'];},e:s=>t('ir_e_li')},
+  {a:0x104,s:'addi t0, t0, 1',x:s=>{s.t0++;return['t0'];},e:s=>t('ir_e_addi',s.t0)},
+  {a:0x108,s:'sw   t0, 0(a0)',x:s=>{s.x=s.t0;return['x'];},e:s=>t('ir_e_sw',s.t0)},
+  {a:0x10C,s:'j    0x0104',x:s=>{s.pc=0x104;return['pc'];},jump:1,e:s=>t('ir_e_j')}];
+const IR_ISR=[
+  {a:0x200,s:'addi sp, sp, -4',c:'ir_c_room',x:s=>{s.sp-=4;return['sp'];},e:s=>t('ir_e_room',hexN(s.sp))},
+  {a:0x204,s:'sw   t0, 0(sp)',c:'ir_c_save',x:s=>{s.stk=s.t0;return['stk'];},e:s=>t('ir_e_save',s.t0,hexN(s.sp))},
+  {a:0x208,s:'lw   t0, 0(a1)',c:'ir_c_load',x:s=>{s.t0=s.presses;return['t0'];},e:s=>t('ir_e_load',s.t0)},
+  {a:0x20C,s:'addi t0, t0, 1',x:s=>{s.t0++;return['t0'];},e:s=>t('ir_e_inc',s.t0)},
+  {a:0x210,s:'sw   t0, 0(a1)',c:'ir_c_store',x:s=>{s.presses=s.t0;return['presses'];},e:s=>t('ir_e_store',s.t0)},
+  {a:0x214,s:'lw   t0, 0(sp)',c:'ir_c_rest',x:s=>{s.t0=s.stk;return['t0'];},e:s=>t('ir_e_rest',s.t0)},
+  {a:0x218,s:'addi sp, sp, 4',x:s=>{s.sp+=4;return['sp'];},e:s=>t('ir_e_free',hexN(s.sp))},
+  {a:0x21C,s:'mret',c:'ir_c_mret',x:s=>{s.pc=s.mepc;s.mode='main';return['pc'];},jump:1,e:s=>t('ir_e_mret',hexN(s.pc))}];
+const IR={at:0x108,steps:[]};
+const irFind=a=>IR_MAIN.find(i=>i.a===a)||IR_ISR.find(i=>i.a===a);
+function irBuild(){
+  const s={pc:0x100,t0:0,sp:0x2000,mepc:null,x:0,presses:2,stk:null,mode:'main'};
+  const cl=o=>Object.assign({},o);
+  const st=[{s:cl(s),k:'start',chg:[]}];
+  let pending=false,taken=false,after=0,t0before=null;
+  for(let g=0;g<40&&after<3;g++){
+    if(pending){
+      t0before=s.t0;
+      s.mepc=s.pc;s.pc=IR_MTVEC;s.mode='isr';pending=false;taken=true;
+      st.push({s:cl(s),k:'enter',chg:['pc','mepc']});continue;
+    }
+    const at=s.pc,mode=s.mode,ins=irFind(at);
+    const chg=ins.x(s);
+    if(!ins.jump)s.pc=at+4;
+    let k='exec';
+    if(!taken&&at===IR.at){pending=true;k='sig';}
+    if(at===0x21C)k='mret';
+    else if(taken&&mode==='main')after++;
+    st.push({s:cl(s),k,chg,at,mode,e:ins.e(s),t0b:t0before});
+  }
+  IR.steps=st;
+}
+function irRender(){
+  const i=S.irq.i,cur=IR.steps[i],s=cur.s;
+  // explanation
+  let title,text,q='';
+  if(cur.k==='start'){title=t('ir_x_start_t');text=t('ir_x_start',hexN(IR.at));q=t('ir_q_pc');}
+  else if(cur.k==='enter'){title=t('ir_x_enter_t');text=t('ir_x_enter',hexN(s.mepc));q=t('ir_q_t0');}
+  else{
+    const ins=irFind(cur.at);
+    title=hexN(cur.at)+'  '+ins.s.replace(/\s+/g,' ');
+    text=cur.e;
+    if(cur.k==='sig'){text+=' '+t('ir_x_sig');q=t('ir_q_pc');}
+    if(cur.k==='mret'){text+=' '+t('ir_x_back')+' '+t('ir_x_t0',cur.t0b);}
+  }
+  const badge=cur.k==='start'?'':i;
+  $('irExpl').innerHTML=explHTML(title,text,badge,q);
+  const box=$('irExpl');box.classList.toggle('good',cur.k==='mret');
+  // code
+  const line=(ins,isr)=>{
+    const ex=cur.at===ins.a&&cur.k!=='enter';
+    const seen=IR.steps.slice(1,i).some(x=>x.at===ins.a);
+    const cls=ex?(isr?'act':'act w'):seen?'seen':'';
+    const arrow=s.pc===ins.a?'→':'';
+    const cm=ins.c?`   # ${t(ins.c)}`:'';
+    return `<span class="l ${cls}"><span class="pcm">${arrow}</span>${codeHTML(hexN(ins.a)+'  '+ins.s.padEnd(16)+cm)}</span>`;
+  };
+  $('irMain').innerHTML=IR_MAIN.map(x=>line(x,false)).join('');
+  $('irIsr').innerHTML=IR_ISR.map(x=>line(x,true)).join('');
+  // registers and memory
+  const ch=new Set(cur.chg);
+  const reg=(n,v,c)=>`<div class="reg${ch.has(c||n)?' chg':''}"><span>${esc(n)}</span><b>${esc(v)}</b></div>`;
+  $('irRegs').innerHTML=reg('PC',hexN(s.pc),'pc')+reg('t0',String(s.t0))+reg('sp',hexN(s.sp))+
+    reg('mepc ('+t('ir_saved_pc')+')',s.mepc===null?'-':hexN(s.mepc),'mepc')+reg('mtvec',hexN(IR_MTVEC),'-')+reg('a0','0x1000','-')+reg('a1','0x1004','-');
+  $('irMem').innerHTML=reg('x  [0x1000]',String(s.x),'x')+reg('presses  [0x1004]',String(s.presses),'presses')+
+    reg(t('ir_stack')+'  [0x1FFC]',s.stk===null?'-':String(s.stk),'stk');
+  // trace
+  $('irStrip').innerHTML=IR.steps.slice(1,i+1).map(x=>x.k==='enter'?`<span class="t">IRQ</span>`:`<span class="${x.mode==='isr'?'i':'m'}">${hexN(x.at).slice(2)}</span>`).join('')||`<span class="note" style="margin:0">${esc(t('ir_trace_empty'))}</span>`;
+  $('irLegend').innerHTML=legendItem('var(--work)',t('lg_main'))+legendItem('',t('lg_irq'),'border:1.5px dashed var(--isr)')+legendItem('var(--isr)',t('lg_isr'));
+}
+function irFill(){
+  const sel=$('irAt');const v=IR.at;
+  sel.innerHTML=IR_MAIN.map(x=>`<option value="${x.a}">${hexN(x.a)}  ${esc(x.s.replace(/\s+/g,' '))}</option>`).join('');
+  sel.value=String(v);
+}
+function irInit(){
+  S.irq=Stepper(document.querySelector('[data-ctrl="irq"]'),()=>IR.steps.length,irRender,1100);
+  $('irAt').addEventListener('change',e=>{IR.at=+e.target.value;irBuild();S.irq.reset();});
+  irBuild();
+}
+
+/* =====================================================================
+   3. Timer i tick / timer and tick
+   ===================================================================== */
+const TK={how:'timer',lcd:false,ev:null};
+const TK_P=[300,500,700],TK_MAX=12000,TK_N=TK_MAX/100+1,TK_W=4000;
+function tkBuild(){
+  const r=rng(11);
+  const ch=[[],[],[]],cpu=[];
+  const lcdDur=()=>2*(4+r()*8);  // two rows, each write several ms
+  if(TK.how==='timer'){
+    for(let i=0;i<3;i++)for(let k=1;k*TK_P[i]<=TK_MAX;k++)ch[i].push({t:k*TK_P[i],ideal:k*TK_P[i]});
+    cpu.push({a:0,b:TK_MAX,k:'loop'});
+    if(TK.lcd){let x=0;while(x<TK_MAX){const d=lcdDur();cpu.push({a:x,b:x+d,k:'lcd'});x+=d+1;}}
+  }else if(TK.how==='millis'){
+    const last=[0,0,0];let x=0;
+    cpu.push({a:0,b:TK_MAX,k:'loop'});
+    while(x<TK_MAX){
+      for(let i=0;i<3;i++)if(x-last[i]>=TK_P[i]){last[i]+=TK_P[i];ch[i].push({t:x,ideal:last[i]});}
+      if(TK.lcd){const d=lcdDur();cpu.push({a:x,b:x+d,k:'lcd'});x+=d+0.05;}
+      else x=Math.min(...last.map((l,i)=>l+TK_P[i]));
+    }
+  }else{
+    let x=0;const cnt=[0,0,0];
+    outer:while(x<TK_MAX){
+      for(let i=0;i<3;i++){
+        cpu.push({a:x,b:x+TK_P[i],k:'delay',i});x+=TK_P[i];
+        if(x>TK_MAX)break outer;
+        cnt[i]++;ch[i].push({t:x,ideal:cnt[i]*TK_P[i]});
+      }
+      if(TK.lcd){const d=lcdDur();cpu.push({a:x,b:x+d,k:'lcd'});x+=d;}
+    }
+  }
+  TK.ev={ch,cpu};
+}
+const tkT=()=>S.tick.i*100;
+function tkLedState(i,T){return TK.ev.ch[i].filter(c=>c.t<=T+1e-9).length%2===1;}
+function tkRecent(i,T){return T>0?TK.ev.ch[i].filter(c=>c.t>T-100+1e-9&&c.t<=T+1e-9):[];}
+function tkRender(){
+  const T=tkT(),tick=S.tick.i;
+  // LEDs
+  $('tkLeds').innerHTML=[0,1,2].map(i=>{
+    const on=tkLedState(i,T),chg=tkRecent(i,T).length>0;
+    return `<div class="led${on?' on':''}${chg?' chg':''}" style="--c:var(--led${i+1})"><i></i><b>LED ${i+1}</b><small>${esc(t('tk_every',TK_P[i]/100,TK_P[i]))}</small></div>`;
+  }).join('');
+  $('tkNum').textContent=TK.how==='timer'?String(tick):secs(T);
+  $('tkNumL').textContent=TK.how==='timer'?t('tk_ticks'):t('tk_time');
+  // explanation
+  const changed=[0,1,2].filter(i=>tkRecent(i,T).length);
+  let title,text;
+  if(TK.how==='timer'){
+    title=tick===0?t('tk_x0_t'):t('tk_x_tick_t',tick,secs(T));
+    if(tick===0)text=t('tk_x0');
+    else{
+      const parts=[0,1,2].map(i=>`<code>ticks % ${TK_P[i]/100} == ${tick%(TK_P[i]/100)}</code>`).join(', ');
+      text=t('tk_x_tick',parts)+' '+(changed.length?t('tk_x_changed',changed.map(i=>'LED '+(i+1)).join(', ')):t('tk_x_none'));
+      if(tick%105===0)text+=' '+t('tk_x_all');
+    }
+  }else{
+    title=t('tk_x_time_t',secs(T));
+    const seg=TK.ev.cpu.filter(c=>c.k!=='loop').find(c=>c.a<=T&&c.b>T);
+    let now=TK.how==='delay'?(seg&&seg.k==='delay'?t('tk_x_in_delay',TK_P[seg.i]):t('tk_x_in_lcd')):(seg?t('tk_x_in_lcd'):t('tk_x_in_loop'));
+    const late=[];changed.forEach(i=>tkRecent(i,T).forEach(c=>late.push(t('tk_x_late',i+1,num(c.t-c.ideal,1)))));
+    text=(T===0?t('tk_x_start_'+TK.how):now)+(late.length?' '+late.join(' '):'');
+  }
+  $('tkExpl').innerHTML=explHTML(title,text,'');
+  tkSvg(T);tkStats(T);
+}
+function tkSvg(T){
+  const ws=T<=3200?0:Math.floor((T-3000)/500)*500,we=ws+TK_W;
+  const X0=150,X1=985,k=(X1-X0)/TK_W,X=ms=>X0+(ms-ws)*k;
+  let o='';
+  const rows=[50,108,166],RH=32,cY=222,CH=24,aY=262;
+  // grid
+  for(let m=ws;m<=we;m+=100){
+    const major=m%500===0;
+    o+=svgEl('line',{x1:X(m),y1:30,x2:X(m),y2:aY,stroke:'var(--rule)','stroke-width':major?1:.5,opacity:major?1:.6});
+    if(major)o+=txt(X(m),aY+18,secs(m),{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
+    if(TK.how==='timer'&&m>0)o+=svgEl('path',{d:`M${X(m)-3},26 L${X(m)+3},26 L${X(m)},31 Z`,fill:m<=T?'var(--isr)':'var(--idle)'});
+  }
+  if(TK.how==='timer')o+=txt(10,30,t('tk_r_tick'),{'font-size':11.5,fill:'var(--muted)'});
+  // LED rows
+  [0,1,2].forEach(i=>{
+    const y=rows[i],col=`var(--led${i+1})`;
+    o+=txt(10,y+14,'LED '+(i+1),{'font-weight':600});
+    o+=txt(10,y+29,t('tk_every_s',TK_P[i]),{'font-size':11.5,fill:'var(--muted)'});
+    o+=rect(X0,y,X1-X0,RH,'var(--sunken)');
+    // ideal moments
+    for(let m=Math.ceil(ws/TK_P[i])*TK_P[i];m<=we;m+=TK_P[i])if(m>0)o+=svgEl('line',{x1:X(m),y1:y-4,x2:X(m),y2:y+RH+4,stroke:'var(--isr)','stroke-width':1.2,'stroke-dasharray':'2 3'});
+    // on segments
+    const cs=TK.ev.ch[i];let on=false,prev=0;
+    const draw=(a,b)=>{const x1=X(Math.max(a,ws)),x2=X(Math.min(b,we,T));if(x2>x1)o+=rect(x1,y+4,x2-x1,RH-8,col,{rx:3});};
+    for(const c of cs){if(c.t>T)break;if(on)draw(prev,c.t);on=!on;prev=c.t;}
+    if(on)draw(prev,T);
+    cs.forEach(c=>{
+      if(c.t>T||c.t<ws||c.t>we)return;
+      o+=svgEl('line',{x1:X(c.t),y1:y,x2:X(c.t),y2:y+RH,stroke:'var(--ink)','stroke-width':1.6});
+      const late=c.t-c.ideal;
+      if(late>0.5&&c.ideal>=ws){
+        o+=svgEl('line',{x1:X(c.ideal),y1:y+RH+2,x2:X(c.t),y2:y+RH+2,stroke:'var(--bad)','stroke-width':3});
+        if(late>=25)o+=txt(X(c.t)+3,y+RH+1,'+'+num(late,0)+' ms',{'font-size':10.5,'font-weight':600,fill:'var(--bad)'});
+      }
+    });
+  });
+  // CPU row
+  o+=txt(10,cY+16,t('tk_r_cpu'),{'font-weight':600});
+  TK.ev.cpu.forEach(c=>{
+    const a=Math.max(c.a,ws),b=Math.min(c.b,we,T);if(b<=a)return;
+    const col=c.k==='loop'?'var(--work)':c.k==='lcd'?'var(--ta)':'var(--idle)';
+    o+=rect(X(a),cY,X(b)-X(a),CH,col,{opacity:c.k==='loop'?.55:1});
+    if(c.k==='delay'&&X(b)-X(a)>70)o+=txt((X(a)+X(b))/2,cY+16,`delay(${TK_P[c.i]})`,{'text-anchor':'middle','font-size':11,class:'m',fill:'var(--ink)'});
+  });
+  if(TK.how==='timer')for(let m=Math.ceil(Math.max(ws,1)/100)*100;m<=Math.min(we,T);m+=100)o+=rect(X(m)-1.5,cY-3,3,CH+6,'var(--isr)');
+  o+=svgEl('line',{x1:X(T),y1:20,x2:X(T),y2:aY,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+  $('tkSvg').innerHTML=o;
+  let lg=legendItem('',t('tk_lg_ideal'),'border-left:2px dashed var(--isr);border-radius:0;width:2px')+legendItem('var(--ink)',t('tk_lg_change'))+legendItem('var(--bad)',t('tk_lg_late'))+
+    legendItem('var(--work)',t('tk_lg_loop'))+legendItem('var(--ta)',t('tk_lg_lcd'));
+  if(TK.how==='delay')lg+=legendItem('var(--idle)',t('tk_lg_delay'));
+  if(TK.how==='timer')lg+=legendItem('var(--isr)',t('tk_lg_isr'));
+  $('tkLegend').innerHTML=lg;
+}
+function tkStats(T){
+  let h=`<tr><th>LED</th><th>${esc(t('tk_th_want'))}</th><th>${esc(t('tk_th_n'))}</th><th>${esc(t('tk_th_iv'))}</th><th>${esc(t('tk_th_late'))}</th></tr>`;
+  [0,1,2].forEach(i=>{
+    const cs=TK.ev.ch[i].filter(c=>c.t<=T+1e-9);
+    const iv=[];let prev=0;cs.forEach(c=>{iv.push(c.t-prev);prev=c.t;});
+    const mx=cs.reduce((m,c)=>Math.max(m,c.t-c.ideal),0);
+    const ivs=iv.length?(Math.max(...iv)-Math.min(...iv)<0.5?num(iv[0],0)+' ms':t('tk_range',num(Math.min(...iv),0),num(Math.max(...iv),0))):'-';
+    const good=mx<0.5;
+    h+=`<tr><td><b>LED ${i+1}</b></td><td class="mono">${TK_P[i]} ms</td><td class="mono">${cs.length}</td><td class="mono">${esc(ivs)}</td><td class="mono ${cs.length?(good?'ok-t':'bad-t'):''}">${cs.length?esc(num(mx,1)+' ms'):'-'}</td></tr>`;
+  });
+  $('tkStats').innerHTML=h;
+}
+function tkCode(){
+  let L;
+  const lcd=TK.lcd;
+  if(TK.how==='timer')L=[['void IRAM_ATTR onTick() {        // '+t('tk_c_every'),''],['  ticks++;',''],
+    ['  if (ticks % 3 == 0) toggle(LED1);',''],['  if (ticks % 5 == 0) toggle(LED2);',''],['  if (ticks % 7 == 0) toggle(LED3);',''],['}',''],['',''],
+    ['void loop() {',''],[lcd?'  showOnLcd();                     // '+t('tk_c_lcd'):'  // '+t('tk_c_empty'),''],['}','']];
+  else if(TK.how==='millis')L=[['void loop() {',''],['  if (millis() - last1 >= 300) { last1 += 300; toggle(LED1); }',''],
+    ['  if (millis() - last2 >= 500) { last2 += 500; toggle(LED2); }',''],['  if (millis() - last3 >= 700) { last3 += 700; toggle(LED3); }',''],
+    [lcd?'  showOnLcd();                     // '+t('tk_c_lcd'):'',lcd?'':'dim'],['}','']];
+  else L=[['void loop() {',''],['  delay(300);  toggle(LED1);',''],['  delay(500);  toggle(LED2);',''],['  delay(700);  toggle(LED3);',''],
+    [lcd?'  showOnLcd();                     // '+t('tk_c_lcd'):'',lcd?'':'dim'],['}','']];
+  $('tkCode').innerHTML=codeLines(L.filter(x=>x[0]!==''||x[1]!=='dim'));
+}
+function tkAll(){tkBuild();tkCode();segSync($('tkHow'),TK.how);$('tkLcd').checked=TK.lcd;S.tick.go(S.tick.i);}
+function tkInit(){
+  S.tick=Stepper(document.querySelector('[data-ctrl="tick"]'),()=>TK_N,tkRender,550,i=>TK.how==='timer'?t('tk_lbl',i,secs(i*100)):secs(i*100));
+  const row=document.querySelector('[data-ctrl="tick"] .row');
+  row.insertAdjacentHTML('beforeend','<button data-a="m10">−10</button><button data-a="p10">+10</button>');
+  row.querySelector('[data-a="m10"]').onclick=()=>{S.tick.stop();S.tick.go(S.tick.i-10);};
+  row.querySelector('[data-a="p10"]').onclick=()=>{S.tick.stop();S.tick.go(S.tick.i+10);};
+  segInit($('tkHow'),v=>{TK.how=v;tkAll();});
+  $('tkLcd').addEventListener('change',e=>{TK.lcd=e.target.checked;tkAll();});
+  tkBuild();
+}
+
+/* =====================================================================
+   4. Kwant czasu / time slice
+   ===================================================================== */
+const SL_OPTS=[1,5,10,50,100,250,500],SL_DUR=3000;
+const SL={slice:1,t:0,playing:false,lastTs:0,raf:0,presses:[],zoom:false,bar:null};
+const slOwner=ms=>['A','B','C'][Math.floor(ms/SL.slice)%3];
+function slCompute(T){
+  let led=false,cnt=0,due=false,next=100;
+  const tog=[],cntS=[],seen=SL.presses.map(p=>({p,seen:null}));
+  const n=Math.floor(T);
+  for(let ms=0;ms<n;ms++){
+    const o=slOwner(ms);
+    while(ms>=next){due=true;next+=100;}
+    if(o==='A'&&due){led=!led;tog.push(ms);due=false;}
+    if(o==='B')cnt++;
+    if(o==='C')seen.forEach(s=>{if(s.seen===null&&s.p<=ms)s.seen=ms;});
+    if(ms%10===0)cntS.push([ms,cnt]);
+  }
+  cntS.push([n,cnt]);
+  return {led,tog,cnt,cntS,seen};
+}
+function slSegs(a,b){
+  const out=[];let ms=a;
+  while(ms<b){const o=slOwner(ms);const end=Math.min(b,(Math.floor(ms/SL.slice)+1)*SL.slice);out.push({o,a:ms,b:end});ms=end;}
+  return out;
+}
+function slRender(){
+  const T=SL.t,C=slCompute(T);
+  // zoom: the first 12 ms
+  {
+    const X0=150,W=830/12;let o='';
+    o+=txt(10,30,t('sl_zoom'),{'font-weight':600});
+    o+=txt(10,47,t('sl_zoom_s'),{'font-size':11.5,fill:'var(--muted)'});
+    for(let ms=0;ms<12;ms++){
+      const x=X0+ms*W,ow=slOwner(ms),show=SL.zoom;
+      o+=rect(x+1,14,W-2,40,show?TASKC[ow]:'var(--sunken)',{rx:4,stroke:show?'none':'var(--rule)','stroke-dasharray':'3 3'});
+      o+=txt(x+W/2,40,show?ow:'?',{'text-anchor':'middle','font-size':16,'font-weight':600,fill:show?'var(--on-color)':'var(--muted)'});
+    }
+    for(let ms=0;ms<=12;ms++)o+=txt(X0+ms*W,72,ms+' ms',{'text-anchor':'middle','font-size':11,fill:'var(--muted)'});
+    if(!SL.zoom)o+=`<g style="cursor:pointer" id="slReveal">${rect(X0+830/2-90,66,180,26,'var(--ink)',{rx:6})}${txt(X0+830/2,84,t('sl_reveal'),{'text-anchor':'middle','font-size':13,'font-weight':600,fill:'var(--surface)'})}</g>`;
+    $('slZoom').innerHTML=o;
+    const rv=$('slReveal');if(rv)rv.addEventListener('click',()=>{SL.zoom=true;slRender();});
+  }
+  // the core over 3 s
+  {
+    const X0=150,k=830/SL_DUR,X=ms=>X0+ms*k;let o='';
+    o+=txt(10,28,t('sl_core'),{'font-weight':600});
+    o+=txt(10,45,t('sl_core_s'),{'font-size':11.5,fill:'var(--muted)'});
+    o+=rect(X0,12,830,36,'var(--sunken)');
+    slSegs(0,Math.floor(T)).forEach(s=>{o+=rect(X(s.a),12,Math.max(X(s.b)-X(s.a),0.6),36,TASKC[s.o]);if(X(s.b)-X(s.a)>16)o+=txt((X(s.a)+X(s.b))/2,35,s.o,{'text-anchor':'middle','font-weight':600,fill:'var(--on-color)'});});
+    for(let s=0;s<=3;s++)o+=txt(X(s*1000),68,s+' s',{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
+    o+=svgEl('line',{x1:X(T),y1:6,x2:X(T),y2:54,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+    $('slCore').innerHTML=o;
+  }
+  const st=(k,v)=>`<div class="stat"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  $('slStats').innerHTML=st('sl_s_slice',SL.slice+' ms')+st('sl_s_per',num(1000/SL.slice,1))+st('sl_s_done',num(Math.floor(T/SL.slice),0))+st('sl_s_now',T>0&&T<SL_DUR?slOwner(Math.floor(T)):'-');
+  // how it looks to us
+  const now=T>0&&T<SL_DUR?slOwner(Math.floor(T)):null;
+  ['A','B','C'].forEach(k=>{$('slSt'+k).innerHTML=now?pill(now===k?'run':'ready'):'';});
+  $('slLed').classList.toggle('on',C.led);
+  $('slCnt').textContent=num(C.cnt,0);
+  const lp=C.seen.length?C.seen[C.seen.length-1]:null;
+  $('slSeen').innerHTML=!lp?esc(t('sl_press_hint')):lp.seen===null?`<b>${esc(t('sl_wait'))}</b>`:esc(t('sl_seen',num(lp.seen-lp.p,0)));
+  {
+    const X0=150,k=830/SL_DUR,X=ms=>X0+ms*k;let o='';
+    const yL=10,yB=58,yC=106,H=30;
+    o+=txt(10,yL+19,t('sl_r_led'),{'font-weight':600});
+    o+=txt(10,yB+19,t('sl_r_cnt'),{'font-weight':600});
+    o+=txt(10,yC+19,t('sl_r_btn'),{'font-weight':600});
+    [yL,yB,yC].forEach(y=>{o+=rect(X0,y,830,H,'var(--sunken)');});
+    let on=false,prev=0;
+    C.tog.forEach(ms=>{if(on)o+=rect(X(prev),yL+4,X(ms)-X(prev),H-8,'var(--led1)',{rx:2});on=!on;prev=ms;});
+    if(on)o+=rect(X(prev),yL+4,X(T)-X(prev),H-8,'var(--led1)',{rx:2});
+    const maxC=SL_DUR/3;
+    o+=svgEl('polyline',{points:C.cntS.map(([ms,c])=>`${X(ms).toFixed(1)},${(yB+H-2-(H-4)*Math.min(1,c/maxC)).toFixed(1)}`).join(' '),fill:'none',stroke:'var(--tb)','stroke-width':2});
+    slSegs(0,Math.floor(T)).filter(s=>s.o==='C').forEach(s=>{o+=rect(X(s.a),yC+4,Math.max(X(s.b)-X(s.a),0.6),H-8,'var(--tc)',{opacity:.75});});
+    C.seen.forEach(s=>{
+      if(s.p>T)return;
+      o+=svgEl('circle',{cx:X(s.p),cy:yC+H/2,r:5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':2});
+      if(s.seen!==null){o+=svgEl('line',{x1:X(s.p),y1:yC+H/2,x2:X(s.seen),y2:yC+H/2,stroke:'var(--bad)','stroke-width':2.5});o+=svgEl('circle',{cx:X(s.seen),cy:yC+H/2,r:5,fill:'var(--ok)'});}
+    });
+    o+=svgEl('line',{x1:X(T),y1:4,x2:X(T),y2:yC+H+4,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+    $('slUs').innerHTML=o;
+  }
+  let e;
+  if(T===0)e=[t('sl_x0_t'),t('sl_x0')];
+  else if(SL.slice<=10)e=[t('sl_x_short_t'),t('sl_x_short',SL.slice)];
+  else e=[t('sl_x_long_t'),t('sl_x_long',SL.slice,SL.slice*2)];
+  $('slExpl').innerHTML=explHTML(e[0],e[1],'');
+  SL.bar.sync(SL.playing,T===0?'a_start':'a_play',fix(T/1000,2)+' / 3 s',T>=SL_DUR);
+  segSync($('slSlice'),SL.slice);
+}
+function slTick(ts){
+  if(!SL.playing)return;
+  const dt=SL.lastTs?Math.min(100,ts-SL.lastTs):0;SL.lastTs=ts;
+  SL.t=Math.min(SL_DUR,SL.t+dt);
+  if(SL.t>=SL_DUR)SL.playing=false;
+  slRender();
+  if(SL.playing)SL.raf=requestAnimationFrame(slTick);
+}
+function slPlay(){if(SL.t>=SL_DUR)return;SL.playing=true;SL.lastTs=0;cancelAnimationFrame(SL.raf);SL.raf=requestAnimationFrame(slTick);slRender();}
+function slPause(){SL.playing=false;cancelAnimationFrame(SL.raf);slRender();}
+function slReset(){slPause();SL.t=0;SL.presses=[];slRender();}
+function slInit(){
+  $('slSlice').innerHTML=SL_OPTS.map(v=>`<button data-v="${v}">${v} ms</button>`).join('');
+  segInit($('slSlice'),v=>{SL.slice=+v;slReset();});
+  SL.bar=RunBar(document.querySelector('[data-ctrl="slice"]'),'sl_keys');
+  SL.bar.on('play',()=>SL.playing?slPause():slPlay());
+  SL.bar.on('reset',slReset);
+  $('slBtn').addEventListener('click',()=>{if(SL.t>=SL_DUR)return;if(!SL.playing)slPlay();SL.presses.push(SL.t);slRender();});
+}
+
+/* =====================================================================
+   5. Przełączanie kontekstu / context switch
+   ===================================================================== */
+const CX={fr:false};
+const CX_CPU=[
+  {run:'A',pc:0x0210,t0:7,t1:3,sp:0x2000,mepc:null},
+  {run:'S',pc:null,t0:7,t1:3,sp:0x2000,mepc:0x0210},
+  {run:'S',pc:null,t0:7,t1:3,sp:0x1FF4,mepc:0x0210},
+  {run:'S',pc:null,t0:7,t1:3,sp:0x1FF4,mepc:0x0210},
+  {run:'B',pc:0x0308,t0:42,t1:9,sp:0x3000,mepc:0x0308}];
+const CX_SAVE=['addi sp, sp, -CONTEXT_SIZE  # 12 = 3 × 4 bytes','sw   t0, 1*4(sp)            # save registers','sw   t1, 2*4(sp)','csrr t0, mepc                # where it stopped','sw   t0, 0(sp)               # save the PC','lw   t0, pxCurrentTCB        # its TCB','sw   sp, 0(t0)               # pxTopOfStack = sp'];
+const CX_PICK=['call vTaskSwitchContext      # pxCurrentTCB = the TCB of the next task'];
+const CX_REST=['lw   t0, pxCurrentTCB        # the new TCB','lw   sp, 0(t0)               # sp = pxTopOfStack','lw   t0, 0(sp)               # its saved PC','csrw mepc, t0','lw   t0, 1*4(sp)             # restore registers','lw   t1, 2*4(sp)','addi sp, sp, CONTEXT_SIZE','mret                         # continue the task'];
+function cxRender(){
+  const i=S.ctx.i,c=CX_CPU[i],fr=CX.fr;
+  const t0v=fr&&(i===2||i===3)?0x4000:c.t0;
+  // highlight maps
+  const H={};
+  if(i===1){H.mepc='chg';H.pc='chg';}
+  if(i===2){H.pc='rd';H.t0=fr?'chg':'rd';H.t1='rd';H.sp='chg';H.mepc='rd';}
+  if(i===4){H.pc='chg';H.t0='chg';H.t1='chg';H.sp='chg';H.mepc='chg';}
+  const reg=(k,n,v)=>`<div class="reg ${H[k]||''}"><span>${n}</span><b>${esc(v)}</b></div>`;
+  const runName=c.run==='S'?t('cx_sched'):t('cx_task',c.run);
+  $('cxCpuH').innerHTML=esc(t('cx_cpu'))+' · '+`<span style="color:${c.run==='A'?'var(--ta)':c.run==='B'?'var(--tb)':'var(--sched)'}">${esc(runName)}</span>`;
+  const sv=v=>v===null?'-':hexN(v);
+  $('cxCpu').innerHTML=reg('pc','PC',c.pc===null?t('cx_sched_pc'):hexN(c.pc))+reg('t0','t0',fr&&(i===2||i===3)?hexN(t0v)+'  (TCB A)':String(t0v))+reg('t1','t1',String(c.t1))+reg('sp','sp',hexN(c.sp))+
+    reg('mepc',fr?'mepc':t('cx_savedpc')+' (mepc)',sv(c.mepc));
+  // stacks
+  const cell=(ad,v,cls,tag)=>`<div class="cell"><span class="ad">${hexN(ad)}</span><span class="v ${cls}">${esc(v)}</span><span class="tp">${tag||''}</span></div>`;
+  const topA=i>=2?0x1FF4:0x2000,topB=i>=4?0x3000:0x2FF4;
+  const tg=(who,ad,top)=>ad===top?`<span style="color:${who==='A'?'var(--ta)':'var(--tb)'}">← ${esc(t('cx_top'))}</span>`:'';
+  let sa='<div class="mem">';
+  [[0x1FF4,'PC',0x0210],[0x1FF8,'t0',7],[0x1FFC,'t1',3]].forEach(([ad,n,v])=>{
+    const has=i>=2;sa+=cell(ad,has?`${n} = ${n==='PC'?hexN(v):v}`:'',has?'a'+(i===2?' chg':''):'empty',tg('A',ad,topA));});
+  sa+=cell(0x2000,t('cx_data','A'),'a',tg('A',0x2000,topA))+'</div>';
+  let sb='<div class="mem">';
+  [[0x2FF4,'PC',0x0308],[0x2FF8,'t0',42],[0x2FFC,'t1',9]].forEach(([ad,n,v])=>{
+    sb+=cell(ad,`${n} = ${n==='PC'?hexN(v):v}`,'b'+(i===4?' rd':''),tg('B',ad,topB));});
+  sb+=cell(0x3000,t('cx_data','B'),'b',tg('B',0x3000,topB))+'</div>';
+  $('cxStacks').innerHTML=`<h3 style="color:var(--ta);font-size:13px">${esc(t('cx_stack','A'))}</h3>${sa}<h3 style="color:var(--tb);font-size:13px;margin-top:12px">${esc(t('cx_stack','B'))}</h3>${sb}`;
+  // table / TCBs
+  const spA=i>=2?hexN(0x1FF4):'-';
+  if(!fr){
+    $('cxTblH').textContent=t('cx_tbl');
+    $('cxTbl').innerHTML=`<div class="regs" style="grid-template-columns:minmax(0,1fr)">
+      <div class="reg ${i===2?'chg':''} ${i===3?'':''}"><span style="color:var(--ta)">${esc(t('cx_task','A'))}</span><b>${spA}</b></div>
+      <div class="reg ${i===3?'sel':i===4?'rd':''}"><span style="color:var(--tb)">${esc(t('cx_task','B'))}</span><b>${hexN(0x2FF4)}</b></div></div>
+      <p class="note">${esc(i>=3?t('cx_next_b'):t('cx_next_q'))}</p>`;
+  }else{
+    $('cxTblH').textContent=t('cx_tcbs');
+    const cur=i>=3?'B':'A';
+    $('cxTbl').innerHTML=`<div class="regs" style="grid-template-columns:minmax(0,1fr)">
+      <div class="reg ${i===3?'chg':''}"><span>pxCurrentTCB</span><b>${hexN(cur==='A'?0x4000:0x4100)} → TCB ${cur}</b></div>
+      <div class="reg ${i===2?'chg':''}"><span style="color:var(--ta)">TCB A  [0x4000] · pxTopOfStack</span><b>${spA}</b></div>
+      <div class="reg ${i===4?'rd':''}"><span style="color:var(--tb)">TCB B  [0x4100] · pxTopOfStack</span><b>${hexN(0x2FF4)}</b></div></div>
+      <p class="note">${esc(t('cx_tcb_note'))}</p>`;
+  }
+  $('cxLegend').innerHTML=legendItem('',t('cx_lg_rd'),'border:2px solid var(--rd)')+legendItem('',t('cx_lg_wr'),'border:2px solid var(--wr)')+
+    legendItem('var(--ta)',t('cx_task','A'))+legendItem('var(--tb)',t('cx_task','B'));
+  // assembly
+  $('cxAsmP').hidden=!fr;
+  const mark=(arr,on,key)=>arr.map(s=>[s,on?(s.startsWith(key)?'act k':'act'):'']);
+  $('cxAsm1').innerHTML=codeLines(mark(CX_SAVE,i===2,'sw   sp'));
+  $('cxAsm2').innerHTML=codeLines(mark(CX_PICK,i===3,'call'));
+  $('cxAsm3').innerHTML=codeLines(mark(CX_REST,i===4,'lw   sp'));
+  // explanation
+  const k=fr?'fr':'s';
+  $('cxExpl').innerHTML=explHTML(t('cx_t'+i),t('cx_'+k+i),i||'',i<4?t('cx_q_'+k+(i+1)):t('cx_q_end'));
+}
+function cxInit(){
+  S.ctx=Stepper(document.querySelector('[data-ctrl="ctx"]'),()=>5,cxRender,1600);
+  $('cxFr').addEventListener('change',e=>{CX.fr=e.target.checked;S.ctx.reset();});
+}
+
+/* =====================================================================
+   6. Stany i priorytety / states and priorities
+   ===================================================================== */
+const ST={scn:'c',presses:[],sim:null};
+const ST_MS=16,ST_U=ST_MS*2;
+function stSim(){
+  const D=(ST.scn==='all'?[['C',4],['A',16],['B',16],['C',16]]:[['C',4]]).map(([task,at])=>({task,at,done:false}));
+  const PR=new Set(ST.presses.concat(ST.scn==='h'?[15]:[]));
+  const st={A:'ready',B:'ready',C:'ready',H:'blk'};
+  const until={},q=['A','B','C'];let cur=null,hLeft=0;
+  const tl=[];
+  for(let u=0;u<ST_U;u++){
+    const ev=[];
+    ['A','B','C'].forEach(k=>{if(st[k]==='blk'&&until[k]===u){st[k]='ready';q.push(k);ev.push({k:'wake',task:k});}});
+    if(PR.has(u)&&st.H==='blk'){st.H='ready';hLeft=2;ev.push({k:'press'});}
+    if(u%2===0&&cur&&cur!=='H'&&cur!=='IDLE'){st[cur]='ready';q.push(cur);cur=null;}
+    if(cur==='IDLE')cur=null;
+    if(st.H==='ready'&&cur!=='H'){
+      if(cur){st[cur]='ready';q.unshift(cur);ev.push({k:'preempt',task:cur});}
+      cur='H';st.H='run';
+    }
+    while(!cur){
+      if(!q.length){cur='IDLE';break;}
+      const k=q.shift();
+      const d=D.find(d=>!d.done&&d.task===k&&d.at<=u);
+      if(d){d.done=true;st[k]='blk';until[k]=u+6;ev.push({k:'delay',task:k,until:u+6});continue;}
+      cur=k;st[k]='run';
+    }
+    const snap={run:cur,st:Object.assign({},st),ev,q:q.slice(),until:Object.assign({},until)};
+    tl.push(snap);
+    if(cur==='H'){hLeft--;if(hLeft<=0){st.H='blk';cur=null;ev.push({k:'hdone'});}}
+  }
+  ST.sim=tl;
+}
+const stMs=u=>num(u/2,1)+' ms';
+function stEvText(e,u){
+  if(e.k==='wake')return t('st_e_wake',e.task,stMs(u));
+  if(e.k==='press')return t('st_e_press',stMs(u));
+  if(e.k==='preempt')return t('st_e_preempt',e.task);
+  if(e.k==='delay')return t('st_e_delay',e.task,stMs(u),stMs(e.until));
+  if(e.k==='hdone')return t('st_e_hdone',stMs(u+1));
+  return '';
+}
+function stRender(){
+  const T=S.states.i,U=T*2,tl=ST.sim;
+  const X0=140,W=845/ST_U,X=u=>X0+u*W;
+  const rows=[['H',22],['A',72],['B',122],['C',172],['IDLE',222]],RH=34;
+  let o=`<defs>${HATCH('stH')}</defs>`;
+  rows.forEach(([k,y])=>{
+    o+=txt(10,y+15,k==='IDLE'?'IDLE':t('cx_task',k),{'font-weight':600,fill:TASKC[k]==='var(--idle)'?'var(--muted)':TASKC[k]});
+    o+=txt(10,y+30,k==='H'?t('st_prio',2):k==='IDLE'?t('st_prio',0):t('st_prio',1),{'font-size':11.5,fill:'var(--muted)'});
+    o+=rect(X0,y,845,RH,'var(--sunken)',{opacity:.6});
+  });
+  for(let u=0;u<U;u++){
+    const s=tl[u];
+    rows.forEach(([k,y])=>{
+      if(k==='IDLE'){if(s.run==='IDLE')o+=rect(X(u)+.5,y+2,W-1,RH-4,'var(--idle)',{rx:2});return;}
+      const v=s.run===k?'run':s.st[k];
+      if(v==='run')o+=rect(X(u)+.5,y+2,W-1,RH-4,TASKC[k],{rx:2});
+      else if(v==='ready')o+=rect(X(u)+.5,y+9,W-1,RH-18,'var(--ready-bg)',{stroke:'var(--ready)','stroke-width':1});
+      else o+=rect(X(u)+.5,y+9,W-1,RH-18,'url(#stH)');
+    });
+    s.ev.forEach(e=>{
+      if(e.k==='press')o+=svgEl('path',{d:`M${X(u)},${22-2} l-5,-10 h10 z`,fill:'var(--th)'});
+      if(e.k==='delay'){const y=rows.find(r=>r[0]===e.task)[1];o+=txt(X(u)+3,y-3,'vTaskDelay(3)',{'font-size':10.5,class:'m',fill:'var(--muted)'});}
+    });
+  }
+  for(let m=0;m<=ST_MS;m++){
+    o+=svgEl('line',{x1:X(m*2),y1:16,x2:X(m*2),y2:262,stroke:'var(--rule)','stroke-dasharray':'2 3'});
+    o+=txt(X(m*2),280,m+(m===ST_MS?' ms':''),{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
+  }
+  o+=txt(X0,296,t('st_axis'),{'font-size':11,fill:'var(--muted)'});
+  o+=svgEl('line',{x1:X(U),y1:10,x2:X(U),y2:266,stroke:'var(--ink)','stroke-width':1.6,'stroke-dasharray':'3 3'});
+  $('stSvg').innerHTML=o;
+  $('stLegend').innerHTML=legendItem('var(--ta)',t('st_lg_run'))+legendItem('',t('st_lg_ready'),'background:var(--ready-bg);border:1px solid var(--ready)')+
+    legendItem('',t('st_lg_blk'),'background:repeating-linear-gradient(45deg,var(--blk) 0 2px,var(--blk-bg) 2px 5px)')+legendItem('var(--idle)',t('st_lg_idle'))+legendItem('var(--th)',t('st_lg_press'));
+  // explanation of the last ms
+  let title,text;
+  if(T===0){title=t('st_x0_t');text=t('st_x0');}
+  else{
+    const a=tl[U-2],b=tl[U-1];
+    const who=a.run===b.run?t('st_ran1',a.run==='IDLE'?'IDLE':a.run):t('st_ran2',a.run,b.run);
+    const evs=[];[U-2,U-1].forEach(u=>tl[u].ev.forEach(e=>evs.push(stEvText(e,u))));
+    title=t('st_x_t',T-1,T);
+    text=who+(evs.length?' '+evs.join(' '):'');
+    if(a.run==='IDLE'||b.run==='IDLE')text+=' '+t('st_x_idle');
+  }
+  $('stExpl').innerHTML=explHTML(title,text,T||'');
+  // lists
+  const s=T===0?{run:null,st:{A:'ready',B:'ready',C:'ready',H:'blk'},q:['A','B','C'],until:{}}:tl[U-1];
+  const tk=k=>`<span class="chip" style="--c:${TASKC[k]}">${k}</span>`;
+  const run=T===0?'-':s.run;
+  const rdy2=s.st.H==='ready'?[tk('H')]:[];
+  const rdy1=['A','B','C'].filter(k=>s.st[k]==='ready'&&k!==s.run);
+  const blk=['H','A','B','C'].filter(k=>s.st[k]==='blk');
+  const row=(lbl,content)=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)"><span style="min-width:150px;font-size:13px;color:var(--muted)">${esc(lbl)}</span><div class="chips">${content||`<span class="note" style="margin:0">${esc(t('st_empty'))}</span>`}</div></div>`;
+  $('stLists').innerHTML=row(t('st_l_run'),run==='-'?'':run==='IDLE'?`<span class="chip" style="--c:var(--idle)">IDLE</span>`:tk(run))+
+    row(t('st_l_r2'),rdy2.join(''))+row(t('st_l_r1'),rdy1.map(tk).join(''))+
+    row(t('st_l_blk'),blk.map(k=>tk(k)+`<span class="note" style="margin:0 6px 0 0">${esc(k==='H'?t('st_w_btn'):t('st_w_until',stMs(s.until[k])))}</span>`).join(''));
+  // CPU usage
+  const cnt={H:0,A:0,B:0,C:0,IDLE:0};for(let u=0;u<U;u++)cnt[tl[u].run]++;
+  $('stBar').innerHTML=U?Object.keys(cnt).filter(k=>cnt[k]).map(k=>`<i style="width:${cnt[k]/U*100}%;background:${TASKC[k]}" title="${k}"></i>`).join(''):'';
+  $('stBarLegend').innerHTML=U?Object.keys(cnt).map(k=>legendItem(TASKC[k],`${k}: ${pct(cnt[k]/U*100)}`)).join(''):esc(t('st_cpu_empty'));
+  $('stPress').disabled=T>=ST_MS;
+  segSync($('stScn'),ST.scn);
+}
+function stCode(){
+  $('stCode').innerHTML=codeLines([
+    ['xTaskCreate(taskA, "A", 2048, NULL, 1, NULL);   // '+t('st_c_p1'),''],['xTaskCreate(taskB, "B", 2048, NULL, 1, NULL);',''],['xTaskCreate(taskC, "C", 2048, NULL, 1, NULL);',''],
+    ['xTaskCreate(taskH, "H", 2048, NULL, 2, NULL);   // '+t('st_c_p2'),''],['',''],
+    ['void taskC(void *p) {',''],['  // ... '+t('st_c_at2'),''],['  vTaskDelay(pdMS_TO_TICKS(3));                  // '+t('st_c_blk'),''],['}',''],
+    ['void taskH(void *p) {',''],['  for (;;) {',''],['    waitForButton();                             // '+t('st_c_wait'),''],['    handleButton();                              // '+t('st_c_work'),''],['  }',''],['}','']]);
+}
+function stInit(){
+  S.states=Stepper(document.querySelector('[data-ctrl="states"]'),()=>ST_MS+1,stRender,900,i=>i+' / '+ST_MS+' ms');
+  segInit($('stScn'),v=>{ST.scn=v;ST.presses=[];stSim();S.states.reset();});
+  $('stPress').addEventListener('click',()=>{const T=S.states.i;if(T>=ST_MS)return;const u=T*2+1;if(!ST.presses.includes(u))ST.presses.push(u);stSim();S.states.stop();S.states.go(T+1);});
+  stSim();
+}
+
+/* =====================================================================
+   7. Wspólny licznik / shared counter
+   ===================================================================== */
+const SC={runs:[],cur:null,shown:0,playing:false,raf:0,start:0,bar:null};
+// time slices in micro-steps (one counter++ = 3); chosen so that most runs give 6 and some give 4 or 5
+const SC_SLICES=[3,3,6,6,7,8];
+function scGen(){
+  const r=Math.random;
+  const tk=[{n:0,ph:0,reg:0},{n:0,ph:0,reg:0}];
+  let counter=0,u=0,who=r()<.5?0:1;const segs=[],plus=[],sw=[];
+  while(tk[0].n<3||tk[1].n<3){
+    if(tk[who].n>=3)who=1-who;
+    const len=SC_SLICES[Math.floor(r()*SC_SLICES.length)],a=u;
+    for(let k=0;k<len&&tk[who].n<3;k++){
+      const s=tk[who];
+      if(s.ph===0){s.reg=counter;s.ph=1;}
+      else if(s.ph===1){s.reg++;s.ph=2;}
+      else{counter=s.reg;s.ph=0;s.n++;plus.push({task:who,u:u+1});}
+      u++;
+    }
+    segs.push({task:who,a,b:u});
+    if((tk[0].n<3||tk[1].n<3)&&tk[1-who].n<3){sw.push(u);who=1-who;}
+  }
+  return {segs,plus,sw,final:counter,total:u};
+}
+function scRender(){
+  const R=SC.cur,sh=SC.shown;
+  const done=R&&sh>=R.total;
+  $('scVal').textContent=!R?'0':done?String(R.final):'…';
+  $('scVal').parentElement.style.borderColor=done?(R.final===6?'var(--ok)':'var(--bad)'):'';
+  const adds=R?R.plus.filter(p=>p.u<=sh).length:0;
+  const bad=SC.runs.filter(x=>x!==6).length;
+  const st=(k,v,cl)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  $('scStats').innerHTML=st('sc_s_adds',adds+' / 6')+st('sc_s_exp','6')+st('sc_s_runs',SC.runs.length)+st('sc_s_bad',bad,bad?'bad':'');
+  // timeline
+  let o='';const X0=130,W=850;
+  const rows=[[0,22],[1,82]],RH=36;
+  rows.forEach(([k,y])=>{o+=txt(10,y+15,t('sc_task',k+1),{'font-weight':600,fill:k?'var(--tb)':'var(--ta)'});o+=txt(10,y+30,t('sc_task_s'),{'font-size':11.5,fill:'var(--muted)'});o+=rect(X0,y,W,RH,'var(--sunken)',{opacity:.6});});
+  if(R){
+    const k=W/Math.max(R.total,1),X=u=>X0+u*k;
+    R.segs.forEach(s=>{
+      const a=s.a,b=Math.min(s.b,sh);if(b<=a)return;
+      const y=rows[s.task][1];
+      o+=rect(X(a)+1,y+3,X(b)-X(a)-2,RH-6,s.task?'var(--tb)':'var(--ta)',{rx:4,opacity:.85});
+    });
+    R.sw.forEach(u=>{if(u<=sh){o+=svgEl('line',{x1:X(u),y1:14,x2:X(u),y2:126,stroke:'var(--sched)','stroke-width':2,'stroke-dasharray':'4 3'});}});
+    R.plus.forEach(p=>{if(p.u<=sh){const y=rows[p.task][1];o+=txt(X(p.u)-4,y+RH/2+5,'+1',{'text-anchor':'end','font-size':13,'font-weight':700,fill:'var(--on-color)'});}});
+  }else o+=txt(X0+W/2,72,t('sc_empty'),{'text-anchor':'middle',fill:'var(--muted)'});
+  o+=txt(X0,146,t('sc_axis'),{'font-size':11,fill:'var(--muted)'});
+  $('scSvg').innerHTML=o;
+  $('scLegend').innerHTML=legendItem('var(--ta)',t('sc_lg_run',1))+legendItem('var(--tb)',t('sc_lg_run',2))+legendItem('',t('sc_lg_sw'),'border-left:2px dashed var(--sched);border-radius:0;width:2px')+legendItem('',t('sc_lg_plus'),'background:none');
+  let e;
+  if(!R)e=[t('sc_x0_t'),t('sc_x0')];
+  else if(!done)e=[t('sc_xr_t'),t('sc_xr')];
+  else if(R.final===6)e=[t('sc_xok_t'),t('sc_xok')];
+  else e=[t('sc_xbad_t',R.final),t('sc_xbad',R.final)];
+  $('scExpl').innerHTML=explHTML(e[0],e[1],'');
+  $('scExpl').classList.toggle('bad',!!(R&&done&&R.final!==6));
+  $('scExpl').classList.toggle('good',!!(R&&done&&R.final===6));
+  $('scHist').innerHTML=SC.runs.length?SC.runs.map((v,i)=>`<span class="chip" style="--c:${v===6?'var(--ok)':'var(--bad)'}">${t('sc_run',i+1)}: ${v}</span>`).join(''):`<span class="note" style="margin:0">${esc(t('sc_hist_empty'))}</span>`;
+  SC.bar.sync(SC.playing,'sc_run_btn','',SC.playing);
+}
+function scFrame(ts){
+  if(!SC.playing)return;
+  if(!SC.start)SC.start=ts;
+  SC.shown=Math.min(SC.cur.total,(ts-SC.start)/110);
+  if(SC.shown>=SC.cur.total){SC.playing=false;SC.runs.push(SC.cur.final);}
+  scRender();
+  if(SC.playing)SC.raf=requestAnimationFrame(scFrame);
+}
+function scRun(){if(SC.playing)return;SC.cur=scGen();SC.shown=0;SC.start=0;SC.playing=true;cancelAnimationFrame(SC.raf);SC.raf=requestAnimationFrame(scFrame);scRender();}
+function scStop(){if(SC.playing){SC.playing=false;cancelAnimationFrame(SC.raf);SC.shown=SC.cur.total;SC.runs.push(SC.cur.final);}}
+function scCode(){
+  $('scCode').innerHTML=codeLines([['volatile int counter = 0;',''],['',''],['void task(void *p) {               // '+t('sc_c_two'),''],
+    ['  for (int i = 0; i < 3; i++)',''],['    counter++;',''],['  vTaskDelete(NULL);',''],['}','']]);
+}
+function scInit(){
+  SC.bar=RunBar(document.querySelector('[data-ctrl="shared"]'),'sc_keys');
+  SC.bar.on('play',scRun);
+  SC.bar.on('reset',()=>{cancelAnimationFrame(SC.raf);SC.playing=false;SC.runs=[];SC.cur=null;SC.shown=0;scRender();});
+}
+
+/* =====================================================================
+   8-10. Wątki: wyścig, mutex, zakleszczenie / threads: race, mutex, deadlock
+   ===================================================================== */
+const THC={A:'var(--ta)',B:'var(--tb)'};
+const other=k=>k==='A'?'B':'A';
+function thrCard(k,lines,pc,state,regs,disabled,btnLabel,id){
+  const code=lines.map((s,j)=>`<span class="l ${j<pc?'seen':''} ${j===pc&&state!=='done'?(state==='blk'?'act p':'act'):''}"><span class="pcm">${j===pc&&state!=='done'?'→':''}</span>${codeHTML(s)}</span>`).join('');
+  return `<div class="thr ${state==='blk'?'blocked':''}" style="--c:${THC[k]}">
+    <div class="hd"><b>${esc(t('th_thread',k))}</b>${pill(state==='done'?'done':state==='blk'?'blk':'ready')}</div>
+    <pre class="code">${code}</pre>
+    ${regs?`<div class="regs" style="margin-top:8px">${regs}</div>`:''}
+    <button class="go" data-th="${k}" id="${id}" ${disabled?'disabled':''}>${esc(btnLabel)}</button></div>`;
+}
+function triedHTML(map,total,fmtRes){
+  const n=map.size;
+  let h=`<div class="stats" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))"><div class="stat"><span>${esc(t('rc_tried'))}</span><b>${total?esc(t('rc_k_of',n,total)):n}</b></div></div>`;
+  if(!n)return h+`<p class="note">${esc(t('rc_tried_empty'))}</p>`;
+  h+='<div class="tried">';
+  for(const [key,res] of map){
+    const chips=key.split(' ').map(x=>`<span class="chip${x.endsWith('*')?' x':''}" style="--c:${THC[x[0]]}">${esc(x.endsWith('*')?x[0]+' ✕':x)}</span>`).join('');
+    const r=fmtRes(res);
+    h+=`<div><span class="chips">${chips}</span><b class="${r.ok?'ok-t':'bad-t'}">${esc(r.s)}</b></div>`;
+  }
+  return h+'</div>';
+}
+const orderChips=o=>o.length?o.map(x=>`<span class="chip${x.endsWith('*')?' x':''}" style="--c:${THC[x[0]]}">${esc(x.endsWith('*')?x[0]+' ✕':x)}</span>`).join(''):`<span class="note" style="margin:0">${esc(t('rc_order_empty'))}</span>`;
+
+/* ---------- race step by step ---------- */
+const RC_INS=['lw   t0, counter','addi t0, t0, 1','sw   t0, counter'];
+const RC={pc:{A:0,B:0},t0:{A:null,B:null},counter:5,order:[],tried:new Map(),last:null};
+function rcReset(){RC.pc={A:0,B:0};RC.t0={A:null,B:null};RC.counter=5;RC.order=[];RC.last=null;rcRender();}
+function rcStep(k){
+  const i=RC.pc[k];if(i>=3)return;
+  const before=RC.counter;
+  if(i===0)RC.t0[k]=RC.counter;else if(i===1)RC.t0[k]++;else RC.counter=RC.t0[k];
+  RC.pc[k]++;RC.order.push(k);RC.last={k,i,before};
+  if(RC.pc.A===3&&RC.pc.B===3){const key=RC.order.join(' ');if(!RC.tried.has(key))RC.tried.set(key,RC.counter);}
+  rcRender();
+}
+function rcRender(){
+  const done=RC.pc.A===3&&RC.pc.B===3;
+  const card=k=>thrCard(k,RC_INS,RC.pc[k],RC.pc[k]>=3?'done':'ready',
+    `<div class="reg ${RC.last&&RC.last.k===k&&RC.last.i<2?'chg':''}"><span>t0 (${esc(t('th_own',k))})</span><b>${RC.t0[k]===null?'-':RC.t0[k]}</b></div>`,
+    RC.pc[k]>=3,t('th_run',k),'rcGo'+k);
+  const l=RC.last,flash=l&&l.i===0?'flash-r':l&&l.i===2?'flash-w':'';
+  let banner='';
+  if(done)banner=RC.counter===7?`<div class="banner ok">${esc(t('rc_ok'))}</div>`:`<div class="banner bad">${esc(t('rc_lost',RC.counter))}</div>`;
+  const mid=`<div class="mid"><div class="memcell ${flash}"><span>counter  [${esc(t('th_mem'))}]</span><b>${RC.counter}</b></div>
+    <div><h3 style="font-size:13px">${esc(t('rc_order'))}</h3><div class="chips">${orderChips(RC.order)}</div></div>${banner}</div>`;
+  $('rcThreads').innerHTML=card('A')+mid+card('B');
+  ['A','B'].forEach(k=>$('rcGo'+k).onclick=()=>rcStep(k));
+  let e;
+  if(!l)e=[t('rc_x0_t'),t('rc_x0'),t('rc_q')];
+  else{
+    const ins=RC_INS[l.i].replace(/\s+/g,' ');
+    const txts=[t('rc_e_lw',l.k,RC.t0[l.k]),t('rc_e_addi',l.k,RC.t0[l.k]),t('rc_e_sw',l.k,RC.counter,l.before)];
+    let s=txts[l.i];
+    if(l.i===2&&RC.pc[other(l.k)]>0&&RC.pc[other(l.k)]<3&&RC.t0[other(l.k)]!==null)s+=' '+t('rc_e_stale',other(l.k),RC.t0[other(l.k)]);
+    if(done)s+=' '+(RC.counter===7?t('rc_e_ok'):t('rc_e_lost'));
+    e=[`${l.k}: ${ins}`,s,done?t('rc_q_again'):''];
+  }
+  $('rcExpl').innerHTML=explHTML(e[0],e[1],'',e[2]);
+  $('rcExpl').classList.toggle('bad',done&&RC.counter!==7);$('rcExpl').classList.toggle('good',done&&RC.counter===7);
+  $('rcTried').innerHTML=triedHTML(RC.tried,20,v=>({ok:v===7,s:t('rc_res',v)}));
+}
+
+/* ---------- mutex ---------- */
+const MX_INS=['lock(m)','lw   t0, counter','addi t0, t0, 1','sw   t0, counter','unlock(m)'];
+const MX={};
+function mxReset(){Object.assign(MX,{pc:{A:0,B:0},t0:{A:null,B:null},st:{A:'ready',B:'ready'},owner:null,counter:5,order:[],last:null});if(!MX.tried)MX.tried=new Map();mxRender();}
+function mxStep(k){
+  const i=MX.pc[k],o=other(k);if(MX.st[k]==='blk'||i>=5)return;
+  let ev={k,i};
+  if(i===0){
+    if(MX.owner&&MX.owner!==k){MX.st[k]='blk';MX.order.push(k+'*');MX.last={k,i,blocked:true};mxRender();return;}
+    MX.owner=k;
+  }else if(i===1)MX.t0[k]=MX.counter;
+  else if(i===2)MX.t0[k]++;
+  else if(i===3)MX.counter=MX.t0[k];
+  else{MX.owner=null;if(MX.st[o]==='blk'){MX.owner=o;MX.st[o]='ready';MX.pc[o]=1;ev.hand=o;}}
+  MX.pc[k]++;MX.order.push(k);if(ev.hand)MX.order.push(ev.hand);
+  if(MX.pc[k]>=5)MX.st[k]='done';
+  MX.last=ev;
+  if(MX.pc.A>=5&&MX.pc.B>=5){const key=MX.order.filter(x=>!x.endsWith('*')).join(' ');if(!MX.tried.has(key))MX.tried.set(key,MX.counter);}
+  mxRender();
+}
+function mxRender(){
+  const done=MX.pc.A>=5&&MX.pc.B>=5;
+  const card=k=>thrCard(k,MX_INS,MX.pc[k],MX.st[k],
+    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>${MX.t0[k]===null?'-':MX.t0[k]}</b></div>`,
+    MX.st[k]!=='ready',MX.st[k]==='blk'?t('th_waits'):t('th_run',k),'mxGo'+k);
+  const own=MX.owner;
+  let banner='';
+  if(done)banner=`<div class="banner ok">${esc(t('mx_done',MX.counter))}</div>`;
+  const mid=`<div class="mid"><div class="memcell" style="border-color:${own?THC[own]:'var(--rule)'}"><span>🔒 mutex m</span><b style="font-size:18px">${esc(own?t('mx_held',own):t('mx_free'))}</b></div>
+    <div class="memcell"><span>counter  [${esc(t('th_mem'))}]</span><b>${MX.counter}</b></div>
+    <div><h3 style="font-size:13px">${esc(t('rc_order'))}</h3><div class="chips">${orderChips(MX.order)}</div></div>${banner}</div>`;
+  $('mxThreads').innerHTML=card('A')+mid+card('B');
+  ['A','B'].forEach(k=>$('mxGo'+k).onclick=()=>mxStep(k));
+  const l=MX.last;let e;
+  if(!l)e=[t('mx_x0_t'),t('mx_x0'),t('mx_q')];
+  else if(l.blocked)e=[`${l.k}: lock(m)`,t('mx_e_blk',l.k,other(l.k)),t('mx_q_blk')];
+  else{
+    const ins=MX_INS[l.i].replace(/\s+/g,' ');
+    const s=[t('mx_e_lock',l.k),t('rc_e_lw',l.k,MX.t0[l.k]),t('rc_e_addi',l.k,MX.t0[l.k]),t('mx_e_sw',l.k,MX.counter),l.hand?t('mx_e_hand',l.k,l.hand):t('mx_e_unlock',l.k)][l.i];
+    e=[`${l.k}: ${ins}`,s+(done?' '+t('mx_e_done'):''),''];
+  }
+  $('mxExpl').innerHTML=explHTML(e[0],e[1],'',e[2]);
+  $('mxExpl').classList.toggle('good',done);
+  $('mxTried').innerHTML=triedHTML(MX.tried,0,v=>({ok:v===7,s:t('rc_res',v)}));
+}
+
+/* ---------- deadlock ---------- */
+const DL={b:'YX'};
+const dlProg=k=>{
+  const A=[['lock','X'],['lock','Y'],['work'],['unlock','Y'],['unlock','X']];
+  if(k==='A'||DL.b==='XY')return A;
+  return [['lock','Y'],['lock','X'],['work'],['unlock','X'],['unlock','Y']];
+};
+const dlTxt=i=>i[0]==='work'?'work()':`${i[0]}(${i[1]})`;
+function dlReset(){Object.assign(DL,{pc:{A:0,B:0},st:{A:'ready',B:'ready'},held:{X:null,Y:null},wait:{A:null,B:null},steps:0,order:[],dead:false,last:null});if(!DL.tried)DL.tried=new Map();dlRender();}
+function dlStep(k){
+  if(DL.dead||DL.st[k]!=='ready')return;
+  const P=dlProg(k),ins=P[DL.pc[k]],o=other(k);
+  const ev={k,ins};
+  if(ins[0]==='lock'){
+    const m=ins[1];
+    if(DL.held[m]&&DL.held[m]!==k){
+      DL.st[k]='blk';DL.wait[k]=m;DL.order.push(k+'*');ev.blocked=true;
+      if(DL.wait[o]&&DL.held[DL.wait[o]]===k&&DL.held[m]===o)DL.dead=true;
+      DL.last=ev;
+      if(DL.dead){const key=DL.order.join(' ');if(!DL.tried.has(key))DL.tried.set(key,'dead');}
+      dlRender();return;
+    }
+    DL.held[m]=k;
+  }else if(ins[0]==='unlock'){
+    const m=ins[1];DL.held[m]=null;
+    if(DL.wait[o]===m){DL.held[m]=o;DL.wait[o]=null;DL.st[o]='ready';DL.pc[o]++;DL.steps++;ev.hand=o;}
+  }
+  DL.pc[k]++;DL.steps++;DL.order.push(k);if(ev.hand)DL.order.push(ev.hand);
+  ['A','B'].forEach(x=>{if(DL.pc[x]>=5)DL.st[x]='done';});
+  DL.last=ev;
+  if(DL.pc.A>=5&&DL.pc.B>=5){const key=DL.order.join(' ');if(!DL.tried.has(key))DL.tried.set(key,'ok');}
+  dlRender();
+}
+function dlGraph(){
+  const A=[48,110],B=[252,110],Xp=[150,36],Yp=[150,184];
+  let o=`<defs><marker id="dlArA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--ta)"/></marker>
+    <marker id="dlArB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--tb)"/></marker>
+    <marker id="dlArW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--bad)"/></marker></defs>`;
+  const pos={A,B,X:Xp,Y:Yp};
+  const edge=(from,to,col,mk,dash,label,side)=>{
+    const [x1,y1]=pos[from],[x2,y2]=pos[to];
+    // shorten to box borders
+    const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),ux=dx/L,uy=dy/L;
+    const s1=from==='A'||from==='B'?40:26,s2=to==='A'||to==='B'?40:26;
+    const ax=x1+ux*s1,ay=y1+uy*s1*0.7,bx=x2-ux*s2,by=y2-uy*s2*0.7;
+    const cx=(ax+bx)/2+uy*18*side,cy=(ay+by)/2-ux*18*side;
+    let p=svgEl('path',{d:`M${ax},${ay} Q${cx},${cy} ${bx},${by}`,fill:'none',stroke:col,'stroke-width':2.6,'stroke-dasharray':dash?'6 4':null,'marker-end':`url(#${mk})`});
+    p+=txt(cx+(cx<150?-4:4),cy+(cy<110?-2:12),label,{'text-anchor':cx<150?'end':'start','font-size':10.5,'font-weight':600,fill:col});
+    return p;
+  };
+  ['X','Y'].forEach(m=>{const h=DL.held[m];if(h)o+=edge(m,h,THC[h],h==='A'?'dlArA':'dlArB',false,t('dl_held'),h==='A'?1:-1);});
+  ['A','B'].forEach(k=>{const m=DL.wait[k];if(m)o+=edge(k,m,'var(--bad)','dlArW',true,t('dl_waits'),k==='A'?1:-1);});
+  const node=(k,[x,y],w,col,lbl,dim)=>svgEl('rect',{x:x-w/2,y:y-17,width:w,height:34,rx:7,fill:`color-mix(in srgb,${col} 12%,var(--surface))`,stroke:col,'stroke-width':2.4,opacity:dim?.55:1})+txt(x,y+5,lbl,{'text-anchor':'middle','font-weight':600,fill:col});
+  o+=node('A',A,80,THC.A,t('th_thread','A'),DL.st.A==='blk');
+  o+=node('B',B,80,THC.B,t('th_thread','B'),DL.st.B==='blk');
+  o+=node('X',Xp,52,'var(--shared)','🔒 X');
+  o+=node('Y',Yp,52,'var(--shared)','🔒 Y');
+  if(DL.dead)o+=txt(150,114,t('dl_circle'),{'text-anchor':'middle','font-weight':700,fill:'var(--bad)'});
+  return `<svg viewBox="0 0 300 220" style="width:100%;max-width:340px;display:block;margin:0 auto" role="img">${o}</svg>`;
+}
+function dlRender(){
+  const card=k=>{
+    const P=dlProg(k).map(dlTxt);
+    const st=DL.st[k];
+    return thrCard(k,P,DL.pc[k],st,'',st!=='ready'||DL.dead,st==='blk'?t('th_waits_for',DL.wait[k]):t('th_step',k),'dlGo'+k);
+  };
+  const mbox=m=>{const h=DL.held[m];return `<div class="memcell" style="border-color:${h?THC[h]:'var(--rule)'};padding:6px 10px"><span>🔒 ${m}</span><b style="font-size:15px">${esc(h?t('mx_held',h):t('mx_free'))}</b></div>`;};
+  let banner='';
+  if(DL.dead)banner=`<div class="banner bad">${esc(t('dl_dead'))}</div>`;
+  else if(DL.pc.A>=5&&DL.pc.B>=5)banner=`<div class="banner ok">${esc(t('dl_ok'))}</div>`;
+  const mid=`<div class="mid"><div class="row" style="justify-content:center">${mbox('X')}${mbox('Y')}</div>${dlGraph()}
+    <div class="legend" style="justify-content:center;margin-top:0">${legendItem('var(--ta)',t('dl_lg_held'))}${legendItem('',t('dl_lg_wait'),'border-top:2px dashed var(--bad);border-radius:0;height:0;width:14px')}</div>
+    <div><h3 style="font-size:13px">${esc(t('rc_order'))}</h3><div class="chips">${orderChips(DL.order)}</div></div>${banner}</div>`;
+  $('dlThreads').innerHTML=card('A')+mid+card('B');
+  ['A','B'].forEach(k=>$('dlGo'+k).onclick=()=>dlStep(k));
+  const l=DL.last;let e;
+  if(!l)e=[t('dl_x0_t'),t('dl_x0',DL.b==='YX'?t('dl_yx'):t('dl_xy')),t('dl_q')];
+  else{
+    const ins=dlTxt(l.ins);let s;
+    if(l.blocked)s=t('dl_e_blk',l.k,l.ins[1],other(l.k));
+    else if(l.ins[0]==='lock')s=t('dl_e_lock',l.k,l.ins[1]);
+    else if(l.ins[0]==='work')s=t('dl_e_work',l.k);
+    else s=l.hand?t('dl_e_hand',l.k,l.ins[1],l.hand):t('dl_e_unlock',l.k,l.ins[1]);
+    if(DL.dead)s+=' '+t('dl_e_dead',DL.steps);
+    else if(DL.pc.A>=5&&DL.pc.B>=5)s+=' '+t('dl_e_ok');
+    e=[`${l.k}: ${ins}`,s,DL.dead?t('dl_q_dead'):''];
+  }
+  $('dlExpl').innerHTML=explHTML(e[0],e[1],'',e[2]);
+  $('dlExpl').classList.toggle('bad',DL.dead);
+  $('dlExpl').classList.toggle('good',!DL.dead&&DL.pc.A>=5&&DL.pc.B>=5);
+  $('dlTried').innerHTML=triedHTML(DL.tried,0,v=>({ok:v==='ok',s:v==='ok'?t('dl_r_ok'):t('dl_r_dead')}));
+  segSync($('dlOrder'),DL.b);
+}
+
+/* =====================================================================
+   11. Producent-konsument / producer-consumer
+   ===================================================================== */
+const PCS={size:5,pr:3,cr:3,rnd:false,playing:false,raf:0,lastTs:0,bar:null,r:Math.random};
+const PC_WIN=30;
+function pcDur(rate){const m=1/rate;if(!PCS.rnd)return m;return Math.min(5*m,Math.max(0.15*m,-Math.log(1-PCS.r())*m));}
+function pcReset(){
+  Object.assign(PCS,{t:0,buf:[],next:1,prod:{st:'run',left:pcDur(PCS.pr),blk:0},cons:{st:'blk',left:0,blk:0,item:null},produced:0,consumed:0,hist:[],lastSample:-1});
+  pcRender();
+}
+function pcStep(dt){
+  const P=PCS.prod,C=PCS.cons;
+  if(P.st==='run'){P.left-=dt;if(P.left<=0){if(PCS.buf.length<PCS.size){PCS.buf.push(PCS.next++);PCS.produced++;P.left+=pcDur(PCS.pr);}else{P.st='blk';P.left=0;}}}
+  else{P.blk+=dt;if(PCS.buf.length<PCS.size){PCS.buf.push(PCS.next++);PCS.produced++;P.st='run';P.left=pcDur(PCS.pr);}}
+  if(C.st==='run'){C.left-=dt;if(C.left<=0){PCS.consumed++;C.item=null;if(PCS.buf.length){C.item=PCS.buf.shift();C.left+=pcDur(PCS.cr);}else{C.st='blk';C.left=0;}}}
+  else{C.blk+=dt;if(PCS.buf.length){C.item=PCS.buf.shift();C.st='run';C.left=pcDur(PCS.cr);}}
+  // the producer may have been blocked on a full buffer that the consumer just emptied
+  if(P.st==='blk'&&PCS.buf.length<PCS.size){PCS.buf.push(PCS.next++);PCS.produced++;P.st='run';P.left=pcDur(PCS.pr);}
+  PCS.t+=dt;
+  if(PCS.t-PCS.lastSample>=0.05||PCS.lastSample<0){PCS.hist.push({t:PCS.t,b:PCS.buf.length,p:P.st,c:C.st});PCS.lastSample=PCS.t;}
+  while(PCS.hist.length&&PCS.hist[0].t<PCS.t-PC_WIN)PCS.hist.shift();
+}
+function pcRender(){
+  const P=PCS.prod,C=PCS.cons;
+  $('pcStP').innerHTML=pill(P.st==='run'?'run':'blk');
+  $('pcStC').innerHTML=pill(C.st==='run'?'run':'blk');
+  $('pcInfoP').innerHTML=esc(P.st==='run'?t('pc_p_run'):t('pc_p_blk'));
+  $('pcInfoC').innerHTML=esc(C.st==='run'?t('pc_c_run',C.item):t('pc_c_blk'));
+  let sl='';for(let i=0;i<PCS.size;i++){const v=PCS.buf[i];sl+=`<div class="slot ${v!==undefined?'full':''}">${v!==undefined?v:''}</div>`;}
+  $('pcSlots').innerHTML=sl;
+  $('pcBufInfo').textContent=t('pc_buf',PCS.buf.length,PCS.size);
+  const tt=Math.max(PCS.t,1e-9);
+  const st=(k,v,cl)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  $('pcStats').innerHTML=st('pc_s_prod',PCS.produced)+st('pc_s_cons',PCS.consumed)+st('pc_s_pblk',pct(P.blk/tt*100))+st('pc_s_cblk',pct(C.blk/tt*100));
+  // chart
+  const X0=110,W=870,yT=16,yB=176,H=yB-yT,t1=Math.max(PCS.t,PC_WIN),t0=t1-PC_WIN,X=x=>X0+(x-t0)/PC_WIN*W,Y=b=>yB-b/PCS.size*H;
+  let o='';
+  for(let b=0;b<=PCS.size;b++){o+=svgEl('line',{x1:X0,y1:Y(b),x2:X0+W,y2:Y(b),stroke:'var(--rule)','stroke-width':b===0||b===PCS.size?1.2:.6});o+=txt(X0-8,Y(b)+4,String(b),{'text-anchor':'end','font-size':11,fill:'var(--muted)'});}
+  o+=txt(10,yT+10,t('pc_r_fill'),{'font-weight':600,'font-size':12.5});
+  o+=txt(10,yT+26,t('pc_r_fill_s'),{'font-size':11,fill:'var(--muted)'});
+  const h=PCS.hist;
+  if(h.length>1){
+    let d=`M${X(h[0].t)},${Y(0)}`;
+    h.forEach((p,i)=>{if(i)d+=` L${X(p.t)},${Y(h[i-1].b)}`;d+=` L${X(p.t)},${Y(p.b)}`;});
+    d+=` L${X(h[h.length-1].t)},${Y(0)} Z`;
+    o+=svgEl('path',{d,fill:'color-mix(in srgb,var(--shared) 25%,transparent)',stroke:'var(--shared)','stroke-width':2,'stroke-linejoin':'round'});
+  }
+  const strip=(y,key,lbl)=>{
+    let s=txt(10,y+12,lbl,{'font-size':12,'font-weight':600});
+    s+=rect(X0,y,W,15,'var(--sunken)');
+    for(let i=1;i<h.length;i++){const p=h[i-1];s+=rect(X(p.t),y,X(h[i].t)-X(p.t)+0.4,15,p[key]==='run'?'var(--run)':'var(--blk)',{opacity:p[key]==='run'?.85:.6});}
+    return s;
+  };
+  o+=strip(188,'p',t('pc_prod'));o+=strip(208,'c',t('pc_cons'));
+  for(let s=Math.ceil(t0/5)*5;s<=t1;s+=5)o+=txt(X(s),240,num(s,0)+' s',{'text-anchor':'middle','font-size':11,fill:'var(--muted)'});
+  $('pcSvg').innerHTML=o;
+  $('pcLegend').innerHTML=legendItem('var(--shared)',t('pc_lg_fill'))+legendItem('var(--run)',t('st_run'))+legendItem('var(--blk)',t('st_blk'));
+  PCS.bar.sync(PCS.playing,PCS.t===0?'a_start':'a_play',fix(PCS.t,1)+' s');
+  $('pcSizeO').textContent=PCS.size;$('pcPrO').textContent=t('pc_rate',PCS.pr);$('pcCrO').textContent=t('pc_rate',PCS.cr);
+}
+function pcFrame(ts){
+  if(!PCS.playing)return;
+  let dt=PCS.lastTs?Math.min(0.1,(ts-PCS.lastTs)/1000):0;PCS.lastTs=ts;
+  while(dt>0){const d=Math.min(dt,0.01);pcStep(d);dt-=d;}
+  pcRender();
+  PCS.raf=requestAnimationFrame(pcFrame);
+}
+function pcPlay(){PCS.playing=true;PCS.lastTs=0;cancelAnimationFrame(PCS.raf);PCS.raf=requestAnimationFrame(pcFrame);pcRender();}
+function pcPause(){PCS.playing=false;cancelAnimationFrame(PCS.raf);pcRender();}
+function pcCode(){
+  $('pcCode1').innerHTML=codeLines([['void producer() {',''],['  for (;;) {',''],['    int item = produce();          // '+t('pc_c_time'),''],
+    ['    std::unique_lock<std::mutex> lock(m);',''],['    notFull.wait(lock, [] { return buffer.size() < SIZE; });',''],['    buffer.push(item);',''],['    notEmpty.notify_one();',''],['  }',''],['}','']]);
+  $('pcCode2').innerHTML=codeLines([['void consumer() {',''],['  for (;;) {',''],['    std::unique_lock<std::mutex> lock(m);',''],
+    ['    notEmpty.wait(lock, [] { return !buffer.empty(); });',''],['    int item = buffer.front(); buffer.pop();',''],['    notFull.notify_one();',''],['    lock.unlock();',''],['    consume(item);                 // '+t('pc_c_time'),''],['  }',''],['}','']]);
+}
+function pcInit(){
+  PCS.bar=RunBar(document.querySelector('[data-ctrl="pc"]'),'');
+  PCS.bar.on('play',()=>PCS.playing?pcPause():pcPlay());
+  PCS.bar.on('reset',()=>{pcReset();});
+  $('pcSize').addEventListener('input',e=>{PCS.size=+e.target.value;pcReset();});
+  $('pcPr').addEventListener('input',e=>{PCS.pr=+e.target.value;pcRender();});
+  $('pcCr').addEventListener('input',e=>{PCS.cr=+e.target.value;pcRender();});
+  $('pcRnd').addEventListener('change',e=>{PCS.rnd=e.target.checked;});
+  pcReset();
+}
+
+/* =====================================================================
+   aplikacja / app
+   ===================================================================== */
+const MODS=['poll','irq','tick','slice','ctx','states','shared','race','mutex','dead','pc'];
+const GRPS={g6:['poll','irq','tick','slice','ctx','states','shared'],g7:['race','mutex'],g8:['dead','pc']};
+const GRP_OF={};for(const g in GRPS)GRPS[g].forEach(m=>GRP_OF[m]=g);
+const lastIn={g6:'poll',g7:'race',g8:'dead'};
+function openGrp(g){document.querySelectorAll('#topics .grp').forEach(el=>{const on=el.dataset.grp===g;el.classList.toggle('open',on);el.querySelector('.gh').setAttribute('aria-expanded',String(on));});}
+function modHead(){const g=GRP_OF[cur];$('mhGrp').textContent=t('lect'+g.slice(1))+' · '+t(g+'n');$('mhTitle').textContent=t('tp_'+cur);$('mhSub').textContent=t('tp_'+cur+'_s');}
+let cur='poll';
+try{const h=location.hash.slice(1);if(MODS.includes(h))cur=h;else{const s=localStorage.getItem('ccSimMod');if(MODS.includes(s))cur=s;}}catch(e){}
+function renderAll(){
+  poLegend();poRender();
+  irFill();S.irq.go(S.irq.i);
+  tkCode();segSync($('tkHow'),TK.how);S.tick.go(S.tick.i);
+  slRender();
+  S.ctx.go(S.ctx.i);
+  stCode();S.states.go(S.states.i);
+  scCode();scRender();
+  rcRender();mxRender();dlRender();
+  pcCode();pcRender();
+}
+function applyLang(){
+  document.documentElement.lang=lang;document.title=t('doc_title');
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.dataset.i);});
+  document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
+  renderAll();modHead();
+}
+function showMod(m){
+  ['irq','tick','ctx','states'].forEach(k=>S[k].stop());
+  if(cur==='poll'&&m!=='poll'){poUp();poPause();}
+  if(cur==='slice'&&m!=='slice')slPause();
+  if(cur==='shared'&&m!=='shared'){scStop();scRender();}
+  if(cur==='pc'&&m!=='pc')pcPause();
+  cur=m;
+  MODS.forEach(k=>{$('mod-'+k).hidden=k!==m;});
+  document.querySelectorAll('#topics button[data-mod]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mod===m)));
+  openGrp(GRP_OF[m]);lastIn[GRP_OF[m]]=m;modHead();
+  try{localStorage.setItem('ccSimMod',m);history.replaceState(null,'','#'+m);}catch(e){}
+  if(m==='pc'&&!PCS.playing)pcPlay();
+}
+document.querySelectorAll('#topics button[data-mod]').forEach(b=>b.addEventListener('click',()=>showMod(b.dataset.mod)));
+document.querySelectorAll('#topics .gh').forEach(b=>b.addEventListener('click',()=>{
+  const g=b.dataset.grp;
+  if(GRP_OF[cur]===g){const el=b.parentElement;el.classList.toggle('open');b.setAttribute('aria-expanded',String(el.classList.contains('open')));}
+  else showMod(lastIn[g]);
+}));
+document.querySelectorAll('.langs button').forEach(b=>b.addEventListener('click',()=>{
+  lang=b.dataset.lang;try{localStorage.setItem('ccSimLang',lang);}catch(e){}applyLang();
+}));
+const typing=e=>{const tg=e.target;return tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable);};
+document.addEventListener('keydown',e=>{
+  if(typing(e)||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(cur==='poll'){if(e.key===' '){e.preventDefault();if(!e.repeat)poDown();}return;}
+  if(cur==='race'||cur==='mutex'||cur==='dead'){
+    const k=e.key.toUpperCase();
+    if(k==='A'||k==='B'){e.preventDefault();({race:rcStep,mutex:mxStep,dead:dlStep})[cur](k);}
+    else if(k==='R'){e.preventDefault();({race:rcReset,mutex:mxReset,dead:dlReset})[cur]();}
+    return;
+  }
+  const s=S[cur];if(!s||!s.next)return;
+  if(e.key==='ArrowRight'){e.preventDefault();s.stop();s.next();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();s.prev();}
+  else if(e.key===' '&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();s.toggle();}
+});
+document.addEventListener('keyup',e=>{if(cur==='poll'&&e.key===' '){e.preventDefault();poUp();}});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(MODS.includes(h)&&h!==cur)showMod(h);});
+window.addEventListener('blur',()=>{if(cur==='poll')poUp();});
+
+/* reset buttons for the thread topics */
+function thrBar(id,reset,note){
+  const c=document.querySelector(`[data-ctrl="${id}"]`);
+  c.innerHTML=`<div class="row"><button data-a="reset">${ICON.reset}<span data-i="a_reset"></span></button></div><p class="note" style="margin:0" data-i="${note}"></p>`;
+  c.querySelector('[data-a="reset"]').onclick=reset;
+}
+thrBar('race',rcReset,'th_keys');thrBar('mutex',mxReset,'th_keys');thrBar('dead',dlReset,'th_keys');
+segInit($('dlOrder'),v=>{DL.b=v;dlReset();});
+
+poInit();irInit();tkInit();slInit();cxInit();stInit();scInit();pcInit();
+rcReset();mxReset();dlReset();
+applyLang();
+showMod(cur);
+})();
+</script>
+</body>
+</html>

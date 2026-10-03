@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<script>(function(){try{if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');}catch(e){}})();</script>
+<style>html.embed .wrap{max-width:none;padding:14px 18px 48px}html.embed .topbar h1,html.embed .langs{display:none}</style>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulator potoku RISC-V</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --sunken:#EAEEF2; --ink:#16202B; --muted:#5B6673; --rule:#D5DBE1;
+  --cIF:#EB5A14; --cID:#7C3AB4; --cEX:#009925; --cMEM:#1E78C8; --cWB:#142D55; --on-stage:#FFFFFF;
+  --good:#1E7E4F; --good-bg:#E2F3EA; --bad:#B8372B; --bad-bg:#FBE7E4; --warn:#9A6200; --warn-bg:#FBF0DC; --focus:#2F6FDB;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542;
+    --cIF:#F28A55; --cID:#B38BE0; --cEX:#4CC46A; --cMEM:#6AAEEA; --cWB:#9DB4E0; --on-stage:#0F1419;
+    --good:#5FD19A; --good-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19; --warn:#E8B25A; --warn-bg:#3A2A10; --focus:#7FA8F0;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542;
+  --cIF:#F28A55; --cID:#B38BE0; --cEX:#4CC46A; --cMEM:#6AAEEA; --cWB:#9DB4E0; --on-stage:#0F1419;
+  --good:#5FD19A; --good-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19; --warn:#E8B25A; --warn-bg:#3A2A10; --focus:#7FA8F0;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+header p{margin:0;color:var(--muted);max-width:74ch}
+.langs{display:flex;gap:6px}
+.langs button{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:13px}
+.langs button svg{width:22px;height:14px;border-radius:2px;box-shadow:0 0 0 1px var(--rule);display:block}
+.langs button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+.stack{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+h2{font-size:16px;font-weight:600;margin:0 0 10px}
+h3{font-size:14px;font-weight:600;margin:0}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+.field{margin-bottom:10px}
+select{width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--sunken);border:1px solid var(--rule);border-radius:6px;padding:7px 9px}
+button{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{background:var(--sunken)}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.primary:hover{opacity:.9}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:6px 0 0}
+.err{font-size:13px;color:var(--bad);margin:6px 0 0;white-space:pre-wrap}
+.mono{font-family:var(--mono)}
+
+.progs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:10px}
+@media (max-width:760px){.progs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.progs button{padding:8px 8px;font-size:13px;text-align:left;line-height:1.3}
+.progs button small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.progs button.on{border-color:var(--ink);background:var(--sunken)}
+.progs button.on small{color:var(--ink)}
+
+.ctrlbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 16px}
+.ctrlbar button{display:inline-flex;align-items:center;gap:8px}
+.ctrlbar svg{width:14px;height:14px}
+.cyc{font-family:var(--mono);font-size:20px;font-weight:500}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.stats{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.codeview{font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--sunken);border:1px solid var(--rule);border-radius:8px;padding:8px 0;overflow:auto;min-height:300px}
+.codeview .ln{display:grid;grid-template-columns:34px 112px auto;align-items:center;min-height:24px;padding-right:12px;white-space:pre}
+.codeview .ln.act{background:color-mix(in srgb,var(--act) 16%,transparent)}
+.codeview .num{color:var(--muted);text-align:right;padding-right:10px;font-size:12px}
+.codeview .chips{display:flex;gap:3px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:1px 6px;border-radius:4px;color:var(--on-stage);line-height:1.5}
+.chip.IF{background:var(--cIF)} .chip.ID{background:var(--cID)} .chip.EX{background:var(--cEX)} .chip.MEM{background:var(--cMEM)} .chip.WB{background:var(--cWB)}
+.chip.stall{background:transparent!important;border:1.5px dashed currentColor;padding:0 5px}
+.chip.stall.IF{color:var(--cIF)} .chip.stall.ID{color:var(--cID)}
+.chip.X{background:var(--bad-bg);color:var(--bad)}
+.stat{background:var(--sunken);border-radius:8px;padding:7px 10px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:18px;font-weight:500}
+
+.codes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px}
+@media (max-width:760px){.codes{grid-template-columns:minmax(0,1fr)}}
+.code-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 0 6px;min-height:30px}
+.code-h button{padding:4px 10px;font-size:13px}
+pre.code,textarea.code{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--sunken);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;overflow:auto;white-space:pre;color:var(--ink);width:100%;tab-size:4}
+textarea.code{min-height:300px;resize:vertical;display:block}
+pre.code{min-height:300px}
+.code .c{color:var(--muted)} .code .k{color:var(--cID)} .code .n{color:var(--cIF)}
+.dimmed{opacity:.55}
+
+.stages{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:640px){.stages{grid-template-columns:minmax(0,1fr)}}
+.stage{border:1px solid var(--rule);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.stage .sh{padding:6px 10px;color:var(--on-stage);font-weight:600;font-size:14px;line-height:1.25}
+.stage .sh small{display:block;font-weight:400;font-size:11.5px;opacity:.9}
+.stage .sb{padding:10px;font-family:var(--mono);font-size:13px;min-height:62px;word-break:break-word}
+.stage .sb.empty{color:var(--muted)}
+.stage .sb s{color:var(--muted)}
+.tag{display:inline-block;font-family:var(--sans);font-size:11.5px;font-weight:600;padding:1px 7px;border-radius:999px;margin-top:6px}
+.tag.stall{background:var(--warn-bg);color:var(--warn)}
+.tag.flush{background:var(--bad-bg);color:var(--bad)}
+.tag.fwd{background:var(--good-bg);color:var(--good)}
+.events{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.events li{font-size:14px;padding:7px 10px;border-radius:6px;background:var(--sunken);border-left:3px solid var(--rule)}
+.events li.stall{border-left-color:var(--warn)} .events li.flush{border-left-color:var(--bad)} .events li.fwd{border-left-color:var(--good)} .events li.ok{border-left-color:var(--good)}
+.events code{font-family:var(--mono);font-size:13px}
+
+.gwrap{overflow:auto;max-height:560px;border:1px solid var(--rule);border-radius:8px}
+table.gantt{border-collapse:separate;border-spacing:0;font-size:12px}
+table.gantt th,table.gantt td{padding:0;height:28px;text-align:center;border-bottom:1px solid var(--rule)}
+table.gantt thead th{position:sticky;top:0;background:var(--surface);z-index:2;font-weight:500;color:var(--muted);font-family:var(--mono);min-width:40px;padding:0 2px}
+table.gantt thead th.cur{color:var(--ink);background:var(--sunken)}
+table.gantt .lab{position:sticky;left:0;background:var(--surface);z-index:1;text-align:left;padding:0 12px 0 10px;font-family:var(--mono);font-size:12.5px;white-space:nowrap;border-right:1px solid var(--rule)}
+table.gantt thead th.lab{z-index:3;font-family:var(--sans);color:var(--muted)}
+table.gantt td.cur{background:var(--sunken)}
+.cell{display:flex;align-items:center;justify-content:center;height:22px;margin:0 2px;border-radius:4px;font-weight:600;font-family:var(--mono);font-size:11.5px;color:var(--on-stage)}
+.cell.IF{background:var(--cIF)} .cell.ID{background:var(--cID)} .cell.EX{background:var(--cEX)} .cell.MEM{background:var(--cMEM)} .cell.WB{background:var(--cWB)}
+.cell.stall{background:transparent!important;border:2px dashed currentColor}
+.cell.stall.IF{color:var(--cIF)} .cell.stall.ID{color:var(--cID)}
+.cell.X{background:var(--bad-bg);color:var(--bad)}
+tr.flushed .lab{color:var(--muted);text-decoration:line-through}
+.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:13px;color:var(--muted)}
+.legend .cell{width:40px;margin:0}
+
+.two-col{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+@media (max-width:860px){.two-col{grid-template-columns:minmax(0,1fr)}}
+.regs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+@media (max-width:520px){.regs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.reg{display:flex;justify-content:space-between;gap:6px;padding:4px 8px;border-radius:5px;background:var(--sunken);font-family:var(--mono);font-size:12.5px}
+.reg span{color:var(--muted)}
+.reg.used{background:var(--surface);border:1px solid var(--rule)}
+.reg.chg{background:var(--cWB);color:var(--on-stage)} .reg.chg span{color:var(--on-stage);opacity:.8}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:3px 10px;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+table.mem{border-collapse:collapse;width:100%;font-size:13px}
+table.mem th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:5px 8px;border-bottom:1px solid var(--rule)}
+table.mem td{padding:5px 8px;border-bottom:1px solid var(--rule);font-family:var(--mono)}
+table.mem tr.w td{background:var(--bad-bg)} table.mem tr.r td{background:var(--good-bg)}
+.hdr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.hdr h2{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div>
+    <h1 data-i="title"></h1>
+    <p data-i="intro"></p>
+  </div>
+  <div class="langs" role="group" aria-label="Język / Language">
+    <button data-lang="pl" aria-pressed="false"><svg viewBox="0 0 16 10" aria-hidden="true"><rect width="16" height="5" fill="#fff"/><rect y="5" width="16" height="5" fill="#DC143C"/></svg>PL</button>
+    <button data-lang="en" aria-pressed="false"><svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+  </div>
+</header>
+
+<div class="stack">
+  <section class="panel">
+    <h2 data-i="h_progs"></h2>
+    <div class="progs" id="progs"></div>
+    <p class="note" id="progDesc" style="margin:0"></p>
+  </section>
+
+  <section class="panel">
+    <h2 id="codeTitle"></h2>
+    <div class="codes">
+      <div>
+        <div class="code-h"><h3>C</h3><button data-copy="c" data-i="b_copy"></button></div>
+        <pre class="code" id="cBox"></pre>
+        <p class="note" id="cNote"></p>
+      </div>
+      <div>
+        <div class="code-h"><h3 data-i="asm_h"></h3>
+          <div class="row"><button data-copy="asm" data-i="b_copy"></button><button id="bEdit" data-i="b_edit"></button><button class="primary" id="bAsm" data-i="b_asm" hidden></button></div></div>
+        <div class="codeview" id="asmView"></div>
+        <textarea class="code" id="asmBox" spellcheck="false" autocapitalize="off" autocomplete="off" hidden></textarea>
+        <p class="note" id="asmNote"></p>
+        <p class="err" id="asmErr"></p>
+      </div>
+    </div>
+  </section>
+
+  <div class="ctrlbar" id="ctrlbar">
+    <div class="row">
+      <button id="bPrev"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2 4 8l7 6z" fill="currentColor"/></svg><span data-i="a_prev"></span></button>
+      <button id="bNext" class="primary"><span data-i="a_next"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2l7 6-7 6z" fill="currentColor"/></svg></button>
+      <button id="bReset"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i="a_reset"></span></button>
+    </div>
+    <div class="cyc" id="cycLabel"></div>
+    <p class="note" data-i="keys_note" style="margin:0"></p>
+  </div>
+
+  <section class="panel">
+    <h2 id="stagesTitle"></h2>
+    <div class="stages" id="stages"></div>
+    <ul class="events" id="events"></ul>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_diagram"></h2>
+    <div class="gwrap" id="gwrap"><table class="gantt" id="gantt"></table></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <div class="two-col">
+    <section class="panel">
+      <div class="hdr"><h2 data-i="h_regs"></h2><div class="seg" role="group"><button data-fmt="dec" aria-pressed="true">dec</button><button data-fmt="hex" aria-pressed="false">hex</button></div></div>
+      <div class="regs" id="regs"></div>
+      <p class="note" data-i="regs_note"></p>
+    </section>
+    <section class="panel">
+      <h2 data-i="h_mem"></h2>
+      <div id="mem"></div>
+      <p class="note" data-i="mem_note"></p>
+    </section>
+  </div>
+
+  <section class="panel">
+    <h2 data-i="h_stats"></h2>
+    <div class="stats">
+      <div class="stat"><span data-i="st_cycles"></span><b id="sCyc">–</b></div>
+      <div class="stat"><span data-i="st_instr"></span><b id="sIns">–</b></div>
+      <div class="stat"><span>CPI</span><b id="sCpi">–</b></div>
+      <div class="stat"><span data-i="st_stalls"></span><b id="sStall">–</b></div>
+      <div class="stat"><span data-i="st_flush"></span><b id="sFlush">–</b></div>
+      <div class="stat"><span data-i="st_fwd"></span><b id="sFwd">–</b></div>
+    </div>
+    <p class="note" id="statsNote"></p>
+    <p class="note" data-i="proc_note"></p>
+  </section>
+</div>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const hex=(n,w)=>'0x'+((n>>>0).toString(16).toUpperCase()).padStart(w||8,'0');
+const STAGES=['IF','ID','EX','MEM','WB'];
+const DATA_BASE=0x10000000, MAX_CYCLES=1000;
+let lang='pl';
+
+/* ================= tłumaczenia / translations ================= */
+const T={
+pl:{
+  doc_title:'Symulator potoku RISC-V', title:'Symulator potoku RISC-V',
+  intro:'Pięć etapów i nowa instrukcja pobierana w każdym cyklu. Wybierz program albo napisz własny, a potem przechodź cykl po cyklu i patrz, gdzie potok czeka (stall), skąd bierze wyniki (forwarding) i co wyrzuca (flush).',
+  h_progs:'Wybierz program', h_stats:'Podsumowanie całego programu',
+  keys_note:'Strzałki ← → na klawiaturze działają tak samo.',
+  proc_note:'Procesor działa jak w Ripes „5-stage processor”: ma forwarding, skok rozstrzyga się w EX, a IF zawsze pobiera następną instrukcję, więc wykonany skok kosztuje 2 cykle. WB zapisuje rejestr w pierwszej połowie cyklu, a ID czyta go w drugiej.',
+  b_edit:'Edytuj kod', code_hint:'Podświetlone linie są teraz w potoku, a etykiety pokazują etap.',
+  st_cycles:'Cykle', st_instr:'Instrukcje', st_stalls:'Wstrzymania', st_flush:'Wyrzucone', st_fwd:'Forwardingi',
+  stats_note:(n,ideal)=>'Bez wstrzymań i wyrzuceń byłoby '+ideal+' cykli: '+n+' instrukcji + 4 cykle na zapełnienie potoku.',
+  asm_h:'RISC-V (możesz edytować)', b_copy:'Kopiuj', copied:'Skopiowano', b_asm:'Złóż i uruchom',
+  c_none:'Własny kod: nie ma wersji w C.', c_edited:'Kod RISC-V został zmieniony, więc C pokazuje wersję oryginalną.',
+  code_dirty:'Kod zmieniony. Kliknij „Złóż i uruchom”.', code_ok:n=>'Złożono: '+n+' instrukcji w pamięci programu. Pseudoinstrukcje (li, la, mv, bnez…) są rozwijane tak jak w Ripes.',
+  custom_title:'Twój program',
+  stages_title:c=>'Potok w cyklu '+c,
+  sIF:'pobranie instrukcji', sID:'dekodowanie, odczyt rejestrów', sEX:'obliczenie (ALU), decyzja o skoku', sMEM:'pamięć danych', sWB:'zapis do rejestru',
+  bubble:'bąbelek (nic nie robi)', t_stall:'czeka', t_flush:'wyrzucona', t_fwd:(r,f)=>r+' z '+f,
+  before:'Cykl 0: potok jest pusty. Kliknij „Dalej”, żeby pobrać pierwszą instrukcję.',
+  no_events:'Każda instrukcja przesuwa się o jeden etap. Nic nie czeka i nic nie jest wyrzucane.',
+  h_diagram:'Diagram potoku', th_instr:'Instrukcja',
+  lg_stall:'instrukcja czeka (stall)', lg_x:'instrukcja wyrzucona (flush)',
+  h_regs:'Rejestry', regs_note:'Podświetlony rejestr zapisała w tym cyklu instrukcja w WB. Obramowane rejestry używa program.',
+  h_mem:'Pamięć danych', mem_note:'lw czyta, a sw zapisuje pamięć w etapie MEM. Zielony wiersz: odczyt w tym cyklu, czerwony: zapis.',
+  th_addr:'Adres', th_name:'Nazwa', th_val:'Wartość', mem_empty:'Program nie ma sekcji .data.',
+  cyc:(c,n)=>'Cykl '+c+' / '+n,
+  a_prev:'Wstecz', a_next:'Dalej', a_reset:'Od początku',
+  ev_fetch:i=>'IF pobiera <code>'+i+'</code>.',
+  ev_wb:(i,r,v)=>'<code>'+i+'</code> kończy i zapisuje <code>'+r+' = '+v+'</code>.',
+  ev_done:i=>'<code>'+i+'</code> kończy.',
+  ev_memr:(i,a,v)=>'<code>'+i+'</code> czyta pamięć: <code>['+a+'] = '+v+'</code>.',
+  ev_memw:(i,a,v)=>'<code>'+i+'</code> zapisuje pamięć: <code>['+a+'] = '+v+'</code>.',
+  ev_fwd:(c,r,f,p)=>'<code>'+c+'</code> dostaje <code>'+r+'</code> przez forwarding z rejestru potoku '+f+' (wynik <code>'+p+'</code>), zamiast czekać na WB.',
+  ev_loaduse:(c,r,p)=>'<code>'+c+'</code> czeka w ID: potrzebuje <code>'+r+'</code>, a <code>'+p+'</code> przyniesie tę wartość z pamięci dopiero w MEM. Forwarding nie cofa się w czasie, więc potok wstrzymuje IF i ID na 1 cykl, a do EX wchodzi bąbelek.',
+  ev_raw:(c,r,p)=>'<code>'+c+'</code> czeka w ID: potrzebuje <code>'+r+'</code>, a <code>'+p+'</code> zapisze go dopiero w WB. Bez forwardingu potok wstrzymuje IF i ID, a do EX wchodzi bąbelek.',
+  ev_flush:(b,tk,tg,list)=>'<code>'+b+'</code> w EX: skok '+(tk?'<b>wykonany</b> do <code>'+tg+'</code>':'<b>niewykonany</b>')+', a potok pobrał '+(tk?'dalsze linie':'instrukcje spod celu skoku')+'. Flush: '+(list.length?list.map(x=>'<code>'+x+'</code>').join(', ')+' wyrzucone':'nic nie zostało pobrane')+', od następnego cyklu IF pobiera '+(tk?'z <code>'+tg+'</code>':'następną linię')+'.',
+  ev_ok:(b,tk,pred)=>'<code>'+b+'</code> w EX: skok '+(tk?'wykonany':'niewykonany')+(pred?', tak jak przewidziano':', więc pobrane dalsze linie są poprawne')+'. Bez strat.',
+  ev_end:'Ostatnia instrukcja skończyła WB. Koniec programu.',
+  ev_trunc:'Zatrzymano po '+MAX_CYCLES+' cyklach. Może pętla nie ma końca?',
+  e_line:n=>'Linia '+n+': ', e_reg:t=>'nieznany rejestr „'+t+'”', e_imm:t=>'zła liczba „'+t+'”', e_op:t=>'nieznana instrukcja „'+t+'”',
+  e_args:(op,n)=>'„'+op+'” potrzebuje '+n+' argumentów', e_label:t=>'nie ma etykiety „'+t+'”', e_range:(v,a,b)=>'stała '+v+' poza zakresem '+a+'…'+b,
+  e_dir:t=>'nieobsługiwana dyrektywa „'+t+'”', e_dup:t=>'etykieta „'+t+'” jest zdefiniowana dwa razy', e_mem:t=>'oczekiwano argumentu w postaci offset(rejestr), a jest „'+t+'”',
+  e_empty:'W sekcji .text nie ma żadnej instrukcji.', e_data:'W sekcji .data mogą być tylko dyrektywy .word i .zero.',
+  e_align:(op,a)=>op+': adres '+a+' nie jest wielokrotnością 4 (cykl zatrzymany).',
+  runtime:'Błąd podczas wykonania: '
+},
+en:{
+  doc_title:'RISC-V pipeline simulator', title:'RISC-V pipeline simulator',
+  intro:'Five stages and a new instruction fetched every cycle. Pick a program or write your own, then step cycle by cycle and see where the pipeline waits (stall), where it takes results from (forwarding) and what it throws away (flush).',
+  h_progs:'Choose a program', h_stats:'Whole-program summary',
+  keys_note:'The ← → arrow keys work the same way.',
+  proc_note:'The processor works like Ripes “5-stage processor”: it has forwarding, branches are resolved in EX and IF always fetches the next instruction, so a taken branch costs 2 cycles. WB writes a register in the first half of a cycle and ID reads it in the second half.',
+  b_edit:'Edit code', code_hint:'Highlighted lines are in the pipeline right now, and the labels show their stage.',
+  st_cycles:'Cycles', st_instr:'Instructions', st_stalls:'Stalls', st_flush:'Flushed', st_fwd:'Forwards',
+  stats_note:(n,ideal)=>'With no stalls or flushes it would take '+ideal+' cycles: '+n+' instructions + 4 cycles to fill the pipeline.',
+  asm_h:'RISC-V (editable)', b_copy:'Copy', copied:'Copied', b_asm:'Assemble and run',
+  c_none:'Your own code: there is no C version.', c_edited:'The RISC-V code was changed, so the C shows the original version.',
+  code_dirty:'Code changed. Click “Assemble and run”.', code_ok:n=>'Assembled: '+n+' instructions in program memory. Pseudo-instructions (li, la, mv, bnez…) are expanded as in Ripes.',
+  custom_title:'Your program',
+  stages_title:c=>'Pipeline in cycle '+c,
+  sIF:'instruction fetch', sID:'decode, read registers', sEX:'execute (ALU), branch decision', sMEM:'data memory', sWB:'write back to register',
+  bubble:'bubble (does nothing)', t_stall:'waiting', t_flush:'flushed', t_fwd:(r,f)=>r+' from '+f,
+  before:'Cycle 0: the pipeline is empty. Click “Next” to fetch the first instruction.',
+  no_events:'Every instruction moves one stage forward. Nothing waits and nothing is thrown away.',
+  h_diagram:'Pipeline diagram', th_instr:'Instruction',
+  lg_stall:'instruction waits (stall)', lg_x:'instruction thrown away (flush)',
+  h_regs:'Registers', regs_note:'The highlighted register was written in this cycle by the instruction in WB. Outlined registers are used by the program.',
+  h_mem:'Data memory', mem_note:'lw reads and sw writes memory in the MEM stage. Green row: read in this cycle, red: write.',
+  th_addr:'Address', th_name:'Name', th_val:'Value', mem_empty:'The program has no .data section.',
+  cyc:(c,n)=>'Cycle '+c+' / '+n,
+  a_prev:'Back', a_next:'Next', a_reset:'Restart',
+  ev_fetch:i=>'IF fetches <code>'+i+'</code>.',
+  ev_wb:(i,r,v)=>'<code>'+i+'</code> finishes and writes <code>'+r+' = '+v+'</code>.',
+  ev_done:i=>'<code>'+i+'</code> finishes.',
+  ev_memr:(i,a,v)=>'<code>'+i+'</code> reads memory: <code>['+a+'] = '+v+'</code>.',
+  ev_memw:(i,a,v)=>'<code>'+i+'</code> writes memory: <code>['+a+'] = '+v+'</code>.',
+  ev_fwd:(c,r,f,p)=>'<code>'+c+'</code> gets <code>'+r+'</code> by forwarding from the '+f+' pipeline register (result of <code>'+p+'</code>) instead of waiting for WB.',
+  ev_loaduse:(c,r,p)=>'<code>'+c+'</code> waits in ID: it needs <code>'+r+'</code>, but <code>'+p+'</code> brings that value from memory only in MEM. Forwarding cannot go back in time, so the pipeline holds IF and ID for 1 cycle and a bubble enters EX.',
+  ev_raw:(c,r,p)=>'<code>'+c+'</code> waits in ID: it needs <code>'+r+'</code>, but <code>'+p+'</code> writes it only in WB. Without forwarding the pipeline holds IF and ID and a bubble enters EX.',
+  ev_flush:(b,tk,tg,list)=>'<code>'+b+'</code> in EX: the branch is '+(tk?'<b>taken</b> to <code>'+tg+'</code>':'<b>not taken</b>')+', but the pipeline fetched '+(tk?'the following lines':'instructions from the branch target')+'. Flush: '+(list.length?list.map(x=>'<code>'+x+'</code>').join(', ')+' thrown away':'nothing had been fetched')+', and from the next cycle IF fetches '+(tk?'from <code>'+tg+'</code>':'the next line')+'.',
+  ev_ok:(b,tk,pred)=>'<code>'+b+'</code> in EX: the branch is '+(tk?'taken':'not taken')+(pred?', as predicted':', so the lines already fetched are correct')+'. Nothing lost.',
+  ev_end:'The last instruction has finished WB. End of the program.',
+  ev_trunc:'Stopped after '+MAX_CYCLES+' cycles. Maybe the loop never ends?',
+  e_line:n=>'Line '+n+': ', e_reg:t=>'unknown register “'+t+'”', e_imm:t=>'bad number “'+t+'”', e_op:t=>'unknown instruction “'+t+'”',
+  e_args:(op,n)=>'“'+op+'” needs '+n+' arguments', e_label:t=>'no label “'+t+'”', e_range:(v,a,b)=>'constant '+v+' out of range '+a+'…'+b,
+  e_dir:t=>'unsupported directive “'+t+'”', e_dup:t=>'label “'+t+'” is defined twice', e_mem:t=>'expected an offset(register) argument, got “'+t+'”',
+  e_empty:'There are no instructions in the .text section.', e_data:'Only .word and .zero directives are allowed in .data.',
+  e_align:(op,a)=>op+': address '+a+' is not a multiple of 4 (execution stopped).',
+  runtime:'Runtime error: '
+}};
+const t=k=>T[lang][k];
+
+/* ================= programy / programs ================= */
+const PROGS=[{sub:{"pl": "bez zależności", "en": "no dependencies"},
+ desc:{"pl": "Pięć instrukcji, z których żadna nie potrzebuje wyniku innej. Potok zapełnia się w 5 cykli, a potem kończy jedną instrukcję na cykl: razem 9 cykli.", "en": "Five instructions, none of which needs another one’s result. The pipeline fills up in 5 cycles and then finishes one instruction per cycle: 9 cycles in total."},
+ c:{"pl": "int main(void) {\n    int a = 1;       // każda zmienna ma swój rejestr\n    int b = 2;\n    int c = 3;\n    int d = 4;\n    int e = 5;       // żadna linia nie korzysta\n                     // z wyniku poprzedniej\n    return 0;\n}", "en": "int main(void) {\n    int a = 1;       // each variable has its own register\n    int b = 2;\n    int c = 3;\n    int d = 4;\n    int e = 5;       // no line uses the result\n                     // of a previous one\n    return 0;\n}"},
+ asm:{"pl": ".data\n# zmienne są w rejestrach, nie w pamięci\n\n.text\nmain:\n    addi x5, x0, 1      # a = 1\n    addi x6, x0, 2      # b = 2\n    addi x7, x0, 3      # c = 3\n    addi x8, x0, 4      # d = 4\n    addi x9, x0, 5      # e = 5", "en": ".data\n# the variables live in registers, not in memory\n\n.text\nmain:\n    addi x5, x0, 1      # a = 1\n    addi x6, x0, 2      # b = 2\n    addi x7, x0, 3      # c = 3\n    addi x8, x0, 4      # d = 4\n    addi x9, x0, 5      # e = 5"}},
+{sub:{"pl": "zależność od lw", "en": "load dependency"},
+ desc:{"pl": "add potrzebuje wyniku lw, który stoi tuż przed nim. Dzięki forwardingowi wystarczy jeden cykl czekania, a dalsze zależności nie kosztują nic.", "en": "add needs the result of the lw right before it. Thanks to forwarding one cycle of waiting is enough, and the other dependencies cost nothing."},
+ c:{"pl": "int x[3] = {5, 7, 0};    // tablica w pamięci (.data)\n\nint main(void) {\n    x[2] = x[0] + x[1] - 2;\n    return 0;\n}", "en": "int x[3] = {5, 7, 0};    // array in memory (.data)\n\nint main(void) {\n    x[2] = x[0] + x[1] - 2;\n    return 0;\n}"},
+ asm:{"pl": ".data\nx:  .word 5, 7, 0        # int x[3] = {5, 7, 0}\n\n.text\nmain:\n    la   x10, x         # x10 = &x[0]\n    lw   x5, 0(x10)     # x5 = x[0]\n    lw   x6, 4(x10)     # x6 = x[1]\n    add  x7, x5, x6     # x7 = x[0] + x[1]  (czeka na lw)\n    addi x7, x7, -2     # x7 = x7 - 2\n    sw   x7, 8(x10)     # x[2] = x7", "en": ".data\nx:  .word 5, 7, 0        # int x[3] = {5, 7, 0}\n\n.text\nmain:\n    la   x10, x         # x10 = &x[0]\n    lw   x5, 0(x10)     # x5 = x[0]\n    lw   x6, 4(x10)     # x6 = x[1]\n    add  x7, x5, x6     # x7 = x[0] + x[1]  (waits for lw)\n    addi x7, x7, -2     # x7 = x7 - 2\n    sw   x7, 8(x10)     # x[2] = x7"}},
+{sub:{"pl": "pętla i flush", "en": "loop and flush"},
+ desc:{"pl": "bnez decyduje o skoku dopiero w EX. Za każdym powrotem do pętli potok wyrzuca to, co zdążył pobrać. Policz, ile razy addi x12 wchodzi do IF, zanim skończy.", "en": "bnez decides about the jump only in EX. Every time the loop jumps back, the pipeline throws away what it has already fetched. Count how many times addi x12 enters IF before it finishes."},
+ c:{"pl": "int main(void) {\n    int c = 3;            // licznik\n    do {\n        c = c - 1;\n    } while (c != 0);     // wracaj, dopóki c != 0\n    int d = 7;            // po pętli\n    return 0;\n}", "en": "int main(void) {\n    int c = 3;            // counter\n    do {\n        c = c - 1;\n    } while (c != 0);     // repeat while c != 0\n    int d = 7;            // after the loop\n    return 0;\n}"},
+ asm:{"pl": ".data\n# zmienne są w rejestrach, nie w pamięci\n\n.text\nmain: li   x11, 3          # c = 3\nloop: addi x11, x11, -1    # c = c - 1\n      bnez x11, loop       # wracaj, dopóki c != 0\n      addi x12, x0, 7      # d = 7 (po pętli)", "en": ".data\n# the variables live in registers, not in memory\n\n.text\nmain: li   x11, 3          # c = 3\nloop: addi x11, x11, -1    # c = c - 1\n      bnez x11, loop       # repeat while c != 0\n      addi x12, x0, 7      # d = 7 (after the loop)"}},
+{sub:{"pl": "suma tablicy", "en": "array sum"},
+ desc:{"pl": "W każdym obrocie pętli add czeka na lw (1 cykl), a bnez wyrzuca 2 pobrane instrukcje. Zobacz, ile cykli na obrót to strata.", "en": "In every loop iteration add waits for lw (1 cycle) and bnez throws away 2 fetched instructions. See how many cycles per iteration are lost."},
+ c:{"pl": "int a[4] = {3, 1, 4, 1};    // tablica w pamięci (.data)\n\nint main(void) {\n    int sum = 0;\n    for (int i = 0; i < 4; i++)\n        sum += a[i];\n    return 0;\n}", "en": "int a[4] = {3, 1, 4, 1};    // array in memory (.data)\n\nint main(void) {\n    int sum = 0;\n    for (int i = 0; i < 4; i++)\n        sum += a[i];\n    return 0;\n}"},
+ asm:{"pl": ".data\na:  .word 3, 1, 4, 1       # int a[4] = {3, 1, 4, 1}\n\n.text\nmain: la   x5, a           # p = &a[0]\n      li   x6, 4           # n = 4\n      li   x10, 0          # sum = 0\nloop: lw   x7, 0(x5)       # x7 = *p\n      add  x10, x10, x7    # sum += x7  (czeka na lw)\n      addi x5, x5, 4       # p++\n      addi x6, x6, -1      # n--\n      bnez x6, loop        # wracaj, dopóki n != 0", "en": ".data\na:  .word 3, 1, 4, 1       # int a[4] = {3, 1, 4, 1}\n\n.text\nmain: la   x5, a           # p = &a[0]\n      li   x6, 4           # n = 4\n      li   x10, 0          # sum = 0\nloop: lw   x7, 0(x5)       # x7 = *p\n      add  x10, x10, x7    # sum += x7  (waits for lw)\n      addi x5, x5, 4       # p++\n      addi x6, x6, -1      # n--\n      bnez x6, loop        # repeat while n != 0"}},
+{sub:{"pl": "suma, lepsza kolejność", "en": "sum, better order"},
+ desc:{"pl": "Ten sam kod w C i te same instrukcje co w Programie 4, tylko w innej kolejności: add nie stoi już tuż za lw, więc nie musi czekać. Porównaj liczbę cykli z Programem 4.", "en": "The same C code and the same instructions as Program 4, just in a different order: add no longer sits right after lw, so it does not have to wait. Compare the cycle count with Program 4."},
+ c:{"pl": "int a[4] = {3, 1, 4, 1};    // tablica w pamięci (.data)\n\nint main(void) {\n    int sum = 0;\n    for (int i = 0; i < 4; i++)\n        sum += a[i];\n    return 0;\n}\n\n// ten sam C co w Programie 4:\n// kompilator może ułożyć instrukcje\n// tak, żeby potok nie czekał", "en": "int a[4] = {3, 1, 4, 1};    // array in memory (.data)\n\nint main(void) {\n    int sum = 0;\n    for (int i = 0; i < 4; i++)\n        sum += a[i];\n    return 0;\n}\n\n// the same C as in Program 4:\n// the compiler can order instructions\n// so that the pipeline does not wait"},
+ asm:{"pl": ".data\na:  .word 3, 1, 4, 1       # int a[4] = {3, 1, 4, 1}\n\n.text\nmain: la   x5, a           # p = &a[0]\n      li   x6, 4           # n = 4\n      li   x10, 0          # sum = 0\nloop: lw   x7, 0(x5)       # x7 = *p\n      addi x5, x5, 4       # p++    (przesunięte w górę)\n      addi x6, x6, -1      # n--    (przesunięte w górę)\n      add  x10, x10, x7    # sum += x7  (lw jest już za MEM)\n      bnez x6, loop        # wracaj, dopóki n != 0", "en": ".data\na:  .word 3, 1, 4, 1       # int a[4] = {3, 1, 4, 1}\n\n.text\nmain: la   x5, a           # p = &a[0]\n      li   x6, 4           # n = 4\n      li   x10, 0          # sum = 0\nloop: lw   x7, 0(x5)       # x7 = *p\n      addi x5, x5, 4       # p++    (moved up)\n      addi x6, x6, -1      # n--    (moved up)\n      add  x10, x10, x7    # sum += x7  (lw is already past MEM)\n      bnez x6, loop        # repeat while n != 0"}}
+];
+const tr=o=>typeof o==='string'?o:o[lang];
+
+/* ================= asembler / assembler ================= */
+const ABI={zero:0,ra:1,sp:2,gp:3,tp:4,t0:5,t1:6,t2:7,s0:8,fp:8,s1:9,a0:10,a1:11,a2:12,a3:13,a4:14,a5:15,a6:16,a7:17,
+  s2:18,s3:19,s4:20,s5:21,s6:22,s7:23,s8:24,s9:25,s10:26,s11:27,t3:28,t4:29,t5:30,t6:31};
+const R3=['add','sub','and','or','xor','sll','srl','sra','slt','sltu','mul','div','rem'];
+const IALU=['addi','andi','ori','xori','slti','sltiu','slli','srli','srai'];
+const BR=['beq','bne','blt','bge','bltu','bgeu'];
+class AsmErr{constructor(k,...a){this.k=k;this.a=a;}}
+function regOf(s){s=(s||'').trim().toLowerCase();const m=/^x(\d{1,2})$/.exec(s);if(m&&+m[1]<32)return +m[1];if(s in ABI)return ABI[s];throw new AsmErr('e_reg',s);}
+function numOf(s){s=(s||'').trim();if(!/^[-+]?(0x[0-9a-f]+|0b[01]+|\d+)$/i.test(s))throw new AsmErr('e_imm',s);
+  const neg=s[0]==='-';const b=s.replace(/^[-+]/,'');let v=/^0x/i.test(b)?parseInt(b.slice(2),16):/^0b/i.test(b)?parseInt(b.slice(2),2):parseInt(b,10);return neg?-v:v;}
+function isNum(s){return /^[-+]?(0x[0-9a-f]+|0b[01]+|\d+)$/i.test((s||'').trim());}
+function rng(v,a,b){if(v<a||v>b)throw new AsmErr('e_range',v,a,b);return v;}
+function memArg(s){const m=/^(.*)\((.+)\)$/.exec((s||'').trim());if(!m)throw new AsmErr('e_mem',s);return {imm:m[1].trim()===''?0:rng(numOf(m[1]),-2048,2047),r:regOf(m[2])};}
+function splitArgs(s){return s.trim()===''?[]:s.split(',').map(x=>x.trim());}
+function hiLo(v){v|=0;const hi=((v+0x800)>>>12)&0xFFFFF;const lo=(v-(hi<<12))|0;return {hi,lo};}
+const RN=r=>'x'+r;
+
+function assemble(src){
+  const lines=src.split('\n');
+  const items=[], labels={}, data=[]; let sect='text', dAddr=DATA_BASE;
+  const dataNames=[];
+  lines.forEach((raw,li)=>{
+    const ln=li+1;
+    try{
+      let s=raw.replace(/(#|\/\/).*$/,'').trim();
+      while(true){const m=/^([A-Za-z_.$][\w.$]*)\s*:(.*)$/.exec(s);if(!m)break;
+        const lb=m[1];if(lb in labels)throw new AsmErr('e_dup',lb);
+        labels[lb]=sect==='text'?{sect:'text',idx:items.length}:{sect:'data',addr:dAddr};
+        if(sect==='data')dataNames.push({name:lb,addr:dAddr});
+        s=m[2].trim();}
+      if(!s)return;
+      if(s[0]==='.'){
+        const m=/^(\.\w+)\s*(.*)$/.exec(s),d=m[1].toLowerCase(),rest=m[2];
+        if(d==='.data'){sect='data';return;} if(d==='.text'){sect='text';return;}
+        if(d==='.globl'||d==='.global'||d==='.align'||d==='.section')return;
+        if(d==='.word'){if(sect!=='data')throw new AsmErr('e_data');splitArgs(rest).forEach(v=>{data.push({addr:dAddr,value:numOf(v)|0});dAddr+=4;});return;}
+        if(d==='.zero'||d==='.space'){if(sect!=='data')throw new AsmErr('e_data');const n=numOf(rest);for(let k=0;k<Math.ceil(n/4);k++){data.push({addr:dAddr,value:0});dAddr+=4;}return;}
+        throw new AsmErr('e_dir',d);
+      }
+      if(sect==='data')throw new AsmErr('e_data');
+      const m=/^(\S+)\s*(.*)$/.exec(s);const op=m[1].toLowerCase(),args=splitArgs(m[2]);
+      const it={op,args,ln,src:(op+' '+args.join(', ')).trim()};
+      it.size=sizeOf(it);
+      for(let k=0;k<it.size;k++)items.push(k===0?it:null);
+    }catch(e){if(e instanceof AsmErr){e.ln=ln;throw e;}throw e;}
+  });
+  const pcs=[];let idx=0;items.forEach((it,i)=>{});
+  Object.keys(labels).forEach(k=>{if(labels[k].sect==='text')labels[k].addr=labels[k].idx*4;});
+  const prog=[];
+  let pc=0;
+  items.forEach(it=>{
+    if(!it)return;
+    try{ expand(it,pc,labels).forEach(ins=>{ins.pc=pc;ins.ln=it.ln;prog.push(ins);pc+=4;}); }
+    catch(e){if(e instanceof AsmErr){e.ln=it.ln;}throw e;}
+  });
+  if(!prog.length)throw new AsmErr('e_empty');
+  const labelAt={};Object.keys(labels).forEach(k=>{const L=labels[k];if(L.sect==='text'&&!(L.addr in labelAt))labelAt[L.addr]=k;});
+  // names for data words
+  const names=new Map();
+  const sorted=dataNames.slice().sort((a,b)=>a.addr-b.addr);
+  sorted.forEach((d,i)=>{const end=i+1<sorted.length?sorted[i+1].addr:dAddr;const n=(end-d.addr)/4;
+    for(let k=0;k<n;k++)names.set(d.addr+4*k,n>1?d.name+'['+k+']':d.name);});
+  return {prog,data,labels,labelAt,names};
+}
+function sizeOf(it){
+  const {op,args}=it;
+  if(op==='la')return 2;
+  if(op==='li'){if(args.length!==2)throw new AsmErr('e_args','li',2);const v=numOf(args[1]);return (v>=-2048&&v<=2047)?1:2;}
+  if(op==='lw'&&args.length===2&&!/\(/.test(args[1]))return 2;
+  if(op==='sw'&&args.length===3)return 2;
+  return 1;
+}
+function need(it,n){if(it.args.length!==n)throw new AsmErr('e_args',it.op,n);}
+function lab(labels,s,pc){s=(s||'').trim();if(isNum(s))return pc+numOf(s);if(!(s in labels))throw new AsmErr('e_label',s);return labels[s].addr;}
+function mk(op,o,text){return Object.assign({op,rd:0,rs1:0,rs2:0,imm:0},o,{text});}
+function expand(it,pc,labels){
+  const {op,args}=it;const A=args;const src=it.src;
+  if(R3.includes(op)){need(it,3);return [mk(op,{rd:regOf(A[0]),rs1:regOf(A[1]),rs2:regOf(A[2])},src)];}
+  if(IALU.includes(op)){need(it,3);let v=numOf(A[2]);if(/^s(l|r)[la]i$/.test(op))rng(v,0,31);else rng(v,-2048,2047);return [mk(op,{rd:regOf(A[0]),rs1:regOf(A[1]),imm:v},src)];}
+  if(op==='lw'){need(it,2);if(!/\(/.test(A[1])){const tg=lab(labels,A[1],pc),rd=regOf(A[0]),{hi,lo}=hiLo(tg-pc);
+      return [mk('auipc',{rd,imm:hi},'auipc '+RN(rd)+', 0x'+hi.toString(16)),mk('lw',{rd,rs1:rd,imm:lo},'lw '+RN(rd)+', '+lo+'('+RN(rd)+')')];}
+    const m=memArg(A[1]);return [mk('lw',{rd:regOf(A[0]),rs1:m.r,imm:m.imm},src)];}
+  if(op==='sw'){if(A.length===3){const tg=lab(labels,A[1],pc),rt=regOf(A[2]),rs2=regOf(A[0]),{hi,lo}=hiLo(tg-pc);
+      return [mk('auipc',{rd:rt,imm:hi},'auipc '+RN(rt)+', 0x'+hi.toString(16)),mk('sw',{rs2,rs1:rt,imm:lo},'sw '+RN(rs2)+', '+lo+'('+RN(rt)+')')];}
+    need(it,2);const m=memArg(A[1]);return [mk('sw',{rs2:regOf(A[0]),rs1:m.r,imm:m.imm},src)];}
+  if(BR.includes(op)){need(it,3);return [mk(op,{rs1:regOf(A[0]),rs2:regOf(A[1]),target:lab(labels,A[2],pc)},src)];}
+  const b2={beqz:['beq',0],bnez:['bne',0],bltz:['blt',0],bgez:['bge',0],blez:['bge',1],bgtz:['blt',1]};
+  if(op in b2){need(it,2);const r=regOf(A[0]);const [o,sw]=b2[op];return [mk(o,{rs1:sw?0:r,rs2:sw?r:0,target:lab(labels,A[1],pc)},src)];}
+  const bsw={bgt:'blt',ble:'bge',bgtu:'bltu',bleu:'bgeu'};
+  if(op in bsw){need(it,3);return [mk(bsw[op],{rs1:regOf(A[1]),rs2:regOf(A[0]),target:lab(labels,A[2],pc)},src)];}
+  if(op==='lui'||op==='auipc'){need(it,2);return [mk(op,{rd:regOf(A[0]),imm:rng(numOf(A[1]),0,0xFFFFF)},src)];}
+  if(op==='jal'){if(A.length===1)return [mk('jal',{rd:1,target:lab(labels,A[0],pc)},src)];need(it,2);return [mk('jal',{rd:regOf(A[0]),target:lab(labels,A[1],pc)},src)];}
+  if(op==='jalr'){if(A.length===1)return [mk('jalr',{rd:1,rs1:regOf(A[0]),imm:0},src)];
+    if(A.length===2){const m=memArg(A[1]);return [mk('jalr',{rd:regOf(A[0]),rs1:m.r,imm:m.imm},src)];}
+    need(it,3);return [mk('jalr',{rd:regOf(A[0]),rs1:regOf(A[1]),imm:rng(numOf(A[2]),-2048,2047)},src)];}
+  if(op==='j'){need(it,1);return [mk('jal',{rd:0,target:lab(labels,A[0],pc)},src)];}
+  if(op==='call'){need(it,1);return [mk('jal',{rd:1,target:lab(labels,A[0],pc)},src)];}
+  if(op==='jr'){need(it,1);return [mk('jalr',{rd:0,rs1:regOf(A[0]),imm:0},src)];}
+  if(op==='ret'){need(it,0);return [mk('jalr',{rd:0,rs1:1,imm:0},src)];}
+  if(op==='nop'){need(it,0);return [mk('addi',{},src)];}
+  if(op==='mv'){need(it,2);return [mk('addi',{rd:regOf(A[0]),rs1:regOf(A[1])},src)];}
+  if(op==='not'){need(it,2);return [mk('xori',{rd:regOf(A[0]),rs1:regOf(A[1]),imm:-1},src)];}
+  if(op==='neg'){need(it,2);return [mk('sub',{rd:regOf(A[0]),rs2:regOf(A[1])},src)];}
+  if(op==='seqz'){need(it,2);return [mk('sltiu',{rd:regOf(A[0]),rs1:regOf(A[1]),imm:1},src)];}
+  if(op==='snez'){need(it,2);return [mk('sltu',{rd:regOf(A[0]),rs2:regOf(A[1])},src)];}
+  if(op==='li'){need(it,2);const rd=regOf(A[0]),v=numOf(A[1])|0;
+    if(v>=-2048&&v<=2047)return [mk('addi',{rd,imm:v},src)];
+    const {hi,lo}=hiLo(v);return [mk('lui',{rd,imm:hi},'lui '+RN(rd)+', 0x'+hi.toString(16)),mk('addi',{rd,rs1:rd,imm:lo},'addi '+RN(rd)+', '+RN(rd)+', '+lo)];}
+  if(op==='la'){need(it,2);const rd=regOf(A[0]),tg=lab(labels,A[1],pc),{hi,lo}=hiLo(tg-pc);
+    return [mk('auipc',{rd,imm:hi},'auipc '+RN(rd)+', 0x'+hi.toString(16)),mk('addi',{rd,rs1:rd,imm:lo},'addi '+RN(rd)+', '+RN(rd)+', '+lo)];}
+  throw new AsmErr('e_op',op);
+}
+
+/* ================= potok / pipeline ================= */
+const isBr=i=>BR.includes(i.op), isCtl=i=>isBr(i)||i.op==='jal'||i.op==='jalr';
+function srcs(i){
+  if(R3.includes(i.op)||isBr(i)||i.op==='sw')return [...new Set([i.rs1,i.rs2])].filter(r=>r);
+  if(IALU.includes(i.op)||i.op==='lw'||i.op==='jalr')return [i.rs1].filter(r=>r);
+  return [];
+}
+const dst=i=>(i.op==='sw'||isBr(i))?0:i.rd;
+function alu(i,a,b,pc){
+  switch(i.op){
+    case 'add':return (a+b)|0; case 'sub':return (a-b)|0; case 'and':return a&b; case 'or':return a|b; case 'xor':return a^b;
+    case 'sll':return a<<(b&31); case 'srl':return (a>>>(b&31))|0; case 'sra':return a>>(b&31);
+    case 'slt':return a<b?1:0; case 'sltu':return (a>>>0)<(b>>>0)?1:0; case 'mul':return Math.imul(a,b);
+    case 'div':return b===0?-1:(a===-2147483648&&b===-1?a:(a/b)|0); case 'rem':return b===0?a:(a===-2147483648&&b===-1?0:(a%b)|0);
+    case 'addi':return (a+i.imm)|0; case 'andi':return a&i.imm; case 'ori':return a|i.imm; case 'xori':return a^i.imm;
+    case 'slti':return a<i.imm?1:0; case 'sltiu':return (a>>>0)<(i.imm>>>0)?1:0;
+    case 'slli':return a<<i.imm; case 'srli':return (a>>>i.imm)|0; case 'srai':return a>>i.imm;
+    case 'lui':return (i.imm<<12)|0; case 'auipc':return (pc+(i.imm<<12))|0;
+  }
+  return 0;
+}
+function brTaken(i,a,b){switch(i.op){case 'beq':return a===b;case 'bne':return a!==b;case 'blt':return a<b;case 'bge':return a>=b;case 'bltu':return (a>>>0)<(b>>>0);case 'bgeu':return (a>>>0)>=(b>>>0);}return false;}
+
+function simulate(A,cfg){
+  const byPc=new Map();A.prog.forEach(i=>byPc.set(i.pc,i));
+  const rf=new Int32Array(32);rf[2]=0x7FFFFFF0;rf[3]=DATA_BASE;
+  const ra=Int32Array.from(rf);
+  const memF=new Map(),memA=new Map();A.data.forEach(d=>{memF.set(d.addr,d.value);memA.set(d.addr,d.value);});
+  const dyn=[],snaps=[],pred=new Map();
+  const st={retired:0,stalls:0,flushed:0,fwd:0};
+  let S={IF:null,ID:null,EX:null,MEM:null,WB:null};
+  let fetchPC=0,err=null,trunc=false;
+  const predict=(ins)=>{if(cfg.pred==='last'&&isCtl(ins)){const e=pred.get(ins.pc);if(e&&e.taken)return e.target;}return ins.pc+4;};
+  const fetch=(pc,c)=>{const ins=byPc.get(pc);if(!ins)return null;const d={id:dyn.length,ins,pc,cells:{},predNext:predict(ins),fetchedAt:c};dyn.push(d);return d;};
+  const real=x=>x&&!x.bubble&&!x.flushedOf;
+  snaps.push({c:0,S:{},events:[],regs:Int32Array.from(ra),mem:new Map(memA),chg:-1,memEv:null,st:{...st}});
+  let c=1;
+  S.IF=fetch(0,1); if(S.IF)fetchPC=S.IF.predNext;
+  while(true){
+    const ev=[];let chg=-1,memEv=null;
+    STAGES.forEach(s=>{const d=S[s];if(real(d)&&!d.cells[c])d.cells[c]={st:s};});
+    if(real(S.IF)&&S.IF.fetchedAt===c)ev.push({k:'fetch',d:S.IF});
+    // WB
+    if(real(S.WB)){const d=S.WB;st.retired++;d.done=c;const rd=dst(d.ins);
+      if(rd){ra[rd]=d.result;chg=rd;ev.push({k:'wb',d,r:rd,v:d.result});}else ev.push({k:'done',d});}
+    // MEM
+    if(real(S.MEM)){const d=S.MEM;
+      if(d.ins.op==='lw'){memEv={t:'r',addr:d.addr};ev.push({k:'memr',d,a:d.addr,v:d.result});}
+      if(d.ins.op==='sw'){memA.set(d.addr,d.store);memEv={t:'w',addr:d.addr};ev.push({k:'memw',d,a:d.addr,v:d.store});}}
+    // EX
+    let flush=false,target=0;
+    if(real(S.EX)&&!err){const d=S.EX,i=d.ins;
+      srcs(i).forEach(r=>{
+        for(const [s,name] of [['MEM','EX/MEM'],['WB','MEM/WB']]){const p=S[s];if(real(p)&&dst(p.ins)===r){if(cfg.fwd){st.fwd++;d.fwd=d.fwd||[];d.fwd.push({r,from:name});ev.push({k:'fwd',d,p,r,from:name});}break;}}
+      });
+      const a=i.rs1?rf[i.rs1]:0,b=i.rs2?rf[i.rs2]:0;
+      if(i.op==='lw'||i.op==='sw'){const addr=((a+i.imm)>>>0);
+        if(addr%4){err={k:'e_align',a:[i.op,hex(addr)]};}
+        else if(i.op==='lw'){d.addr=addr;d.result=memF.get(addr)||0;if(i.rd)rf[i.rd]=d.result;}
+        else{d.addr=addr;d.store=b;memF.set(addr,b);}}
+      else if(isBr(i)){d.taken=brTaken(i,a,b);d.next=d.taken?i.target:d.pc+4;}
+      else if(i.op==='jal'){d.taken=true;d.next=i.target;d.result=d.pc+4;if(i.rd)rf[i.rd]=d.result;}
+      else if(i.op==='jalr'){d.taken=true;d.next=((a+i.imm)&~1)>>>0;d.result=d.pc+4;if(i.rd)rf[i.rd]=d.result;}
+      else{d.result=alu(i,a,b,d.pc);if(i.rd)rf[i.rd]=d.result;}
+      if(isCtl(i)&&!err){
+        if(d.next!==d.predNext){flush=true;target=d.next;const fl=[S.ID,S.IF].filter(real);
+          ev.push({k:'flush',d,taken:d.taken,target:d.next,list:fl.map(x=>x.ins.text)});}
+        else ev.push({k:'ok',d,taken:d.taken,pred:cfg.pred==='last'&&d.taken});
+        pred.set(d.pc,{taken:d.taken,target:d.next});
+      }
+    }
+    // ID hazard
+    let stall=false;
+    if(!flush&&real(S.ID)&&!err){const d=S.ID,need=srcs(d.ins);
+      if(cfg.fwd){const p=S.EX;if(real(p)&&p.ins.op==='lw'&&dst(p.ins)&&need.includes(dst(p.ins))){stall=true;ev.push({k:'loaduse',d,p,r:dst(p.ins)});}}
+      else{for(const s of ['EX','MEM']){const p=S[s];if(real(p)&&dst(p.ins)&&need.includes(dst(p.ins))){stall=true;ev.push({k:'raw',d,p,r:dst(p.ins)});break;}}}
+    }
+    snaps.push({c,S:{...S},events:ev,regs:Int32Array.from(ra),mem:new Map(memA),chg,memEv,st:{...st},stall,flush});
+    if(err)break;
+    const N={WB:S.MEM,MEM:S.EX,EX:null,ID:null,IF:null};
+    if(N.WB&&!real(N.WB))N.WB=null; if(N.MEM&&!real(N.MEM))N.MEM=null;
+    if(flush){
+      const fl=[S.ID,S.IF].filter(real);st.flushed+=fl.length;
+      fl.forEach(x=>{x.cells[c+1]={st:'X'};x.flushed=true;});
+      N.EX=real(S.ID)?{flushedOf:S.ID}:{bubble:true};
+      N.ID=real(S.IF)?{flushedOf:S.IF}:null;
+      N.IF=fetch(target,c+1);fetchPC=N.IF?N.IF.predNext:target;
+    }else if(stall){
+      st.stalls++;N.EX={bubble:true};N.ID=S.ID;N.IF=S.IF;
+      if(real(S.ID))S.ID.cells[c+1]={st:'ID',stall:true};
+      if(real(S.IF))S.IF.cells[c+1]={st:'IF',stall:true};
+    }else{
+      N.EX=S.ID;N.ID=S.IF;N.IF=fetch(fetchPC,c+1);if(N.IF)fetchPC=N.IF.predNext;
+    }
+    S=N;c++;
+    if(!STAGES.some(s=>S[s]&&(real(S[s])||S[s].bubble||S[s].flushedOf))){break;}
+    if(!STAGES.some(s=>real(S[s]))){// only bubbles left: still advance to drain
+      let drain=true;}
+    if(c>MAX_CYCLES){trunc=true;break;}
+  }
+  // drop trailing snapshots with nothing real? keep as is
+  return {dyn,snaps,st,err,trunc,labelAt:A.labelAt,names:A.names,nInstr:A.prog.length};
+}
+
+/* ================= stan UI / UI state ================= */
+let cur=0, sim=null, asmObj=null, progIdx=0, dirty=false, edited=false, editing=false, fmt='dec';
+const cfg={fwd:true,pred:'none'};
+
+function fmtV(v){return fmt==='hex'?hex(v):String(v);}
+function tgtName(pc){return sim&&sim.labelAt[pc]!=null?sim.labelAt[pc]:hex(pc);}
+function evText(e){
+  const it=x=>esc(x.ins.text);
+  switch(e.k){
+    case 'fetch':return {cls:'',h:t('ev_fetch')(it(e.d))};
+    case 'wb':return {cls:'',h:t('ev_wb')(it(e.d),'x'+e.r,e.v)};
+    case 'done':return {cls:'',h:t('ev_done')(it(e.d))};
+    case 'memr':return {cls:'',h:t('ev_memr')(it(e.d),hex(e.a),e.v)};
+    case 'memw':return {cls:'',h:t('ev_memw')(it(e.d),hex(e.a),e.v)};
+    case 'fwd':return {cls:'fwd',h:t('ev_fwd')(it(e.d),'x'+e.r,e.from,it(e.p))};
+    case 'loaduse':return {cls:'stall',h:t('ev_loaduse')(it(e.d),'x'+e.r,it(e.p))};
+    case 'raw':return {cls:'stall',h:t('ev_raw')(it(e.d),'x'+e.r,it(e.p))};
+    case 'flush':return {cls:'flush',h:t('ev_flush')(it(e.d),e.taken,esc(tgtName(e.target)),e.list.map(esc))};
+    case 'ok':return {cls:'ok',h:t('ev_ok')(it(e.d),e.taken,e.pred)};
+  }
+  return {cls:'',h:''};
+}
+
+function run(){
+  $('asmErr').textContent='';
+  try{asmObj=assemble($('asmBox').value);}
+  catch(e){if(e instanceof AsmErr){$('asmErr').textContent=(e.ln?t('e_line')(e.ln):'')+t(e.k)(...e.a);}else{$('asmErr').textContent=String(e);}
+    sim=null;cur=0;setEditing(true);renderAll();return false;}
+  sim=simulate(asmObj,cfg);
+  if(sim.err)$('asmErr').textContent=t('runtime')+t(sim.err.k)(...sim.err.a);
+  cur=0;dirty=false;setEditing(false);
+  renderAll();return true;
+}
+function loadProg(i){progIdx=i;edited=false;dirty=false;$('asmBox').value=tr(PROGS[i].asm);run();}
+function setEditing(v){editing=v;$('asmBox').hidden=!v;$('asmView').hidden=v;$('bEdit').hidden=v;$('bAsm').hidden=!v;if(v)$('asmBox').focus({preventScroll:true});}
+function go(n){if(!sim)return;cur=Math.max(0,Math.min(sim.snaps.length-1,n));renderDyn();}
+
+/* ================= rysowanie / rendering ================= */
+function hl(text,cm,kw){
+  return text.split('\n').map(line=>hlLine(line,cm,kw)).join('\n');
+}
+function hlLine(line,cm,kw){
+  const i=line.indexOf(cm);const cd=i<0?line:line.slice(0,i),com=i<0?'':line.slice(i);
+  return esc(cd).replace(kw,'<span class="k">$1</span>').replace(/(\.data|\.text|\.word|\.zero)/g,'<span class="n">$1</span>')+(com?'<span class="c">'+esc(com)+'</span>':'');
+}
+const ASM_KW=/\b(li|la|lw|sw|add|addi|sub|and|andi|or|ori|xor|xori|sll|slli|srl|srli|sra|srai|slt|slti|sltu|sltiu|mul|div|rem|lui|auipc|beq|bne|blt|bge|bltu|bgeu|beqz|bnez|bltz|bgez|blez|bgtz|bgt|ble|bgtu|bleu|jal|jalr|j|jr|ret|call|mv|nop|not|neg|seqz|snez)\b/g;
+function renderStatic(){
+  document.documentElement.lang=lang;document.title=t('doc_title');
+  document.querySelectorAll('[data-i]').forEach(el=>{el.innerHTML=t(el.dataset.i);});
+  document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
+  $('progs').innerHTML=PROGS.map((p,i)=>'<button data-p="'+i+'">Program '+(i+1)+'<small>'+esc(tr(p.sub))+'</small></button>').join('');
+}
+function renderCode(){
+  const p=progIdx!=null?PROGS[progIdx]:null;
+  $('codeTitle').textContent=p&&!edited?'Program '+(progIdx+1)+': '+tr(p.sub):t('custom_title');
+  $('progDesc').textContent=p?tr(p.desc):'';
+  if(p){$('cBox').innerHTML=hl(tr(p.c),'//',/\b(int|void|for|do|while|return)\b/g);$('cBox').classList.toggle('dimmed',edited);$('cNote').textContent=edited?t('c_edited'):'';}
+  else{$('cBox').innerHTML='';$('cNote').textContent=t('c_none');}
+  $('asmNote').textContent=dirty?t('code_dirty'):(sim?t('code_ok')(sim.nInstr)+' '+t('code_hint'):'');
+  document.querySelectorAll('#progs button').forEach(b=>b.classList.toggle('on',+b.dataset.p===progIdx&&!edited));
+}
+function renderAsmView(snap){
+  const src=$('asmBox').value.split('\n');
+  const chips={};
+  if(snap&&snap.S){STAGES.forEach(s=>{const d=snap.S[s];if(!d)return;
+    if(d.flushedOf){(chips[d.flushedOf.ins.ln]=chips[d.flushedOf.ins.ln]||[]).push({st:'X'});return;}
+    if(d.bubble)return;
+    (chips[d.ins.ln]=chips[d.ins.ln]||[]).push({st:s,stall:snap.stall&&(s==='ID'||s==='IF')});});}
+  let h='';
+  src.forEach((line,i)=>{const ln=i+1,c=chips[ln];
+    const act=c&&c.length?c[c.length-1]:null;
+    const style=act?' style="--act:'+(act.st==='X'?'var(--bad)':'var(--c'+act.st+')')+'"':'';
+    h+='<div class="ln'+(act?' act':'')+'"'+style+'><span class="num">'+ln+'</span><span class="chips">'+
+      (c?c.slice().reverse().map(x=>'<span class="chip '+x.st+(x.stall?' stall':'')+'" title="'+(x.stall?t('t_stall'):x.st==='X'?t('t_flush'):x.st)+'">'+x.st+'</span>').join(''):'')+
+      '</span><span class="src">'+(hlLine(line,'#',ASM_KW)||' ')+'</span></div>';});
+  $('asmView').innerHTML=h;
+}
+function renderStats(){
+  if(!sim){['sCyc','sIns','sCpi','sStall','sFlush','sFwd'].forEach(i=>$(i).textContent='–');$('statsNote').textContent='';return;}
+  const fin=sim.snaps[sim.snaps.length-1];const cyc=fin.c,ins=fin.st.retired;
+  $('sCyc').textContent=cyc;$('sIns').textContent=ins;
+  $('sCpi').textContent=ins?(Math.round(cyc/ins*100)/100).toFixed(2).replace('.',lang==='pl'?',':'.'):'–';
+  $('sStall').textContent=fin.st.stalls;$('sFlush').textContent=fin.st.flushed;$('sFwd').textContent=fin.st.fwd;
+  $('statsNote').textContent=ins?t('stats_note')(ins,ins+4):'';
+}
+function renderStages(snap){
+  $('stagesTitle').textContent=t('stages_title')(snap?snap.c:0);
+  let h='';
+  STAGES.forEach(s=>{
+    const d=snap&&snap.S?snap.S[s]:null;let body,cls='sb';
+    if(!d){body='—';cls+=' empty';}
+    else if(d.bubble){body=t('bubble');cls+=' empty';}
+    else if(d.flushedOf){body='<s>'+esc(d.flushedOf.ins.text)+'</s><br><span class="tag flush">'+t('t_flush')+'</span>';}
+    else{body=esc(d.ins.text);
+      if(snap.stall&&(s==='ID'||s==='IF'))body+='<br><span class="tag stall">'+t('t_stall')+'</span>';
+      if(s==='EX'){snap.events.filter(e=>e.k==='fwd'&&e.d===d).forEach(e=>{body+='<br><span class="tag fwd">'+t('t_fwd')('x'+e.r,e.from)+'</span>';});
+        if(snap.flush)body+='<br><span class="tag flush">flush →</span>';}
+    }
+    h+='<div class="stage"><div class="sh" style="background:var(--c'+s+')">'+s+'<small>'+t('s'+s)+'</small></div><div class="'+cls+'">'+body+'</div></div>';
+  });
+  $('stages').innerHTML=h;
+  let ev='';
+  if(!snap||snap.c===0){ev='<li>'+t('before')+'</li>';}
+  else{
+    const order={flush:0,loaduse:1,raw:1,fwd:2,ok:3,memw:4,memr:4,wb:5,done:5,fetch:6};
+    const list=snap.events.slice().sort((a,b)=>order[a.k]-order[b.k]).map(evText);
+    const special=snap.events.some(e=>['flush','loaduse','raw','fwd'].includes(e.k));
+    if(!special)ev+='<li class="ok">'+t('no_events')+'</li>';
+    ev+=list.map(x=>'<li class="'+x.cls+'">'+x.h+'</li>').join('');
+    if(sim&&snap.c===sim.snaps[sim.snaps.length-1].c){ev+='<li class="ok">'+(sim.trunc?t('ev_trunc'):t('ev_end'))+'</li>';}
+  }
+  $('events').innerHTML=ev;
+}
+function renderGantt(snap){
+  const g=$('gantt');
+  if(!sim){g.innerHTML='';$('legend').innerHTML='';return;}
+  const total=sim.snaps[sim.snaps.length-1].c, c=snap.c;
+  const rows=sim.dyn.filter(d=>d.fetchedAt<=c);
+  let h='<thead><tr><th class="lab">'+t('th_instr')+'</th>';
+  for(let k=1;k<=total;k++)h+='<th class="'+(k===c?'cur':'')+'">'+k+'</th>';
+  h+='</tr></thead><tbody>';
+  rows.forEach(d=>{
+    const fl=d.flushed&&Object.keys(d.cells).some(k=>+k<=c&&d.cells[k].st==='X');
+    h+='<tr class="'+(fl?'flushed':'')+'"><td class="lab" title="PC '+hex(d.pc)+'">'+esc(d.ins.text)+'</td>';
+    for(let k=1;k<=total;k++){
+      const x=k<=c?d.cells[k]:null;
+      h+='<td class="'+(k===c?'cur':'')+'">'+(x?'<div class="cell '+x.st+(x.stall?' stall':'')+'">'+x.st+'</div>':'')+'</td>';
+    }
+    h+='</tr>';
+  });
+  if(!rows.length)h+='<tr><td class="lab" style="color:var(--muted)">—</td></tr>';
+  g.innerHTML=h+'</tbody>';
+  const wrap=$('gwrap'),th=g.querySelector('thead th.cur');
+  if(th){const lab=g.querySelector('thead th.lab').offsetWidth;const x=th.offsetLeft;
+    if(x-lab<wrap.scrollLeft||x+th.offsetWidth>wrap.scrollLeft+wrap.clientWidth)wrap.scrollLeft=Math.max(0,x-lab-th.offsetWidth*3);}
+  const lastRow=g.querySelector('tbody tr:last-child');
+  if(lastRow&&lastRow.offsetTop+lastRow.offsetHeight>wrap.scrollTop+wrap.clientHeight)wrap.scrollTop=lastRow.offsetTop+lastRow.offsetHeight-wrap.clientHeight;
+  $('legend').innerHTML=STAGES.map(s=>'<span class="cell '+s+'">'+s+'</span>').join('')+
+    '<span class="row" style="gap:6px"><span class="cell ID stall">ID</span>'+t('lg_stall')+'</span>'+
+    '<span class="row" style="gap:6px"><span class="cell X">X</span>'+t('lg_x')+'</span>';
+}
+function renderRegs(snap){
+  const used=new Set();if(asmObj&&sim)asmObj.prog.forEach(i=>{[i.rd,i.rs1,i.rs2].forEach(r=>{if(r)used.add(r);});});
+  const regs=snap?snap.regs:new Int32Array(32);
+  let h='';
+  for(let r=0;r<32;r++){
+    const cls='reg'+(snap&&snap.chg===r?' chg':(used.has(r)?' used':''));
+    h+='<div class="'+cls+'" title="x'+r+' = '+regs[r]+' = '+hex(regs[r])+'"><span>x'+r+'</span>'+fmtV(regs[r])+'</div>';
+  }
+  $('regs').innerHTML=h;
+}
+function renderMem(snap){
+  if(!sim||!snap){$('mem').innerHTML='';return;}
+  const addrs=[...new Set([...asmObj.data.map(d=>d.addr),...snap.mem.keys()])].sort((a,b)=>a-b);
+  if(!addrs.length){$('mem').innerHTML='<p class="note" style="margin:0">'+t('mem_empty')+'</p>';return;}
+  let h='<table class="mem"><thead><tr><th>'+t('th_addr')+'</th><th>'+t('th_name')+'</th><th>'+t('th_val')+'</th></tr></thead><tbody>';
+  addrs.forEach(a=>{const cls=snap.memEv&&snap.memEv.addr===a?snap.memEv.t:'';
+    h+='<tr class="'+cls+'"><td>'+hex(a)+'</td><td>'+esc(sim.names.get(a)||'')+'</td><td>'+fmtV(snap.mem.get(a)||0)+'</td></tr>';});
+  $('mem').innerHTML=h+'</tbody></table>';
+}
+function renderDyn(){
+  const snap=sim?sim.snaps[cur]:null;
+  const total=sim?sim.snaps.length-1:0;
+  $('cycLabel').textContent=t('cyc')(cur,total);
+  $('bPrev').disabled=false;
+  renderAsmView(snap);renderStages(snap);renderGantt(snap||{c:0});renderRegs(snap);renderMem(snap);
+}
+function renderAll(){renderStatic();renderCode();renderStats();renderDyn();}
+
+function setLang(l){
+  lang=l;try{localStorage.setItem('pipeSimLang',l);}catch(e){}
+  if(progIdx!=null&&!edited&&!dirty){$('asmBox').value=tr(PROGS[progIdx].asm);
+    try{asmObj=assemble($('asmBox').value);sim=simulate(asmObj,cfg);}catch(e){}}
+  $('asmErr').textContent='';
+  if(sim&&sim.err)$('asmErr').textContent=t('runtime')+t(sim.err.k)(...sim.err.a);
+  renderAll();
+}
+
+/* ================= zdarzenia / events ================= */
+document.querySelectorAll('.langs button').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+$('progs').addEventListener('click',e=>{const b=e.target.closest('button');if(b)loadProg(+b.dataset.p);});
+$('bEdit').onclick=()=>{setEditing(true);};
+$('bAsm').onclick=()=>{run();};
+$('asmBox').addEventListener('input',()=>{dirty=true;if(progIdx!=null)edited=$('asmBox').value!==tr(PROGS[progIdx].asm);renderCode();});
+$('asmBox').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();run();}});
+$('bPrev').onclick=()=>go(cur-1);
+$('bNext').onclick=()=>go(cur+1);
+$('bReset').onclick=()=>go(0);
+document.addEventListener('keydown',e=>{
+  const tg=e.target.tagName;if(tg==='TEXTAREA'||tg==='INPUT'||tg==='SELECT')return;
+  if(e.key==='ArrowRight'){e.preventDefault();go(cur+1);}
+  if(e.key==='ArrowLeft'){e.preventDefault();go(cur-1);}
+});
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{fmt=b.dataset.fmt;document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));renderDyn();});
+document.querySelectorAll('[data-copy]').forEach(btn=>btn.addEventListener('click',async()=>{
+  const txt=btn.dataset.copy==='c'?(progIdx!=null?tr(PROGS[progIdx].c):''):$('asmBox').value;
+  try{await navigator.clipboard.writeText(txt);}
+  catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}ta.remove();}
+  btn.textContent=t('copied');setTimeout(()=>{btn.textContent=t('b_copy');},1500);
+}));
+
+let initLang=null;
+try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')initLang=q;}catch(e){}
+if(!initLang){try{const st=localStorage.getItem('pipeSimLang');if(st==='pl'||st==='en')initLang=st;}catch(e){}}
+if(!initLang)initLang=(navigator.language||'pl').toLowerCase().startsWith('pl')?'pl':'en';
+lang=initLang;
+loadProg(0);
+})();
+</script>
+</body>
+</html>

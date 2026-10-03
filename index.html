@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulatory: Computer Hardware</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --sunken:#EAEEF2; --ink:#16202B; --muted:#5B6673; --rule:#D5DBE1; --focus:#2F6FDB;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){--bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;}
+}
+:root[data-theme="dark"]{--bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+button{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:6px;cursor:pointer}
+button:hover{background:var(--sunken)}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+.app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100vh}
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--rule);background:var(--surface)}
+.top h1{font-size:20px;font-weight:600;margin:0;letter-spacing:-0.01em}
+.top p{margin:0;color:var(--muted);font-size:13.5px}
+.langs{display:flex;gap:6px;flex:none}
+.langs button{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:13px;font-weight:500}
+.langs button svg{width:22px;height:14px;border-radius:2px;box-shadow:0 0 0 1px var(--rule);display:block}
+.langs button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+
+.body{display:grid;grid-template-columns:290px minmax(0,1fr);min-height:0}
+.side{overflow:auto;padding:12px 10px 24px;border-right:1px solid var(--rule);background:var(--surface);display:flex;flex-direction:column;gap:4px}
+.main{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+.modhead{padding:12px 20px 10px;border-bottom:1px solid var(--rule)}
+.modhead span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.modhead h2{font-size:20px;margin:1px 0 0;font-weight:600}
+.modhead p{margin:0;color:var(--muted);font-size:13.5px}
+iframe{border:0;width:100%;height:100%;display:block;background:var(--bg)}
+
+.grp .gh{width:100%;display:flex;align-items:center;gap:11px;text-align:left;border:0;background:none;padding:9px 10px;border-radius:8px}
+.grp .gh:hover{background:var(--sunken)}
+.grp .gh b{display:block;font-size:14.5px;font-weight:600;line-height:1.3}
+.grp .gh small{display:block;font-size:12px;color:var(--muted);font-weight:500}
+.grp .gnum{flex:none;width:30px;height:30px;border-radius:8px;background:var(--sunken);color:var(--muted);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:14px}
+.grp .chev{width:14px;height:14px;margin-left:auto;color:var(--muted);transition:transform .15s;flex:none}
+.grp.open .gh{background:var(--sunken)}
+.grp.open .gnum{background:var(--ink);color:var(--surface)}
+.grp.open .chev{transform:rotate(90deg)}
+.grp.single .chev{display:none}
+.grp .items{display:none;flex-direction:column;gap:2px;margin:4px 0 8px 24px;padding-left:10px;border-left:2px solid var(--rule)}
+.grp.open .items{display:flex}
+.items button{border:0;background:none;text-align:left;padding:6px 10px;border-radius:6px;font-weight:500;line-height:1.3}
+.items button small{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:1px}
+.items button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.items button[aria-pressed="true"] small{color:var(--surface);opacity:.75}
+
+@media (max-width:900px){
+  .app{height:auto;display:block}
+  .top{flex-wrap:wrap}
+  .body{display:block}
+  .side{border-right:0;border-bottom:1px solid var(--rule)}
+  .main{display:block}
+  iframe{height:100vh}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div><h1 data-i="title"></h1><p data-i="intro"></p></div>
+    <div class="langs" role="group" aria-label="Język / Language">
+      <button data-lang="pl" aria-pressed="false"><svg viewBox="0 0 16 10" aria-hidden="true"><rect width="16" height="5" fill="#fff"/><rect y="5" width="16" height="5" fill="#DC143C"/></svg>PL</button>
+      <button data-lang="en" aria-pressed="false"><svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+    </div>
+  </header>
+  <div class="body">
+    <nav class="side" id="side" aria-label="Topics"></nav>
+    <main class="main">
+      <div class="modhead"><span id="mhGrp"></span><h2 id="mhTitle"></h2><p id="mhSub"></p></div>
+      <iframe id="frame" title="simulator"></iframe>
+    </main>
+  </div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* each item: id, simulator directory, topic inside the simulator (hash), name and subtitle in both languages */
+const GROUPS=[
+  {n:3,pl:'Wydajność i potok',en:'Performance and pipelining',items:[
+    {id:'pipeline',sim:'pipeline',pl:['Potok RISC-V','stall, forwarding i flush, cykl po cyklu'],en:['RISC-V pipeline','stalls, forwarding and flushes, cycle by cycle']}]},
+  {n:4,pl:'Pamięć i cache',en:'Memory and cache',items:[
+    {id:'cache',sim:'cache',pl:['Cache direct-mapped','blok, linia, tag, trafienia'],en:['Direct-mapped cache','block, line, tag, hits']}]},
+  {n:5,pl:'Urządzenia wejścia-wyjścia',en:'Input/output devices',items:[
+    {id:'io-i2c',sim:'device',mod:'i2c',pl:['I2C','jedna wiadomość, bit po bicie'],en:['I2C','one message, bit by bit']},
+    {id:'io-mmio',sim:'device',mod:'mmio',pl:['Rejestry urządzeń','sw i lw do urządzenia, dekoder adresu'],en:['Device registers','sw and lw to a device, address decoder']},
+    {id:'io-gpio',sim:'device',mod:'gpio',pl:['Kontroler GPIO','OUT, ENABLE, IN, driver i piny'],en:['GPIO controller','OUT, ENABLE, IN, driver and pins']}]},
+  {n:6,pl:'Przerwania i planista',en:'Interrupts and the scheduler',items:[
+    {id:'cc-poll',sim:'concurrency',mod:'poll',pl:['Polling a przerwanie','Symulator 1: naciskaj i porównaj'],en:['Polling vs interrupt','Simulator 1: press and compare']},
+    {id:'cc-irq',sim:'concurrency',mod:'irq',pl:['Przerwanie krok po kroku','Symulator 1: mepc, ISR, mret'],en:['Interrupt step by step','Simulator 1: mepc, ISR, mret']},
+    {id:'cc-tick',sim:'concurrency',mod:'tick',pl:['Timer i tick','Symulatory 2 i 3: trzy diody'],en:['Timer and tick','Simulators 2 and 3: three LEDs']},
+    {id:'cc-slice',sim:'concurrency',mod:'slice',pl:['Kwant czasu','Symulator 4: A, B, C na zmianę'],en:['Time slice','Simulator 4: A, B, C take turns']},
+    {id:'cc-ctx',sim:'concurrency',mod:'ctx',pl:['Przełączanie kontekstu','Symulatory 5 i 7: stosy i TCB'],en:['Context switch','Simulators 5 and 7: stacks and TCBs']},
+    {id:'cc-states',sim:'concurrency',mod:'states',pl:['Stany i priorytety','Symulator 6: Ready, Blocked, IDLE'],en:['States and priorities','Simulator 6: Ready, Blocked, IDLE']},
+    {id:'cc-shared',sim:'concurrency',mod:'shared',pl:['Wspólny licznik','Symulator 6: 3 + 3 = ?'],en:['Shared counter','Simulator 6: 3 + 3 = ?']}]},
+  {n:7,pl:'Wątki i synchronizacja',en:'Threads and synchronisation',items:[
+    {id:'cc-race',sim:'concurrency',mod:'race',pl:['Wyścig krok po kroku','Symulator 8: lw, addi, sw'],en:['Race step by step','Simulator 8: lw, addi, sw']},
+    {id:'cc-mutex',sim:'concurrency',mod:'mutex',pl:['Mutex','Symulator 9: jeden wątek naraz'],en:['Mutex','Simulator 9: one thread at a time']}]},
+  {n:8,pl:'Zakleszczenie i współpraca',en:'Deadlock and cooperation',items:[
+    {id:'cc-dead',sim:'concurrency',mod:'dead',pl:['Zakleszczenie','Symulator 10: graf oczekiwania'],en:['Deadlock','Simulator 10: the wait-for graph']},
+    {id:'cc-pc',sim:'concurrency',mod:'pc',pl:['Producent-konsument','Symulator 11: bufor o rozmiarze 1 do 8'],en:['Producer-consumer','Simulator 11: a buffer of 1 to 8']}]},
+];
+const T={
+  pl:{title:'Symulatory: Computer Hardware',intro:'Interaktywne ćwiczenia do wykładów 3 do 8. Wybierz wykład i temat po lewej.',lect:n=>`Wykład ${n}`},
+  en:{title:'Computer Hardware simulators',intro:'Interactive exercises for Lectures 3 to 8. Pick a lecture and a topic on the left.',lect:n=>`Lecture ${n}`},
+};
+const ITEMS={};GROUPS.forEach(g=>g.items.forEach(it=>{it.g=g;ITEMS[it.id]=it;}));
+const lastIn={};GROUPS.forEach(g=>{lastIn[g.n]=g.items[0].id;});
+
+let lang=null;
+try{const s=localStorage.getItem('hwSimLang');if(s==='pl'||s==='en')lang=s;}catch(e){}
+if(!lang)lang=(navigator.language||'pl').toLowerCase().startsWith('pl')?'pl':'en';
+let cur='pipeline';
+try{const h=location.hash.slice(1);if(ITEMS[h])cur=h;else{const s=localStorage.getItem('hwSimItem');if(ITEMS[s])cur=s;}}catch(e){}
+
+const CHEV='<svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function buildSide(){
+  $('side').innerHTML=GROUPS.map(g=>{
+    const single=g.items.length===1;
+    const items=single?'':`<div class="items">${g.items.map(it=>`<button data-item="${it.id}"><span>${esc(it[lang][0])}</span><small>${esc(it[lang][1])}</small></button>`).join('')}</div>`;
+    return `<div class="grp${single?' single':''}" data-g="${g.n}"><button class="gh" data-g="${g.n}" aria-expanded="false"><span class="gnum">${g.n}</span><span><small>${esc(T[lang].lect(g.n))}</small><b>${esc(g[lang])}</b></span>${CHEV}</button>${items}</div>`;
+  }).join('');
+  $('side').querySelectorAll('[data-item]').forEach(b=>b.addEventListener('click',()=>show(b.dataset.item)));
+  $('side').querySelectorAll('.gh').forEach(b=>b.addEventListener('click',()=>{
+    const n=+b.dataset.g,g=GROUPS.find(x=>x.n===n);
+    if(ITEMS[cur].g===g&&g.items.length>1){const el=b.parentElement;el.classList.toggle('open');b.setAttribute('aria-expanded',String(el.classList.contains('open')));}
+    else show(lastIn[n]);
+  }));
+}
+function sync(){
+  const it=ITEMS[cur];
+  $('side').querySelectorAll('.grp').forEach(el=>{const on=+el.dataset.g===it.g.n;el.classList.toggle('open',on);el.querySelector('.gh').setAttribute('aria-expanded',String(on));});
+  $('side').querySelectorAll('[data-item]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.item===cur)));
+  $('mhGrp').textContent=T[lang].lect(it.g.n)+' · '+it.g[lang];
+  $('mhTitle').textContent=it[lang][0];
+  $('mhSub').textContent=it[lang][1];
+}
+function show(id){
+  cur=id;const it=ITEMS[id];lastIn[it.g.n]=id;
+  try{localStorage.setItem('hwSimItem',id);history.replaceState(null,'','#'+id);}catch(e){}
+  const base=`sims/${it.sim}/index.html?embed=1&lang=${lang}`;
+  // the same simulator in the same language only changes its hash, so it is not reloaded
+  $('frame').src=base+(it.mod?'#'+it.mod:'');
+  sync();
+}
+function applyLang(){
+  document.documentElement.lang=lang;document.title=T[lang].title;
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=T[lang][el.dataset.i];});
+  document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
+  buildSide();
+  show(cur);
+}
+document.querySelectorAll('.langs button').forEach(b=>b.addEventListener('click',()=>{
+  if(b.dataset.lang===lang)return;
+  lang=b.dataset.lang;try{localStorage.setItem('hwSimLang',lang);}catch(e){}applyLang();
+}));
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(ITEMS[h]&&h!==cur)show(h);});
+applyLang();
+})();
+</script>
+</body>
+</html>

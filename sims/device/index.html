@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<script>(function(){try{if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');}catch(e){}})();</script>
+<style>html.embed .wrap{max-width:none;padding:14px 18px 48px}html.embed header.topbar{display:none}html.embed .wrap>.stack{margin-top:0}html.embed .wrap>.stack>section.panel:first-child{display:none}</style>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulator wejścia-wyjścia: I2C, przerwania, DMA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --sunken:#EAEEF2; --ink:#16202B; --muted:#5B6673; --rule:#D5DBE1; --focus:#2F6FDB;
+  --ok:#1E7E4F; --ok-bg:#E2F3EA; --bad:#B8372B; --bad-bg:#FBE7E4;
+  --work:#23914F; --work-bg:#DFF2E6; --poll:#C8453A; --poll-bg:#FBE4E1; --isr:#D9621C; --isr-bg:#FCE8DA;
+  --copy:#1E78C8; --copy-bg:#DDEAF8; --idle:#BCC4CC; --idle-bg:#EEF1F4;
+  --scl:#7C3AB4; --sda:#1E78C8; --dev:#23914F; --ss:#D9621C;
+  --addr:#D9621C; --data:#1E78C8; --ctl:#7C3AB4;
+  --lcd-bg:#A6CC4A; --lcd-ink:#1D3409; --lcd-frame:#2A3440;
+  --on-color:#FFFFFF;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;
+    --ok:#5FD19A; --ok-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19;
+    --work:#4CC283; --work-bg:#163427; --poll:#EE7F72; --poll-bg:#3E1C19; --isr:#F29A5C; --isr-bg:#3D2414;
+    --copy:#5AA7EE; --copy-bg:#14293D; --idle:#4A5663; --idle-bg:#222C37;
+    --scl:#B98BEA; --sda:#5AA7EE; --dev:#4CC283; --ss:#F29A5C;
+    --addr:#F29A5C; --data:#5AA7EE; --ctl:#B98BEA;
+    --lcd-bg:#7FA52E; --lcd-ink:#10200A; --lcd-frame:#0A0E12; --on-color:#0F1419;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542; --focus:#7FA8F0;
+  --ok:#5FD19A; --ok-bg:#15352A; --bad:#F08A7E; --bad-bg:#3E1C19;
+  --work:#4CC283; --work-bg:#163427; --poll:#EE7F72; --poll-bg:#3E1C19; --isr:#F29A5C; --isr-bg:#3D2414;
+  --copy:#5AA7EE; --copy-bg:#14293D; --idle:#4A5663; --idle-bg:#222C37;
+  --scl:#B98BEA; --sda:#5AA7EE; --dev:#4CC283; --ss:#F29A5C;
+  --addr:#F29A5C; --data:#5AA7EE; --ctl:#B98BEA;
+  --lcd-bg:#7FA52E; --lcd-ink:#10200A; --lcd-frame:#0A0E12; --on-color:#0F1419;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding:28px 20px 60px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+header p{margin:0;color:var(--muted);max-width:74ch}
+.langs{display:flex;gap:6px}
+.langs button{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:13px}
+.langs button svg{width:22px;height:14px;border-radius:2px;box-shadow:0 0 0 1px var(--rule);display:block}
+.langs button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+.stack{display:flex;flex-direction:column;gap:14px;margin-top:22px}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;min-width:0}
+h2{font-size:16px;font-weight:600;margin:0 0 10px}
+h3{font-size:14px;font-weight:600;margin:0 0 6px}
+label{font-size:13px;color:var(--muted)}
+select,input[type=text]{font:inherit;font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--sunken);border:1px solid var(--rule);border-radius:6px;padding:6px 9px}
+button{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{background:var(--sunken)}
+button:disabled{opacity:.45;cursor:default}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.primary:hover{opacity:.9}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.err{font-size:13px;color:var(--bad);margin:6px 0 0;min-height:1em}
+.mono{font-family:var(--mono)}
+
+/* topic picker */
+.topics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+@media (max-width:1100px){.topics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.topics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.topics button{padding:9px 10px;font-size:14px;text-align:left;line-height:1.3;font-weight:600}
+.topics button small{display:block;font-weight:400;color:var(--muted);font-size:12.5px;margin-top:2px}
+.topics button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken);box-shadow:inset 0 -3px 0 var(--ink)}
+.topics button[aria-pressed="true"] small{color:var(--ink)}
+
+/* control bar */
+.ctrlbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;gap:14px 18px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 16px}
+.ctrlbar button{display:inline-flex;align-items:center;gap:8px}
+.ctrlbar svg{width:14px;height:14px}
+.cyc{font-family:var(--mono);font-size:18px;font-weight:500}
+.opts{display:flex;gap:14px 22px;flex-wrap:wrap;align-items:flex-end}
+.opt{display:flex;flex-direction:column;gap:4px}
+.seg{display:inline-flex;border:1px solid var(--rule);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:6px 11px;font-size:13px}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+.chk{display:inline-flex;align-items:center;gap:7px;font-size:14px;color:var(--ink);cursor:pointer}
+.chk input{width:16px;height:16px;accent-color:var(--ink)}
+
+/* explanation box */
+.expl{display:flex;gap:12px;align-items:flex-start;background:var(--sunken);border-radius:8px;padding:12px 14px;border-left:4px solid var(--ink)}
+.expl .bn{flex:none;width:26px;height:26px;border-radius:50%;background:var(--isr);color:var(--on-color);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center}
+.expl .bn:empty{display:none}
+.expl b.t{display:block;font-size:15px}
+.expl .who{font-weight:400;color:var(--muted);font-size:13px;margin-left:6px}
+.expl p{margin:2px 0 0;font-size:14.5px}
+.expl code,.note code,.tbl code{font-family:var(--mono);font-size:.92em}
+.key{margin-top:10px;font-size:13.5px;padding:8px 12px;border:1px dashed var(--rule);border-radius:8px}
+
+.grid2{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.grid3{grid-template-columns:minmax(0,1fr)}}
+.scroll{overflow-x:auto}
+svg text{font-family:var(--sans)}
+svg .m{font-family:var(--mono)}
+
+.code{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--sunken);border-radius:8px;padding:10px 0;overflow-x:auto;white-space:pre}
+.code .l{display:block;padding:0 14px;border-left:3px solid transparent}
+.code .l.act{background:color-mix(in srgb,var(--isr) 16%,transparent);border-left-color:var(--isr)}
+.code .l.act.w{background:color-mix(in srgb,var(--work) 16%,transparent);border-left-color:var(--work)}
+.code .l.act.c{background:color-mix(in srgb,var(--copy) 16%,transparent);border-left-color:var(--copy)}
+.code .l.act.p{background:color-mix(in srgb,var(--poll) 16%,transparent);border-left-color:var(--poll)}
+.code .l.act.k{background:var(--ink);color:var(--surface);border-left-color:var(--ink)}
+.code .l.act.k .c,.code .l.act.k .a{color:var(--surface);opacity:.8}
+.code .l.seen{background:color-mix(in srgb,var(--ink) 5%,transparent)}
+.code .c{color:var(--muted)}
+.code .a{color:var(--muted)}
+.code .hl{color:var(--isr);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:620px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:var(--sunken);border-radius:8px;padding:7px 10px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:18px;font-weight:500}
+.stat.good b{color:var(--ok)} .stat.bad b{color:var(--bad)}
+
+.legend{display:flex;gap:6px 16px;flex-wrap:wrap;font-size:13px;margin-top:8px;color:var(--muted)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+.tbl{border-collapse:collapse;width:100%;font-size:14px}
+.tbl th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td{padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.tbl td.mono{font-family:var(--mono)}
+
+/* bits */
+.bits{display:flex;gap:2px;font-family:var(--mono);font-size:13px;min-width:max-content}
+.bit{width:19px;text-align:center;padding:3px 0;border-radius:3px;background:var(--sunken)}
+.bit.gap{margin-left:7px}
+.bit.hi{background:color-mix(in srgb,var(--addr) 22%,transparent)}
+.bit.lo{background:color-mix(in srgb,var(--data) 20%,transparent)}
+.bit.on{background:var(--ok);color:var(--on-color);font-weight:600}
+.bit.x{background:var(--bad);color:var(--on-color);font-weight:600}
+.bit.pend{background:transparent;border:1px dashed var(--rule);color:var(--muted)}
+.bit.sel{outline:2px solid var(--isr);outline-offset:-2px;font-weight:600}
+.bitnums{display:flex;gap:2px;font-family:var(--mono);font-size:10.5px;color:var(--muted);min-width:max-content}
+.bitnums span{width:19px;text-align:center}
+.bitnums span.gap{margin-left:7px}
+
+/* status pills */
+.pill{display:inline-block;font-size:12.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunken);color:var(--muted);white-space:nowrap}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill.act{background:var(--isr-bg);color:var(--isr)} .pill.info{background:var(--copy-bg);color:var(--copy)}
+
+/* LCD */
+.lcd{display:inline-block;background:var(--lcd-frame);padding:9px;border-radius:8px}
+.lcd pre{margin:0;background:var(--lcd-bg);color:var(--lcd-ink);font-family:var(--mono);font-weight:600;font-size:16px;line-height:1.35;padding:6px 10px;border-radius:3px;letter-spacing:.06em}
+
+/* big press button */
+.bigbtn{display:inline-flex;flex-direction:column;align-items:center;gap:6px;user-select:none;-webkit-user-select:none;touch-action:none}
+.bigbtn button{width:92px;height:92px;border-radius:50%;border:8px solid var(--lcd-frame);background:var(--work);color:var(--on-color);font-weight:600;font-size:15px;box-shadow:0 5px 0 color-mix(in srgb,var(--work) 55%,#000);transition:transform .05s,box-shadow .05s}
+.bigbtn button:hover{background:var(--work);filter:brightness(1.05)}
+.bigbtn button.down{transform:translateY(4px);box-shadow:0 1px 0 color-mix(in srgb,var(--work) 55%,#000)}
+
+@media (prefers-reduced-motion:no-preference){
+  .flash{animation:fl .6s ease-out}
+  @keyframes fl{from{box-shadow:0 0 0 3px var(--isr)}to{box-shadow:0 0 0 3px transparent}}
+}
+
+/* I2C */
+.devtbl td .bits{display:inline-flex}
+/* MMIO */
+.regs{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px}
+.reg{background:var(--sunken);border-radius:7px;padding:6px 10px;border:1px solid transparent}
+.reg span{display:block;font-size:12px;color:var(--muted)}
+.reg b{font-family:var(--mono);font-size:15px;font-weight:500}
+.reg.chg{border-color:var(--isr);background:var(--isr-bg)}
+/* IRQ */
+.codecols{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:980px){.codecols{grid-template-columns:minmax(0,1fr)}}
+.strip{display:flex;gap:3px;flex-wrap:wrap}
+.strip span{font-family:var(--mono);font-size:11.5px;font-weight:600;padding:2px 6px;border-radius:4px;color:var(--on-color)}
+.strip .m{background:var(--work)} .strip .t{background:transparent;color:var(--isr);border:1.5px dashed var(--isr);padding:1px 5px}
+.strip .i{background:var(--isr)} .strip .x{background:var(--bad)}
+.serial{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.5;background:#15191E;color:#E8ECEF;border-radius:8px;padding:10px 14px;overflow-x:auto;white-space:pre}
+.serial .r{color:#FF8A7A;font-weight:600}
+/* DMA */
+.memgrid{display:grid;grid-template-columns:repeat(8,minmax(26px,1fr));gap:3px;font-family:var(--mono);font-size:13px}
+.memgrid div{text-align:center;padding:4px 0;border-radius:4px;background:var(--sunken);border:1px solid var(--rule)}
+.memgrid div.full{background:var(--copy-bg);border-color:color-mix(in srgb,var(--copy) 45%,transparent)}
+.memgrid div.now{background:var(--copy);color:var(--on-color);border-color:var(--copy)}
+.memgrid div.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.progress{height:10px;border-radius:5px;background:var(--sunken);overflow:hidden;margin-top:6px}
+.progress i{display:block;height:100%;background:var(--copy);transition:width .25s}
+.checks{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.checks li{padding:5px 10px;border-radius:6px;background:var(--sunken);border-left:3px solid var(--rule)}
+.checks li.ok{border-left-color:var(--ok)} .checks li.bad{border-left-color:var(--bad)}
+.calc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:760px){.calc{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.calc input{width:100%}
+.presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.presets button{font-size:13px;padding:5px 10px}
+.presets button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+.bar{position:relative;height:26px;border-radius:6px;background:var(--work-bg);overflow:hidden;margin-top:10px}
+.bar i{position:absolute;left:0;top:0;bottom:0;background:var(--isr)}
+.bar span{position:absolute;left:10px;top:3px;font-size:13px;font-weight:600;font-family:var(--mono);color:var(--ink)}
+.formula{font-family:var(--mono);font-size:14px;background:var(--sunken);border-radius:8px;padding:10px 14px;margin-top:10px;overflow-x:auto;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div>
+    <h1 data-i="title"></h1>
+    <p data-i="intro"></p>
+  </div>
+  <div class="langs" role="group" aria-label="Język / Language">
+    <button data-lang="pl" aria-pressed="false"><svg viewBox="0 0 16 10" aria-hidden="true"><rect width="16" height="5" fill="#fff"/><rect y="5" width="16" height="5" fill="#DC143C"/></svg>PL</button>
+    <button data-lang="en" aria-pressed="false"><svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+  </div>
+</header>
+
+<div class="stack">
+  <section class="panel">
+    <h2 data-i="h_topics"></h2>
+    <div class="topics" id="topics">
+      <button data-mod="i2c"><span data-i="tp_i2c"></span><small data-i="tp_i2c_s"></small></button>
+      <button data-mod="mmio"><span data-i="tp_mmio"></span><small data-i="tp_mmio_s"></small></button>
+      <button data-mod="gpio"><span data-i="tp_gpio"></span><small data-i="tp_gpio_s"></small></button>
+      <button data-mod="poll"><span data-i="tp_poll"></span><small data-i="tp_poll_s"></small></button>
+      <button data-mod="irq"><span data-i="tp_irq"></span><small data-i="tp_irq_s"></small></button>
+      <button data-mod="dma"><span data-i="tp_dma"></span><small data-i="tp_dma_s"></small></button>
+    </div>
+  </section>
+
+  <!-- ================= I2C ================= -->
+  <div class="stack mod" id="mod-i2c" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="i2c_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label for="i2cAddr" data-i="i2c_l_addr"></label><select id="i2cAddr"></select></div>
+        <div class="opt"><label data-i="i2c_l_rw"></label><div class="seg" id="i2cRw"><button data-v="w" data-i="i2c_w"></button><button data-v="r" data-i="i2c_r"></button></div></div>
+        <div class="opt" id="i2cDataWrap"><label for="i2cData" data-i="i2c_l_data"></label><input type="text" id="i2cData" value="0x48" size="6" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <p class="err" id="i2cErr"></p>
+      <pre class="code" id="i2cCode"></pre>
+    </section>
+    <div class="ctrlbar" data-ctrl="i2c"></div>
+    <section class="panel">
+      <h2 data-i="i2c_h_bus"></h2>
+      <div class="scroll"><svg id="i2cBus" viewBox="0 0 900 215" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="i2c_h_wave"></h2>
+      <div class="scroll"><svg id="i2cWave" style="display:block" role="img"></svg></div>
+      <div class="legend" id="i2cLegend"></div>
+      <div class="expl" id="i2cExpl" style="margin-top:12px"></div>
+      <div class="key" data-i="i2c_rule"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="i2c_h_devs"></h2>
+      <div class="scroll"><table class="tbl devtbl" id="i2cDevs"></table></div>
+      <p class="note" data-i="i2c_devs_note"></p>
+    </section>
+  </div>
+
+  <!-- ================= MMIO ================= -->
+  <div class="stack mod" id="mod-mmio" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="mm_h_pick"></h2>
+      <div class="presets" id="mmPresets"></div>
+      <details id="mmCustom"><summary data-i="mm_custom"></summary>
+        <div class="opts" style="margin-top:10px">
+          <div class="opt"><label for="mmOp" data-i="mm_l_op"></label><select id="mmOp"><option value="sw">sw</option><option value="lw">lw</option></select></div>
+          <div class="opt"><label for="mmAddr" data-i="mm_l_addr"></label><input type="text" id="mmAddr" value="0x60004008" size="12" autocomplete="off" spellcheck="false"></div>
+          <div class="opt"><label for="mmVal" data-i="mm_l_val"></label><input type="text" id="mmVal" value="0x10" size="12" autocomplete="off" spellcheck="false"></div>
+          <div class="opt"><button class="primary" id="mmGo" data-i="mm_go"></button></div>
+        </div>
+        <p class="err" id="mmErr"></p>
+      </details>
+    </section>
+    <div class="ctrlbar" data-ctrl="mmio"></div>
+    <section class="panel">
+      <h2 data-i="mm_h_chip"></h2>
+      <div class="scroll"><svg id="mmSvg" viewBox="0 0 900 345" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="expl" id="mmExpl" style="margin-top:12px"></div>
+    </section>
+    <div class="grid2" style="grid-template-columns:minmax(0,1fr)">
+      <section class="panel">
+        <h2 data-i="mm_h_addr"></h2>
+        <div class="scroll" id="mmBits"></div>
+        <div class="legend" id="mmBitsLegend"></div>
+        <div id="mmData" style="margin-top:14px"></div>
+      </section>
+      <section class="panel">
+        <h2 data-i="mm_h_state"></h2>
+        <div class="regs" id="mmRegs"></div>
+        <p class="note" data-i="mm_state_note"></p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= GPIO CONTROLLER ================= -->
+  <div class="stack mod" id="mod-gpio" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="gp_h_pick"></h2>
+      <div class="presets" id="gpPresets"></div>
+      <p class="note" style="margin:0" data-i="gp_click_note"></p>
+    </section>
+    <section class="panel">
+      <h2 data-i="gp_h_ctrl"></h2>
+      <div class="scroll"><svg id="gpSvg" viewBox="0 0 980 462" style="width:100%;min-width:720px;display:block" role="img"></svg></div>
+      <div class="legend" id="gpLegend"></div>
+    </section>
+    <div class="grid2">
+      <section class="panel">
+        <h2 data-i="gp_h_last"></h2>
+        <div class="expl" id="gpExpl"></div>
+        <pre class="code" id="gpCode" style="margin-top:12px"></pre>
+      </section>
+      <section class="panel">
+        <h2 data-i="gp_h_regs"></h2>
+        <div class="regs" id="gpRegs"></div>
+        <p class="note" data-i="gp_regs_note"></p>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= POLLING vs INTERRUPTS ================= -->
+  <div class="stack mod" id="mod-poll" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="po_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="po_l_mode"></label><div class="seg" id="poMode"><button data-v="work" data-i="po_m_work"></button><button data-v="spin" data-i="po_m_spin"></button></div></div>
+        <div class="opt"><label data-i="po_l_bounce"></label><div class="row">
+          <label class="chk"><input type="checkbox" id="poBounce"><span data-i="po_bounce"></span></label>
+          <label class="chk"><input type="checkbox" id="poDeb"><span data-i="po_deb"></span></label></div></div>
+        <div class="opt"><label data-i="po_l_presets"></label><div class="row">
+          <button id="poP1" data-i="po_p1"></button><button id="poP2" data-i="po_p2"></button></div></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div><div class="code-h"><h3 id="poCodeH1"></h3></div><pre class="code" id="poCode1"></pre></div>
+        <div><div class="code-h"><h3 data-i="po_code_isr"></h3></div><pre class="code" id="poCode2"></pre></div>
+      </div>
+    </section>
+    <div class="ctrlbar" data-ctrl="poll"></div>
+    <section class="panel">
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div class="bigbtn"><button id="poBtn" aria-label="A">A</button><span class="note" style="margin:0" data-i="po_hold"></span></div>
+        <div class="lcd"><pre id="poLcd"></pre></div>
+        <div style="flex:1;min-width:240px"><div class="stats" id="poStats"></div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2 data-i="po_h_time"></h2>
+      <svg id="poSvg" viewBox="0 0 1000 250" style="width:100%;display:block" role="img"></svg>
+      <div class="legend" id="poLegend"></div>
+      <div class="expl" id="poExpl" style="margin-top:12px"></div>
+    </section>
+  </div>
+
+  <!-- ================= INTERRUPT STEP BY STEP ================= -->
+  <div class="stack mod" id="mod-irq" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="ir_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="ir_l_src"></label><div class="seg" id="irSrc"><button data-v="A" data-i="ir_s_A"></button><button data-v="B" data-i="ir_s_B"></button><button data-v="T" data-i="ir_s_T"></button><button data-v="X" data-i="ir_s_X"></button></div></div>
+        <div class="opt" id="irAtWrap"><label for="irAt" data-i="ir_l_at"></label><select id="irAt"></select></div>
+      </div>
+      <p class="note" id="irSetupNote"></p>
+    </section>
+    <div class="ctrlbar" data-ctrl="irq"></div>
+    <section class="panel">
+      <div class="expl" id="irExpl"></div>
+      <div class="codecols" style="margin-top:14px">
+        <div><h3 data-i="ir_main"></h3><pre class="code" id="irMain"></pre></div>
+        <div><h3 data-i="ir_vec"></h3><pre class="code" id="irVec"></pre></div>
+        <div><h3 id="irHandH"></h3><pre class="code" id="irHand"></pre></div>
+      </div>
+    </section>
+    <div class="grid2">
+      <section class="panel">
+        <h2 data-i="ir_h_regs"></h2>
+        <div class="regs" id="irRegs"></div>
+        <p class="note" data-i="ir_regs_note"></p>
+      </section>
+      <section class="panel">
+        <h2 data-i="ir_h_trace"></h2>
+        <div class="strip" id="irStrip"></div>
+        <div class="legend" id="irLegend"></div>
+        <pre class="serial" id="irSerial" style="margin-top:12px" hidden></pre>
+      </section>
+    </div>
+  </div>
+
+  <!-- ================= DMA ================= -->
+  <div class="stack mod" id="mod-dma" hidden style="margin-top:0">
+    <section class="panel">
+      <h2 data-i="dm_h_setup"></h2>
+      <div class="opts">
+        <div class="opt"><label data-i="dm_l_mode"></label><div class="seg" id="dmMode"><button data-v="dma" data-i="dm_m_dma"></button><button data-v="cpu" data-i="dm_m_cpu"></button></div></div>
+      </div>
+      <pre class="code" id="dmCode" style="margin-top:12px"></pre>
+    </section>
+    <div class="ctrlbar" data-ctrl="dma"></div>
+    <section class="panel">
+      <div class="expl" id="dmExpl"></div>
+      <div class="grid3" style="margin-top:14px">
+        <div><h3>CPU</h3><div class="regs" id="dmCpu"></div></div>
+        <div><h3 data-i="dm_ctrl"></h3><div class="regs" id="dmRegs"></div><div class="progress"><i id="dmProg"></i></div></div>
+        <div><h3 data-i="dm_bus"></h3><div id="dmBus" class="reg" style="min-height:58px"></div>
+          <div class="row" style="margin-top:10px"><button id="dmCheck" data-i="dm_check"></button></div></div>
+      </div>
+      <div class="grid2" style="margin-top:14px">
+        <div><h3><span class="mono">src</span> <span class="note" style="margin:0" id="dmSrcA"></span></h3><div class="memgrid" id="dmSrc"></div></div>
+        <div><h3><span class="mono">dst</span> <span class="note" style="margin:0" id="dmDstA"></span></h3><div class="memgrid" id="dmDst"></div></div>
+      </div>
+      <ul class="checks" id="dmChecks"></ul>
+    </section>
+    <section class="panel">
+      <h2 data-i="dm_h_time"></h2>
+      <svg id="dmSvg" viewBox="0 0 1000 120" style="width:100%;display:block" role="img"></svg>
+      <div class="legend" id="dmLegend"></div>
+    </section>
+    <section class="panel">
+      <h2 data-i="ca_h"></h2>
+      <p class="note" style="margin:0 0 10px" data-i="ca_intro"></p>
+      <div class="presets" id="caPresets"></div>
+      <div class="calc">
+        <div class="opt"><label for="caMhz" data-i="ca_mhz"></label><input type="text" id="caMhz" value="1000"></div>
+        <div class="opt"><label for="caCyc" data-i="ca_cyc"></label><input type="text" id="caCyc" value="1000"></div>
+        <div class="opt"><label for="caRate" data-i="ca_rate"></label><input type="text" id="caRate" value="100000000"></div>
+        <div class="opt"><label for="caPer" data-i="ca_per"></label><input type="text" id="caPer" value="1"></div>
+      </div>
+      <p class="err" id="caErr"></p>
+      <div class="stats" id="caStats"></div>
+      <div class="bar" id="caBar"><i></i><span></span></div>
+      <div class="formula" id="caFormula"></div>
+      <p class="note" id="caNote"></p>
+    </section>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const hexN=(n,w)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w||1,'0');
+const hex2=n=>hexN(n,2);
+const hexA=n=>{const s=(n>>>0).toString(16).toUpperCase().padStart(8,'0');return '0x'+s.slice(0,4)+'\u2009'+s.slice(4);};
+const bin=(n,w)=>(n>>>0).toString(2).padStart(w,'0');
+let lang='pl';
+try{const s=localStorage.getItem('ioSimLang');if(s==='pl'||s==='en')lang=s;}catch(e){}
+try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')lang=q;}catch(e){}
+const fmt=n=>Number(n).toLocaleString(lang==='pl'?'pl-PL':'en-US',{maximumFractionDigits:4});
+const fmtP=n=>{ // percentage with sensible precision
+  let d=n>=100?0:n>=10?1:n>=1?2:n>=0.01?3:4;
+  return Number(n).toLocaleString(lang==='pl'?'pl-PL':'en-US',{maximumFractionDigits:d})+'%';
+};
+const chr=b=>(b>=32&&b<127)?String.fromCharCode(b):'';
+
+/* ---------- tłumaczenia / translations ---------- */
+const T={
+pl:{
+  doc_title:'Symulator wejścia-wyjścia: I2C, przerwania, DMA',
+  title:'Jak CPU rozmawia z urządzeniami',
+  intro:'Wybierz temat i przechodź krok po kroku: jedna wiadomość I2C bit po bicie, jeden sw do urządzenia, rejestry kontrolera GPIO, polling kontra przerwanie, wejście do procedury obsługi przerwania i kopiowanie przez DMA. Przykłady pochodzą z ESP32-C3 z wykładu.',
+  h_topics:'Temat',
+  tp_i2c:'I2C', tp_i2c_s:'jedna wiadomość, bit po bicie',
+  tp_mmio:'Rejestry urządzeń', tp_mmio_s:'sw i lw do urządzenia, dekoder adresu',
+  tp_poll:'Polling a przerwania', tp_poll_s:'naciskaj przycisk i porównaj',
+  tp_irq:'Przerwanie krok po kroku', tp_irq_s:'mepc, mcause, mtvec, mret, wyjątek',
+  tp_dma:'DMA', tp_dma_s:'kopiowanie bez CPU i koszt przerwań',
+  a_prev:'Wstecz', a_next:'Dalej', a_play:'Odtwórz', a_pause:'Pauza', a_reset:'Od początku', a_start:'Start',
+  keys_note:'Klawisze: ← → krok, spacja odtwarza.',
+  keys_note_poll:'Spacja lub mysz: przytrzymaj przycisk A.',
+  step:(i,n)=>`Krok ${i} / ${n}`,
+  /* I2C */
+  i2c_h_setup:'Wiadomość', i2c_l_addr:'Adres docelowy', i2c_l_rw:'Kierunek', i2c_w:'zapis (W)', i2c_r:'odczyt (R)',
+  i2c_l_data:'Bajt do wysłania', i2c_err_data:'Wpisz bajt: 0x00–0xFF, liczbę 0–255 albo jeden znak.',
+  i2c_h_bus:'Magistrala I2C na płytce', i2c_h_wave:'Przebiegi na przewodach SCL i SDA', i2c_h_devs:'Kto słucha? Porównanie adresu',
+  i2c_devs_note:'Każde urządzenie odbiera 7 bitów adresu i porównuje je ze swoim. Odpowiada tylko to, którego adres się zgadza.',
+  i2c_rule:'Zasada: SDA zmienia się tylko, gdy SCL = 0. Zmiana SDA przy SCL = 1 oznacza START albo STOP.',
+  dev_lcd:'LCD 16×2', dev_sensor:'czujnik', dev_mem:'pamięć EEPROM', dev_none:'nikt', nobody_opt:'brak urządzenia',
+  esp_ctrl:'kontroler I2C', pullup:'rezystory podciągające', drives:'ustawia SDA',
+  ph_addr:a=>`adres ${a}`, ph_data:b=>`dane ${b}`,
+  lg_m:'SDA ustawia ESP32', lg_d:'SDA ustawia urządzenie', lg_n:'nikt: rezystor trzyma 1', lg_ss:'START / STOP', lg_scl:'SCL: zegar z ESP32', lg_sample:'tu urządzenie odczytuje bit (SCL = 1)',
+  th_dev:'Urządzenie', th_own:'Jego adres', th_recv:'Odebrane bity adresu', th_state:'Stan',
+  st_idle:'czeka', st_listen:'słucha', st_mine:'to ja!', st_notmine:'nie do mnie, ignoruje', st_ack:'wysyła ACK', st_rx:'odbiera dane', st_tx:'wysyła dane',
+  st_rxack:'odbiera NACK', st_done_w:b=>`odebrał ${b}`, st_done_r:b=>`wysłał ${b}`,
+  m_idle:'magistrala wolna', m_tx:'nadaje', m_wait:'czeka na ACK', m_rx:'odbiera', m_nack:'wysyła NACK',
+  ex_idle:['Magistrala wolna','','Obie linie mają stan 1: trzymają je rezystory podciągające. Nikt nic nie wysyła. Kliknij Dalej, żeby zacząć wiadomość.'],
+  ex_start:['START','ESP32 → wszyscy','SDA spada do 0, gdy SCL = 1. Wszystkie urządzenia budzą się i słuchają: zaczyna się wiadomość.'],
+  ex_addr:(n,v,a,b)=>[`Bit adresu ${n} z 7`,'ESP32 → wszyscy',`ESP32 ustawia SDA = ${v}, gdy SCL = 0, potem daje takt zegara. Przy SCL = 1 każde urządzenie odczytuje bit i porównuje go ze swoim adresem. ${a} = ${b}.`],
+  ex_rw:r=>['Bit R/W','ESP32 → wszyscy',r?'1 = odczyt: po potwierdzeniu dane popłyną od urządzenia do ESP32.':'0 = zapis: po potwierdzeniu dane popłyną od ESP32 do urządzenia.'],
+  ex_ack_a:(d,a)=>['ACK',`${d} → ESP32`,`Tylko urządzenie o adresie ${a} ściąga SDA do 0 w 9. takcie: „jestem, mów dalej”. Pozostałe milczą.`],
+  ex_nack_a:a=>['NACK','nikt',`Żadne urządzenie nie ma adresu ${a}, więc nikt nie ściąga SDA w dół. Rezystor trzyma 1, a 1 w miejscu ACK to NACK. ESP32 rezygnuje i kończy STOP-em. W Arduino Wire.endTransmission() zwróci 2.`],
+  ex_data_w:(n,v,d)=>[`Bit danych ${n} z 8`,`ESP32 → ${d}`,`ESP32 ustawia SDA = ${v}, gdy SCL = 0. ${d} odczytuje bit, gdy SCL = 1.`],
+  ex_data_r:(n,v,d)=>[`Bit danych ${n} z 8`,`${d} → ESP32`,`Teraz SDA ustawia urządzenie (SDA = ${v}), ale zegar SCL nadal daje ESP32. ESP32 odczytuje bit, gdy SCL = 1.`],
+  ex_ack_d:d=>['ACK',`${d} → ESP32`,'„Mam”. Mogłyby teraz przyjść kolejne bajty, każdy z własnym ACK.'],
+  ex_nack_r:d=>['NACK',`ESP32 → ${d}`,'ESP32 celowo nie ściąga SDA: „wystarczy, to był ostatni bajt”. Urządzenie przestaje nadawać.'],
+  ex_stop:s=>['STOP','ESP32 → wszyscy','SDA rośnie do 1, gdy SCL = 1: wiadomość się skończyła, magistrala znowu jest wolna. '+s],
+  res_w:(d,b)=>`${d} odebrał bajt ${b}.`, res_r:(d,b)=>`ESP32 odebrał bajt ${b} od urządzenia ${d}.`, res_n:'Wiadomość nie dotarła do nikogo.',
+  c_w1:'// START, adres, W', c_w2:'// bajt danych', c_w3:'// STOP; 0 = OK, 2 = NACK na adresie',
+  c_r1:'// START, adres, R, 1 bajt, NACK, STOP', c_r2:'// odebrany bajt',
+  /* MMIO */
+  mm_h_pick:'Instrukcja', mm_custom:'Własna instrukcja', mm_l_op:'Instrukcja', mm_l_addr:'Adres', mm_l_val:'Wartość (dla sw)', mm_go:'Wykonaj',
+  mm_p_set:'sw: zapal LED', mm_p_clr:'sw: zgaś LED', mm_p_in:'lw: odczytaj przyciski', mm_p_ram:'sw: do RAM', mm_p_i2c:'sw: bajt do I2C', mm_p_bad:'lw: adres 0',
+  mm_err_addr:'Adres: liczba 32-bitowa, np. 0x60004008.', mm_err_align:'Adres musi być podzielny przez 4: sw i lw przenoszą całe słowa.', mm_err_val:'Wartość: liczba 32-bitowa, np. 0x10.',
+  mm_h_chip:'Wewnątrz ESP32-C3: CPU, magistrala, kontrolery', mm_h_addr:'Od adresu do pinu', mm_h_state:'Stan urządzeń i rejestrów',
+  mm_state_note:'Kliknij przycisk A albo B na schemacie, żeby go wcisnąć, i jeszcze raz odczytaj przyciski.',
+  s_chip:'wewnątrz układu ESP32-C3', s_board:'na płytce: prawdziwe przewody', s_bus:'magistrala wewnętrzna', s_addr:'adres', s_data:'dane', s_ctl:'sterowanie',
+  s_mem:'Pamięć RAM', s_gpio:'kontroler GPIO', s_i2c:'kontroler I2C', s_mine:'moje!', s_notmine:'nie moje', s_write:'zapis', s_read:'odczyt',
+  s_btnA:'przycisk A', s_btnB:'przycisk B', s_led:'LED', s_lcd:'LCD 0x27', s_nobody:'nikt nie odpowiada',
+  mb_hi:'górne 20 bitów: który kontroler', mb_lo:'dolne 12 bitów: który rejestr', mb_pins:'dane: bit n = pin n', mb_val:'wartość',
+  mm_reg_out:'GPIO OUT: wyjścia', mm_reg_in:'GPIO IN: stan pinów', mm_reg_ram:'RAM pod 0x3FC8 0000', mm_reg_fifo:'kolejka I2C (FIFO)', mm_reg_a4:'rejestr a4',
+  mm_empty:'pusta',
+  mx0:(ins,calc)=>['Instrukcja','CPU',`CPU wykonuje ${ins}. ${calc}`],
+  mx_calc:(b,o,a)=>`a5 = ${b}, więc adres to ${b} + ${o} = ${a}.`,
+  mx1:a=>['Adres','CPU → magistrala',`CPU wystawia ${a} na liniach adresowych. Pamięć i każdy kontroler widzą ten sam adres.`],
+  mx2:(a,who)=>['Do kogo to?','dekodery adresów',`Każdy dekoder sprawdza, czy adres jest w jego zakresie. ${who}`],
+  mx2_who:(d,p)=>`${p} należy do: ${d}. Ten mówi „moje!”, reszta ignoruje adres.`,
+  mx2_none:'Żaden zakres się nie zgadza: nikt nie mówi „moje!”.',
+  mx3_sw:(v,d,r)=>['Dane i zapis','CPU → '+d,`CPU wystawia ${v} na liniach danych i „zapis” na liniach sterujących. ${d} zapisuje wartość do rejestru ${r}.`],
+  mx3_lw:(d,r)=>['Odczyt',d+' → CPU',`CPU wystawia „odczyt” na liniach sterujących. ${d} wystawia na liniach danych zawartość rejestru ${r}.`],
+  mx3_none:(ld)=>['Brak odpowiedzi','',`Nikt nie odpowiada na magistrali: instrukcja nie może się wykonać.`],
+  mx4_set:(pins,led)=>['Efekt','',`Każdy bit 1 włącza swój pin: ${pins}. ${led}`],
+  mx4_clr:(pins,led)=>['Efekt','',`Każdy bit 1 wyłącza swój pin: ${pins}. ${led}`],
+  mx4_out:(pins,led)=>['Efekt','',`Cały rejestr wyjść dostaje nową wartość. ${led}`],
+  led_on:'Pin 4 ma 3,3 V: LED świeci.', led_off:'Pin 4 ma 0 V: LED nie świeci.',
+  mx4_in:(v,a)=>['Efekt','',`a4 = ${v}. Bit 5 = ${a} → przycisk A ${a?'nie jest':'jest'} wciśnięty (pull-up: wciśnięty = 0). W C: (reg >> 5) & 1.`],
+  mx4_ram:(a)=>['Efekt','',`Wartość trafia do RAM pod ${a}. LED się nie zmienia: ta sama instrukcja sw, inny adres.`],
+  mx4_ramr:(v)=>['Efekt','',`a4 = ${v}: wartość z RAM. Ta sama instrukcja lw co przy urządzeniu, inny adres.`],
+  mx4_i2c:(b)=>['Efekt','',`Bajt ${b} trafia do kolejki kontrolera I2C. Kontroler sam wyśle go do LCD po SDA i SCL (zobacz temat I2C). Tak działa lcd.print.`],
+  mx4_ign:(d)=>['Efekt','',`${d} rozpoznał swój adres, ale tego rejestru ten symulator nie modeluje: zapis nic nie zmienia, odczyt daje 0.`],
+  mx4_none:(ld,c,a)=>['Wyjątek','',`${ld?'Load':'Store'} access fault: mcause = ${c}, mtval = ${a}. CPU skacze do procedury obsługi wyjątku (zobacz temat „Przerwanie krok po kroku”).`],
+  pins_list:l=>l.length?('pin '+l.join(', ')):'żaden pin',
+  /* GPIO controller */
+  tp_gpio:'Kontroler GPIO', tp_gpio_s:'OUT, ENABLE, IN, driver i piny',
+  gp_h_pick:'Instrukcje', gp_reset:'Stan początkowy',
+  gp_click_note:'Możesz też klikać bity na schemacie (zapis do rejestru), przyciski A i B (wciśnij / puść) i rezystory pull-up (włącz / wyłącz).',
+  gp_h_ctrl:'Wnętrze kontrolera GPIO: bit n każdego rejestru dotyczy pinu GPIO n',
+  gp_h_last:'Co się stało', gp_h_regs:'Rejestry',
+  gp_regs_note:'OUT_W1TS i OUT_W1TC niczego nie przechowują (odczyt daje 0). Pokazujemy ostatnią zapisaną wartość.',
+  gp_rd_w1ts:'zapis 1 → ustaw bit w OUT', gp_rd_w1tc:'zapis 1 → wyzeruj bit w OUT', gp_rd_enable:'1 = wyjście: driver włączony', gp_rd_out:'poziom, który driver wystawia', gp_rd_in:'co jest na pinie teraz',
+  gp_l_drv:'driver', gp_l_drv_s:'włącza go ENABLE', gp_l_pin:'pin', gp_l_pin_s:'napięcie na nóżce', gp_l_board:'na płytce', gp_l_board_s:'co jest podłączone',
+  gp_off:'off', gp_short:'zwarcie!', gp_pu_hint:'pull-up',
+  gp_intro:['Jak używać','','Na górze są rejestry kontrolera GPIO, na dole piny i to, co do nich podłączono: LED na pinie 4, przyciski A i B na pinach 5 i 6. Wybierz instrukcję albo klikaj bity i patrz, co dzieje się z rejestrami i z pinami.'],
+  gp_t_w1ts:'Zapis do OUT_W1TS', gp_t_w1tc:'Zapis do OUT_W1TC', gp_t_out:'Zapis do OUT', gp_t_enable:'Zapis do ENABLE', gp_t_in:'Odczyt IN', gp_t_btn:'Przycisk', gp_t_pu:'Pull-up',
+  gp_who_w:'CPU → kontroler GPIO', gp_who_r:'kontroler GPIO → CPU', gp_who_b:'na płytce',
+  gp_x_w1ts:(v,p,a,b)=>`Każdy bit 1 w ${v} ustawia ten sam bit w OUT (${p}). Bity 0 nic nie zmieniają. OUT: ${a} → ${b}.`,
+  gp_x_w1tc:(v,p,a,b)=>`Każdy bit 1 w ${v} zeruje ten sam bit w OUT (${p}). Bity 0 nic nie zmieniają. OUT: ${a} → ${b}.`,
+  gp_x_out:(v,a,b)=>`Zapis prosto do OUT zmienia wszystkie bity naraz. OUT: ${a} → ${b}.`,
+  gp_x_out_lost:p=>`Uwaga: zmieniły się też bity, których nie chcieliśmy ruszać (${p}). Dlatego digitalWrite używa OUT_W1TS i OUT_W1TC.`,
+  gp_x_en:(a,b)=>`ENABLE: ${a} → ${b}.`,
+  gp_x_inw:'IN jest tylko do odczytu: zapis nic nie zmienia.',
+  gp_nochange:'Żaden bit się nie zmienił.',
+  gp_nodrv:n=>`Bit ${n} w OUT się zmienił, ale ENABLE bit ${n} = 0: driver pinu ${n} jest wyłączony, więc na pinie nic się nie dzieje.`,
+  gp_en_on:n=>`ENABLE bit ${n} = 1: driver pinu ${n} się włącza, pin jest wyjściem.`,
+  gp_en_off:n=>`ENABLE bit ${n} = 0: driver pinu ${n} się wyłącza, pin jest wejściem.`,
+  gp_ps_drv1:n=>`Pin ${n}: driver łączy go z 3,3 V (OUT = 1).`,
+  gp_ps_drv0:n=>`Pin ${n}: driver łączy go z 0 V (OUT = 0).`,
+  gp_ps_short:n=>`Pin ${n}: ZWARCIE! Driver łączy go z 3,3 V, a wciśnięty przycisk z GND.`,
+  gp_ps_press:n=>`Pin ${n}: driver wyłączony, wciśnięty przycisk łączy go z GND → 0 V.`,
+  gp_ps_pu:n=>`Pin ${n}: driver wyłączony, pull-up podciąga go do 3,3 V → 1.`,
+  gp_ps_float:n=>`Pin ${n}: driver wyłączony i nic go nie trzyma: napięcie jest nieokreślone (?).`,
+  gp_x_in:(h,b)=>`CPU czyta IN: a4 = ${h}, bity 7…0: ${b}. Każdy bit to stan swojego pinu w tej chwili.`,
+  gp_x_in_btn:(a,b)=>`Bit 5 = ${a}: przycisk A ${a?'puszczony':'wciśnięty'}. Bit 6 = ${b}: przycisk B ${b?'puszczony':'wciśnięty'}.`,
+  gp_x_in_rnd:p=>`Na ${p} napięcie jest nieokreślone, więc te bity wypadły przypadkiem: przy następnym odczycie mogą być inne.`,
+  gp_x_press:(nm,n)=>`Przycisk ${nm} wciśnięty: łączy pin ${n} z GND.`,
+  gp_x_release:(nm,n)=>`Przycisk ${nm} puszczony: już nie łączy pinu ${n} z GND.`,
+  gp_x_short_why:'W prawdziwym układzie popłynąłby duży prąd. Dlatego pin z przyciskiem musi być wejściem: ENABLE bit = 0.',
+  gp_x_pu_on:n=>`Pull-up pinu ${n} włączony.`, gp_x_pu_off:n=>`Pull-up pinu ${n} wyłączony.`,
+  gp_x_iomux:'Pull-up nie jest w kontrolerze GPIO, tylko w bloku IO_MUX, ale działa na ten sam pin.',
+  gp_note_enw1ts:'W prawdziwym ESP32 pinMode zapisuje do ENABLE_W1TS (+0x24), który ustawia bity ENABLE tak, jak OUT_W1TS ustawia bity OUT.',
+  gp_note_pu5:'pinMode włącza też pull-up pinu 5 (w bloku IO_MUX).',
+  gp_c_out:'nadpisuje cały rejestr', gp_c_bad:'błąd: pin z przyciskiem jako wyjście', gp_c_board:'// zmiana na płytce: żadna instrukcja się nie wykonuje', gp_c_pu:n=>`// IO_MUX: pull-up pinu ${n}`,
+  gp_lg_hi:'3,3 V (1)', gp_lg_lo:'0 V (0)', gp_lg_fl:'nieokreślone (?)', gp_lg_sh:'zwarcie', gp_lg_on:'driver włączony', gp_lg_offd:'driver wyłączony', gp_lg_set:'bity zmienione przez W1TS / W1TC',
+  gp_reg_out:'OUT (+0x04)', gp_reg_en:'ENABLE (+0x20)', gp_reg_in:'IN (+0x3C), bity 7…0', gp_reg_w1ts:'OUT_W1TS: ostatni zapis', gp_reg_w1tc:'OUT_W1TC: ostatni zapis', gp_reg_a4:'a4: ostatni odczyt',
+  /* POLL */
+  po_h_setup:'Program', po_l_mode:'Co robi loop()', po_m_work:'praca 2 s, potem jedno sprawdzenie (zad. 7)', po_m_spin:'tylko sprawdza (zad. 8)',
+  po_l_bounce:'Drgania styków (zad. 11)', po_bounce:'przycisk drga', po_deb:'filtr 50 ms w ISR',
+  po_l_presets:'Gotowe naciśnięcia', po_p1:'5 krótkich kliknięć', po_p2:'2 długie przytrzymania',
+  po_code_isr:'Przerwanie (zad. 9 i 11)', po_code_work:'Polling (zad. 7)', po_code_spin:'Polling (zad. 8)',
+  po_hold:'przytrzymaj myszą lub spacją', po_h_time:'Oś czasu: 10 sekund, te same naciśnięcia dla obu programów',
+  po_s_press:'Naciśnięcia', po_s_poll:'Policzył polling', po_s_irq:'Policzyło przerwanie', po_s_checks:'Sprawdzeń (polling)', po_s_useful:'Trafne sprawdzenia', po_s_work:'Praca CPU (polling)',
+  po_r_btn:'Przycisk A', po_r_poll:'CPU: polling', po_r_irq:'CPU: przerwania', po_sec:'s',
+  lcd1:'Polling:', lcd2:'Przerwanie:',
+  lg_work:'użyteczna praca', lg_poll:'sprawdzanie urządzenia', lg_isr:'procedura obsługi (ISR)', lg_copy:'kopiowanie danych', lg_hit:'naciśnięcie policzone', lg_miss:'naciśnięcie zgubione',
+  lg_bnc:'drgania są rozciągnięte w czasie, żeby było je widać (naprawdę trwają kilka ms)',
+  px_start:['Gotowe do startu','','Kliknij Start i naciskaj przycisk A albo wybierz gotowe naciśnięcia. Oba programy dostają dokładnie te same naciśnięcia.'],
+  px_run:['Trwa pomiar','','Naciskaj przycisk A: krótko i długo. Obserwuj, kiedy CPU sprawdza przycisk i kiedy wchodzi do ISR.'],
+  px_end:'Wynik po 10 s',
+  px_work:(p,n)=>`Polling policzył ${p} z ${n}. Naciśnięcie liczy się tylko wtedy, gdy przycisk jest wciśnięty dokładnie w chwili sprawdzenia; krótkie kliknięcie w czasie 2 s pracy przepada.`,
+  px_twice:'Przytrzymanie trwające przez dwa sprawdzenia liczy się dwa razy: polling widzi stan przycisku, a nie zdarzenie naciśnięcia.',
+  px_spin:(c,n,pct)=>`Polling niczego nie zgubił, ale wykonał ${c} sprawdzeń, z czego trafnych było ${n}: ${pct}. Cała reszta pracy CPU poszła na marne.`,
+  px_irq:q=>`Przerwanie policzyło ${q}: każde zbocze opadające przerywa pracę na chwilę, a CPU przez resztę czasu robi coś użytecznego.`,
+  px_bnc:'Drgania: każde odbicie styku to nowe zbocze, więc nowe przerwanie. Jedno naciśnięcie liczy się kilka razy. Włącz filtr 50 ms.',
+  px_deb:'Filtr: zbocza bliżej niż 50 ms od ostatniego policzonego ISR ignoruje. ISR nadal się wykonuje, ale od razu wraca.',
+  px_key:'Polling albo gubi zdarzenia (zad. 7), albo marnuje CPU (zad. 8). Z przerwaniem CPU pracuje, dopóki urządzenie go nie potrzebuje.',
+  pc_work:'// "praca": 2 s', pc_check:'// jedno sprawdzenie', pc_spin:'// sprawdzenie', pc_bounce:'// drganie',
+  /* IRQ */
+  ir_h_setup:'Scenariusz', ir_l_src:'Źródło', ir_s_A:'przycisk A', ir_s_B:'przycisk B', ir_s_T:'timer', ir_s_X:'wyjątek',
+  ir_l_at:'Sygnał przychodzi w trakcie instrukcji',
+  ir_note_irq:'Tryb wektorowy: CPU skacze pod mtvec + 4 × numer przerwania. Tam leży skok do właściwej procedury obsługi.',
+  ir_note_x:'Wyjątek wywołuje sama instrukcja: lw z adresu 0, gdzie nie ma pamięci (zad. 15).',
+  ir_main:'Program główny', ir_vec:'Tablica wektorów od mtvec', ir_hand:n=>`Procedura obsługi: ${n}`,
+  ir_h_regs:'Rejestry CPU', ir_regs_note:'mepc, mcause, mtval i mtvec to rejestry CSR: specjalne rejestry do obsługi przerwań i wyjątków.',
+  ir_h_trace:'Wykonane instrukcje', ir_lg_m:'program główny', ir_lg_t:'wejście sprzętowe (bez instrukcji)', ir_lg_i:'procedura obsługi', ir_lg_x:'wyjątek',
+  ir_trap:'pułapka', ir_src_name:{A:'przycisk A',B:'przycisk B',T:'timer'},
+  irx_run:(ins,pc)=>['Program główny','',`Wykonuje się ${ins}. PC = ${pc}. Program nie wie, że za chwilę coś się wydarzy.`],
+  irx_irq:(src,ins)=>['Dokończ instrukcję',`${src} → CPU`,`W trakcie ${ins} przychodzi sygnał: ${src}. CPU nie przerywa instrukcji w połowie: ${ins} kończy się normalnie.`],
+  irx_save:(nx,c,n,br)=>['Zapamiętaj','sprzęt',`CPU zapisuje, dokąd wrócić: mepc = ${nx}, czyli następna instrukcja${br?' (bnez skacze z powrotem do pętli)':''}. I dlaczego: mcause = ${c}: najstarszy bit 1 = przerwanie, reszta = numer źródła ${n}.`],
+  irx_jump:(n,pc,h)=>['Skocz','sprzęt',`PC = mtvec + 4 × ${n} = ${pc}. Tam jest skok do ${h}. Żadna instrukcja programu tego nie wywołała: zrobił to sprzęt.`],
+  irx_j:(h,pc)=>['Tablica wektorów','',`j ${h}: zwykły skok do procedury obsługi pod ${pc}.`],
+  irx_h:(txt)=>['Procedura obsługi (ISR)','',txt],
+  irx_ret:(pc)=>['Wróć','mret',`mret: PC = mepc = ${pc}. Program główny działa dalej dokładnie tam, gdzie przerwał.`],
+  irx_cont:(ins)=>['Program główny','',`Wykonuje się ${ins}. Program główny nie zauważył przerwy.`],
+  irx_end:(msg)=>['Koniec','',msg],
+  ire_A:'count zmienił się z 3 na 4, a rejestry programu głównego (także t0) mają te same wartości co przed przerwaniem.',
+  ire_B:'count = 0. ISR był bardzo krótki: jedna instrukcja i mret.',
+  ire_T:'ledOn zmienił się z 0 na 1. Timer wywoła ten sam ISR znowu po ustalonej liczbie taktów.',
+  irh:{save:'Zapisz t0 na stosie: program główny może go używać.',ld:'Wczytaj zmienną do t0.',inc:'count++',st:'Zapisz nową wartość zmiennej.',rest:'Przywróć t0 ze stosu.',zero:'count = 0: zapisz zero prosto do pamięci.',xor:'ledOn = !ledOn (xori z 1 odwraca bit).'},
+  irx_fault:(ins)=>['Instrukcja nie może się wykonać','',`${ins} czyta z adresu 0, pod którym nie ma pamięci: żaden dekoder nie odpowiada. Tej instrukcji nie da się dokończyć.`],
+  irx_xsave:(pc)=>['Zapamiętaj','sprzęt',`mepc = ${pc}: adres złej instrukcji, a nie następnej. mcause = 5 (Load access fault, najstarszy bit 0 = wyjątek). mtval = 0x0000 0000: zakazany adres.`],
+  irx_xjump:(pc)=>['Skocz','sprzęt',`Wyjątki zawsze trafiają na sam początek tablicy: PC = mtvec = ${pc}.`],
+  irx_panic:['Obsługa wyjątku','',`ESP32 wypisuje raport w Serial Monitor i zatrzymuje program (zad. 15). Nie ma mret: powrót powtórzyłby tę samą złą instrukcję.`],
+  ir_cmp:'Przerwanie: przyczyna z zewnątrz, instrukcja się kończy, mepc wskazuje następną. Wyjątek: przyczyna w instrukcji, instrukcja się nie kończy, mepc wskazuje złą.',
+  mc_irq:n=>`przerwanie nr ${n}`, mc_exc:'Load access fault',
+  /* DMA */
+  dm_h_setup:'Kto kopiuje 32 bajty?', dm_l_mode:'Sposób', dm_m_dma:'DMA: esp_async_memcpy', dm_m_cpu:'CPU: memcpy',
+  dm_ctrl:'Kontroler DMA', dm_bus:'Magistrala teraz', dm_check:'Sprawdź dst teraz (memcmp)', dm_h_time:'Oś czasu',
+  dm_doing:'Co robi', dm_work:'work', dm_done:'done', dm_led:'LED',
+  dm_src:'SRC: skąd', dm_dst:'DST: dokąd', dm_len:'LEN: ile bajtów', dm_cnt:'skopiowano',
+  dd_idle:'czeka', dd_setup:'ustawia DMA', dd_work:'work++ (wolne)', dd_isr:'ISR onDone', dd_copy:'kopiuje (memcpy)', dd_after:'dalej pracuje', dd_ret:'memcpy wróciło',
+  db_free:'wolna', db_cfg:'CPU → DMA: zapis rejestrów SRC, DST, LEN', db_dma:(k,o)=>`DMA: słowo ${k}, src+${o} → dst+${o}`, db_cpu:(k,o)=>`CPU: słowo ${k}, lw src+${o}, sw dst+${o}`, db_irq:'DMA → CPU: przerwanie „gotowe”',
+  dm_ok:'OK', dm_err:'BŁĄD', dm_chk:(s,ok,k)=>`krok ${s}: memcmp → ${ok} (${k} z 32 bajtów skopiowanych)`,
+  dm_on:'świeci', dm_off:'nie świeci', dm_true:'true', dm_false:'false',
+  dx0:['Start','','src zawiera tekst, dst same zera. Kliknij Dalej. W każdej chwili możesz sprawdzić dst przyciskiem memcmp.'],
+  dx_setup:['Ustawienie','CPU → DMA','CPU wpisuje do rejestrów DMA trzy rzeczy: skąd (src), dokąd (dst) i ile bajtów (32). esp_async_memcpy wraca od razu: tReturn jest bardzo małe.'],
+  dx_copy:(k,n)=>['Kopiowanie','DMA → pamięć',`DMA przenosi słowo ${k} (4 bajty) z src do dst. CPU w tym czasie wykonuje work++: jest wolne. Skopiowano ${n} z 32 bajtów.`],
+  dx_done:['Gotowe: przerwanie','DMA → CPU','DMA zgłasza jedno przerwanie na koniec. onDone ustawia done = true i zapala LED.'],
+  dx_end:w=>['Po przerwaniu','',`Pętla while (!done) się kończy. work = ${w}: tyle pracy CPU wykonało w czasie kopiowania. DMA nie kopiuje szybciej niż CPU, ale CPU jest w tym czasie wolne.`],
+  dx_cset:['memcpy','CPU','CPU samo wywołuje memcpy i kopiuje dane. Dopóki nie skończy, nie zrobi nic innego.'],
+  dx_ccopy:(k,n)=>['Kopiowanie','CPU → pamięć',`CPU kopiuje słowo ${k}: lw z src, sw do dst. work stoi w miejscu. Skopiowano ${n} z 32 bajtów.`],
+  dx_cend:['memcpy wróciło','',`Kopiowanie trwało mniej więcej tyle samo co z DMA, ale work = 0: przez cały ten czas CPU nie zrobiło nic innego.`],
+  dm_early:'Za wcześnie: DMA jeszcze kopiuje, część dst to wciąż zera. Dane wolno czytać dopiero po przerwaniu „gotowe”.',
+  dl_setup:'ustawianie DMA', dl_idle:'bezczynny', dl_irq:'przerwanie „gotowe”',
+  /* calc */
+  ca_h:'Ile CPU zjadają przerwania? (zad. 17)',
+  ca_intro:'Każde przerwanie kosztuje cykle: zapis rejestrów, skok, ISR, powrót. Wybierz urządzenie albo wpisz własne liczby.',
+  cp_kb:'klawiatura, 20 klawiszy/s', cp_ser:'port szeregowy 100 KB/s, co bajt', cp_ssd:'SSD 100 MB/s, co bajt', cp_dma:'SSD 100 MB/s, DMA co 4 KB', cp_tim:'timer 1000/s, 200 cykli, 160 MHz',
+  ca_mhz:'Zegar CPU (MHz)', ca_cyc:'Cykli na jedno przerwanie', ca_rate:'Zdarzeń lub bajtów na sekundę', ca_per:'Bajtów na jedno przerwanie',
+  cs_irq:'Przerwań na sekundę', cs_cyc:'Cykli na przerwania / s', cs_pct:'Czas CPU na przerwania', cs_left:'Zostaje na pracę',
+  ca_err:'Wpisz dodatnie liczby.',
+  ca_over:k=>`Potrzeba by ${k} procesorów, które nie robią nic innego: niemożliwe. Szybkie urządzenia bez DMA nie działają.`,
+  ca_mid:'Spory kawałek CPU. Przy szybszym urządzeniu trzeba DMA.',
+  ca_low:'Rzadkie zdarzenia: przerwania w zupełności wystarczą.',
+  ca_bar:p=>`przerwania: ${p}`,
+  dm_text:'Te 32 bajty kopiuje DMA lub CPU.',
+  irc_bad:'# adres 0!', irc_v0:'0: wyjątki', irc_v1:'1: przycisk A', irc_v2:'2: przycisk B', irc_v3:'3: timer',
+  irc_save:'zapisz t0', irc_rest:'przywróć t0', irc_panic:'raport i stop',
+},
+en:{
+  doc_title:'I/O simulator: I2C, interrupts, DMA',
+  title:'How the CPU talks to devices',
+  intro:'Pick a topic and step through it: one I2C message bit by bit, one sw to a device, the registers of the GPIO controller, polling against an interrupt, entering an interrupt handler, and copying with DMA. The examples use the ESP32-C3 from the lecture.',
+  h_topics:'Topic',
+  tp_i2c:'I2C', tp_i2c_s:'one message, bit by bit',
+  tp_mmio:'Device registers', tp_mmio_s:'sw and lw to a device, address decoder',
+  tp_poll:'Polling vs interrupts', tp_poll_s:'press the button and compare',
+  tp_irq:'Interrupt step by step', tp_irq_s:'mepc, mcause, mtvec, mret, exception',
+  tp_dma:'DMA', tp_dma_s:'copying without the CPU, cost of interrupts',
+  a_prev:'Back', a_next:'Next', a_play:'Play', a_pause:'Pause', a_reset:'Restart', a_start:'Start',
+  keys_note:'Keys: ← → step, space plays.',
+  keys_note_poll:'Space or mouse: hold button A.',
+  step:(i,n)=>`Step ${i} / ${n}`,
+  i2c_h_setup:'The message', i2c_l_addr:'Target address', i2c_l_rw:'Direction', i2c_w:'write (W)', i2c_r:'read (R)',
+  i2c_l_data:'Byte to send', i2c_err_data:'Enter a byte: 0x00–0xFF, a number 0–255 or one character.',
+  i2c_h_bus:'The I2C bus on the board', i2c_h_wave:'Signals on the SCL and SDA wires', i2c_h_devs:'Who is listening? Address comparison',
+  i2c_devs_note:'Every device receives the 7 address bits and compares them with its own. Only the one whose address matches answers.',
+  i2c_rule:'Rule: SDA changes only while SCL = 0. A change of SDA while SCL = 1 means START or STOP.',
+  dev_lcd:'LCD 16×2', dev_sensor:'sensor', dev_mem:'EEPROM memory', dev_none:'nobody', nobody_opt:'no device',
+  esp_ctrl:'I2C controller', pullup:'pull-up resistors', drives:'drives SDA',
+  ph_addr:a=>`address ${a}`, ph_data:b=>`data ${b}`,
+  lg_m:'SDA driven by the ESP32', lg_d:'SDA driven by the device', lg_n:'nobody: the resistor holds 1', lg_ss:'START / STOP', lg_scl:'SCL: clock from the ESP32', lg_sample:'here the bit is read (SCL = 1)',
+  th_dev:'Device', th_own:'Its address', th_recv:'Address bits received', th_state:'State',
+  st_idle:'waiting', st_listen:'listening', st_mine:'that is me!', st_notmine:'not for me, ignoring', st_ack:'sends ACK', st_rx:'receives data', st_tx:'sends data',
+  st_rxack:'receives NACK', st_done_w:b=>`received ${b}`, st_done_r:b=>`sent ${b}`,
+  m_idle:'bus free', m_tx:'sending', m_wait:'waits for ACK', m_rx:'receiving', m_nack:'sends NACK',
+  ex_idle:['Bus free','','Both lines are at 1: the pull-up resistors hold them there. Nobody is sending. Click Next to start the message.'],
+  ex_start:['START','ESP32 → everyone','SDA goes to 0 while SCL is 1. All devices wake up and listen: a message begins.'],
+  ex_addr:(n,v,a,b)=>[`Address bit ${n} of 7`,'ESP32 → everyone',`The ESP32 sets SDA = ${v} while SCL = 0, then gives a clock tick. While SCL = 1 every device reads the bit and compares it with its own address. ${a} = ${b}.`],
+  ex_rw:r=>['R/W bit','ESP32 → everyone',r?'1 = read: after the ACK, data will flow from the device to the ESP32.':'0 = write: after the ACK, data will flow from the ESP32 to the device.'],
+  ex_ack_a:(d,a)=>['ACK',`${d} → ESP32`,`Only the device with address ${a} pulls SDA to 0 in the 9th tick: “I am here, go on”. The others stay quiet.`],
+  ex_nack_a:a=>['NACK','nobody',`No device has address ${a}, so nobody pulls SDA down. The resistor holds 1, and 1 in the ACK slot is a NACK. The ESP32 gives up and ends with STOP. In Arduino, Wire.endTransmission() returns 2.`],
+  ex_data_w:(n,v,d)=>[`Data bit ${n} of 8`,`ESP32 → ${d}`,`The ESP32 sets SDA = ${v} while SCL = 0. The ${d} reads the bit while SCL = 1.`],
+  ex_data_r:(n,v,d)=>[`Data bit ${n} of 8`,`${d} → ESP32`,`Now the device drives SDA (SDA = ${v}), but the ESP32 still gives the SCL clock. The ESP32 reads the bit while SCL = 1.`],
+  ex_ack_d:d=>['ACK',`${d} → ESP32`,'“Got it”. More bytes could follow now, each one with its own ACK.'],
+  ex_nack_r:d=>['NACK',`ESP32 → ${d}`,'The ESP32 does not pull SDA down on purpose: “enough, that was the last byte”. The device stops sending.'],
+  ex_stop:s=>['STOP','ESP32 → everyone','SDA goes to 1 while SCL is 1: the message is over, the bus is free again. '+s],
+  res_w:(d,b)=>`The ${d} received the byte ${b}.`, res_r:(d,b)=>`The ESP32 received the byte ${b} from the ${d}.`, res_n:'The message reached nobody.',
+  c_w1:'// START, address, W', c_w2:'// data byte', c_w3:'// STOP; 0 = OK, 2 = NACK on address',
+  c_r1:'// START, address, R, 1 byte, NACK, STOP', c_r2:'// the received byte',
+  mm_h_pick:'Instruction', mm_custom:'Your own instruction', mm_l_op:'Instruction', mm_l_addr:'Address', mm_l_val:'Value (for sw)', mm_go:'Run',
+  mm_p_set:'sw: LED on', mm_p_clr:'sw: LED off', mm_p_in:'lw: read the buttons', mm_p_ram:'sw: to RAM', mm_p_i2c:'sw: byte to I2C', mm_p_bad:'lw: address 0',
+  mm_err_addr:'Address: a 32-bit number, e.g. 0x60004008.', mm_err_align:'The address must be divisible by 4: sw and lw move whole words.', mm_err_val:'Value: a 32-bit number, e.g. 0x10.',
+  mm_h_chip:'Inside the ESP32-C3: CPU, bus, controllers', mm_h_addr:'From an address to a pin', mm_h_state:'State of devices and registers',
+  mm_state_note:'Click button A or B in the picture to press it, then read the buttons again.',
+  s_chip:'inside the ESP32-C3 chip', s_board:'on the board: real wires', s_bus:'internal bus', s_addr:'address', s_data:'data', s_ctl:'control',
+  s_mem:'RAM memory', s_gpio:'GPIO controller', s_i2c:'I2C controller', s_mine:'mine!', s_notmine:'not mine', s_write:'write', s_read:'read',
+  s_btnA:'button A', s_btnB:'button B', s_led:'LED', s_lcd:'LCD 0x27', s_nobody:'nobody answers',
+  mb_hi:'upper 20 bits: which controller', mb_lo:'lower 12 bits: which register', mb_pins:'data: bit n = pin n', mb_val:'value',
+  mm_reg_out:'GPIO OUT: outputs', mm_reg_in:'GPIO IN: pin states', mm_reg_ram:'RAM at 0x3FC8 0000', mm_reg_fifo:'I2C queue (FIFO)', mm_reg_a4:'register a4',
+  mm_empty:'empty',
+  mx0:(ins,calc)=>['Instruction','CPU',`The CPU runs ${ins}. ${calc}`],
+  mx_calc:(b,o,a)=>`a5 = ${b}, so the address is ${b} + ${o} = ${a}.`,
+  mx1:a=>['Address','CPU → bus',`The CPU puts ${a} on the address lines. Memory and every controller see the same address.`],
+  mx2:(a,who)=>['Who is it for?','address decoders',`Every decoder checks whether the address is in its range. ${who}`],
+  mx2_who:(d,p)=>`${p} belongs to the ${d}. It says “mine!”, the others ignore the address.`,
+  mx2_none:'No range matches: nobody says “mine!”.',
+  mx3_sw:(v,d,r)=>['Data and write','CPU → '+d,`The CPU puts ${v} on the data lines and “write” on the control lines. The ${d} stores the value in register ${r}.`],
+  mx3_lw:(d,r)=>['Read',d+' → CPU',`The CPU puts “read” on the control lines. The ${d} puts the contents of register ${r} on the data lines.`],
+  mx3_none:(ld)=>['No answer','','Nobody answers on the bus: the instruction cannot complete.'],
+  mx4_set:(pins,led)=>['Effect','',`Every 1 bit switches its pin on: ${pins}. ${led}`],
+  mx4_clr:(pins,led)=>['Effect','',`Every 1 bit switches its pin off: ${pins}. ${led}`],
+  mx4_out:(pins,led)=>['Effect','',`The whole output register gets the new value. ${led}`],
+  led_on:'Pin 4 is at 3.3 V: the LED is on.', led_off:'Pin 4 is at 0 V: the LED is off.',
+  mx4_in:(v,a)=>['Effect','',`a4 = ${v}. Bit 5 = ${a} → button A is ${a?'not ':''}pressed (pull-up: pressed = 0). In C: (reg >> 5) & 1.`],
+  mx4_ram:(a)=>['Effect','',`The value is saved in RAM at ${a}. The LED does not change: the same sw instruction, a different address.`],
+  mx4_ramr:(v)=>['Effect','',`a4 = ${v}: the value from RAM. The same lw as for a device, a different address.`],
+  mx4_i2c:(b)=>['Effect','',`The byte ${b} goes into the I2C controller's queue. The controller sends it to the LCD over SDA and SCL by itself (see the I2C topic). This is how lcd.print works.`],
+  mx4_ign:(d)=>['Effect','',`The ${d} recognised its address, but this simulator does not model this register: a write changes nothing, a read gives 0.`],
+  mx4_none:(ld,c,a)=>['Exception','',`${ld?'Load':'Store'} access fault: mcause = ${c}, mtval = ${a}. The CPU jumps to the exception handler (see “Interrupt step by step”).`],
+  pins_list:l=>l.length?((l.length>1?'pins ':'pin ')+l.join(', ')):'no pin',
+  tp_gpio:'GPIO controller', tp_gpio_s:'OUT, ENABLE, IN, driver and pins',
+  gp_h_pick:'Instructions', gp_reset:'Start state',
+  gp_click_note:'You can also click the bits in the picture (a write to the register), buttons A and B (press / release) and the pull-up resistors (on / off).',
+  gp_h_ctrl:'Inside the GPIO controller: bit n of every register is about pin GPIO n',
+  gp_h_last:'What happened', gp_h_regs:'Registers',
+  gp_regs_note:'OUT_W1TS and OUT_W1TC store nothing (a read gives 0). The last written value is shown.',
+  gp_rd_w1ts:'write 1 → set the bit in OUT', gp_rd_w1tc:'write 1 → clear the bit in OUT', gp_rd_enable:'1 = output: driver on', gp_rd_out:'the level the driver puts out', gp_rd_in:'what is on the pin now',
+  gp_l_drv:'driver', gp_l_drv_s:'switched on by ENABLE', gp_l_pin:'pin', gp_l_pin_s:'voltage on the leg', gp_l_board:'on the board', gp_l_board_s:'what is connected',
+  gp_off:'off', gp_short:'short!', gp_pu_hint:'pull-up',
+  gp_intro:['How to use it','','At the top are the registers of the GPIO controller, at the bottom the pins and what is connected to them: an LED on pin 4, buttons A and B on pins 5 and 6. Pick an instruction or click the bits and watch what happens to the registers and the pins.'],
+  gp_t_w1ts:'Write to OUT_W1TS', gp_t_w1tc:'Write to OUT_W1TC', gp_t_out:'Write to OUT', gp_t_enable:'Write to ENABLE', gp_t_in:'Read IN', gp_t_btn:'Button', gp_t_pu:'Pull-up',
+  gp_who_w:'CPU → GPIO controller', gp_who_r:'GPIO controller → CPU', gp_who_b:'on the board',
+  gp_x_w1ts:(v,p,a,b)=>`Every 1 bit in ${v} sets the same bit in OUT (${p}). 0 bits change nothing. OUT: ${a} → ${b}.`,
+  gp_x_w1tc:(v,p,a,b)=>`Every 1 bit in ${v} clears the same bit in OUT (${p}). 0 bits change nothing. OUT: ${a} → ${b}.`,
+  gp_x_out:(v,a,b)=>`A write straight to OUT changes all bits at once. OUT: ${a} → ${b}.`,
+  gp_x_out_lost:p=>`Careful: bits we did not want to touch changed too (${p}). That is why digitalWrite uses OUT_W1TS and OUT_W1TC.`,
+  gp_x_en:(a,b)=>`ENABLE: ${a} → ${b}.`,
+  gp_x_inw:'IN is read only: a write changes nothing.',
+  gp_nochange:'No bit changed.',
+  gp_nodrv:n=>`Bit ${n} of OUT changed, but ENABLE bit ${n} = 0: the driver of pin ${n} is off, so nothing happens on the pin.`,
+  gp_en_on:n=>`ENABLE bit ${n} = 1: the driver of pin ${n} switches on, the pin is an output.`,
+  gp_en_off:n=>`ENABLE bit ${n} = 0: the driver of pin ${n} switches off, the pin is an input.`,
+  gp_ps_drv1:n=>`Pin ${n}: the driver connects it to 3.3 V (OUT = 1).`,
+  gp_ps_drv0:n=>`Pin ${n}: the driver connects it to 0 V (OUT = 0).`,
+  gp_ps_short:n=>`Pin ${n}: SHORT CIRCUIT! The driver connects it to 3.3 V and the pressed button to GND.`,
+  gp_ps_press:n=>`Pin ${n}: driver off, the pressed button connects it to GND → 0 V.`,
+  gp_ps_pu:n=>`Pin ${n}: driver off, the pull-up pulls it to 3.3 V → 1.`,
+  gp_ps_float:n=>`Pin ${n}: driver off and nothing holds it: the voltage is undefined (?).`,
+  gp_x_in:(h,b)=>`The CPU reads IN: a4 = ${h}, bits 7…0: ${b}. Every bit is the state of its pin right now.`,
+  gp_x_in_btn:(a,b)=>`Bit 5 = ${a}: button A is ${a?'released':'pressed'}. Bit 6 = ${b}: button B is ${b?'released':'pressed'}.`,
+  gp_x_in_rnd:p=>`On ${p} the voltage is undefined, so these bits came out by chance: the next read may differ.`,
+  gp_x_press:(nm,n)=>`Button ${nm} pressed: it connects pin ${n} to GND.`,
+  gp_x_release:(nm,n)=>`Button ${nm} released: it no longer connects pin ${n} to GND.`,
+  gp_x_short_why:'In a real circuit a large current would flow. That is why a pin with a button must be an input: ENABLE bit = 0.',
+  gp_x_pu_on:n=>`Pull-up of pin ${n} on.`, gp_x_pu_off:n=>`Pull-up of pin ${n} off.`,
+  gp_x_iomux:'The pull-up is not in the GPIO controller but in the IO_MUX block; it acts on the same pin.',
+  gp_note_enw1ts:'On the real ESP32, pinMode writes to ENABLE_W1TS (+0x24), which sets ENABLE bits just as OUT_W1TS sets OUT bits.',
+  gp_note_pu5:'pinMode also switches on the pull-up of pin 5 (in the IO_MUX block).',
+  gp_c_out:'overwrites the whole register', gp_c_bad:'mistake: a button pin as an output', gp_c_board:'// a change on the board: no instruction runs', gp_c_pu:n=>`// IO_MUX: pull-up of pin ${n}`,
+  gp_lg_hi:'3.3 V (1)', gp_lg_lo:'0 V (0)', gp_lg_fl:'undefined (?)', gp_lg_sh:'short circuit', gp_lg_on:'driver on', gp_lg_offd:'driver off', gp_lg_set:'bits changed by W1TS / W1TC',
+  gp_reg_out:'OUT (+0x04)', gp_reg_en:'ENABLE (+0x20)', gp_reg_in:'IN (+0x3C), bits 7…0', gp_reg_w1ts:'OUT_W1TS: last write', gp_reg_w1tc:'OUT_W1TC: last write', gp_reg_a4:'a4: last read',
+  po_h_setup:'The program', po_l_mode:'What loop() does', po_m_work:'2 s of work, then one check (Task 7)', po_m_spin:'only checks (Task 8)',
+  po_l_bounce:'Contact bounce (Task 11)', po_bounce:'button bounces', po_deb:'50 ms filter in the ISR',
+  po_l_presets:'Ready-made presses', po_p1:'5 short clicks', po_p2:'2 long holds',
+  po_code_isr:'Interrupt (Tasks 9 and 11)', po_code_work:'Polling (Task 7)', po_code_spin:'Polling (Task 8)',
+  po_hold:'hold with the mouse or space', po_h_time:'Timeline: 10 seconds, the same presses for both programs',
+  po_s_press:'Presses', po_s_poll:'Counted by polling', po_s_irq:'Counted by interrupt', po_s_checks:'Checks (polling)', po_s_useful:'Useful checks', po_s_work:'CPU work (polling)',
+  po_r_btn:'Button A', po_r_poll:'CPU: polling', po_r_irq:'CPU: interrupts', po_sec:'s',
+  lcd1:'Polling:', lcd2:'Interrupt:',
+  lg_work:'useful work', lg_poll:'checking the device', lg_isr:'interrupt handler (ISR)', lg_copy:'copying data', lg_hit:'press counted', lg_miss:'press lost',
+  lg_bnc:'bounces are stretched in time so you can see them (really they last a few ms)',
+  px_start:['Ready to start','','Click Start and press button A, or pick ready-made presses. Both programs get exactly the same presses.'],
+  px_run:['Measuring','','Press button A: short and long. Watch when the CPU checks the button and when it enters the ISR.'],
+  px_end:'Result after 10 s',
+  px_work:(p,n)=>`Polling counted ${p} of ${n}. A press counts only if the button is held exactly when the CPU checks; a short click during the 2 s of work is lost.`,
+  px_twice:'A hold that lasts over two checks counts twice: polling sees the state of the button, not the event of pressing it.',
+  px_spin:(c,n,pct)=>`Polling lost nothing, but it did ${c} checks, and ${n} of them were useful: ${pct}. All the rest of the CPU's work was wasted.`,
+  px_irq:q=>`The interrupt counted ${q}: every falling edge interrupts the work for a moment, and the rest of the time the CPU does something useful.`,
+  px_bnc:'Bouncing: every bounce of the contact is a new edge, so a new interrupt. One press counts several times. Switch on the 50 ms filter.',
+  px_deb:'The filter: the ISR ignores edges less than 50 ms after the last counted one. The ISR still runs, but returns at once.',
+  px_key:'Polling either misses events (Task 7) or wastes the CPU (Task 8). With an interrupt, the CPU works until the device needs it.',
+  pc_work:'// "work": 2 s', pc_check:'// check once', pc_spin:'// check', pc_bounce:'// bounce',
+  ir_h_setup:'Scenario', ir_l_src:'Source', ir_s_A:'button A', ir_s_B:'button B', ir_s_T:'timer', ir_s_X:'exception',
+  ir_l_at:'The signal arrives during instruction',
+  ir_note_irq:'Vectored mode: the CPU jumps to mtvec + 4 × the interrupt number. There it finds a jump to the right handler.',
+  ir_note_x:'The exception is caused by the instruction itself: lw from address 0, where there is no memory (Task 15).',
+  ir_main:'Main program', ir_vec:'Vector table at mtvec', ir_hand:n=>`Handler: ${n}`,
+  ir_h_regs:'CPU registers', ir_regs_note:'mepc, mcause, mtval and mtvec are CSRs: special registers for handling interrupts and exceptions.',
+  ir_h_trace:'Executed instructions', ir_lg_m:'main program', ir_lg_t:'hardware entry (no instruction)', ir_lg_i:'handler', ir_lg_x:'exception',
+  ir_trap:'trap', ir_src_name:{A:'button A',B:'button B',T:'timer'},
+  irx_run:(ins,pc)=>['Main program','',`${ins} runs. PC = ${pc}. The program does not know that something is about to happen.`],
+  irx_irq:(src,ins)=>['Finish the instruction',`${src} → CPU`,`During ${ins} a signal arrives: ${src}. The CPU does not stop an instruction halfway: ${ins} finishes normally.`],
+  irx_save:(nx,c,n,br)=>['Remember','hardware',`The CPU saves where to come back: mepc = ${nx}, the next instruction${br?' (bnez jumps back to the loop)':''}. And why: mcause = ${c}: top bit 1 = interrupt, the rest = source number ${n}.`],
+  irx_jump:(n,pc,h)=>['Jump','hardware',`PC = mtvec + 4 × ${n} = ${pc}. There is a jump to ${h}. No instruction of the program called it: the hardware did.`],
+  irx_j:(h,pc)=>['Vector table','',`j ${h}: an ordinary jump to the handler at ${pc}.`],
+  irx_h:(txt)=>['Interrupt handler (ISR)','',txt],
+  irx_ret:(pc)=>['Return','mret',`mret: PC = mepc = ${pc}. The main program continues exactly where it stopped.`],
+  irx_cont:(ins)=>['Main program','',`${ins} runs. The main program did not notice the break.`],
+  irx_end:(msg)=>['Done','',msg],
+  ire_A:'count went from 3 to 4, and the registers of the main program (t0 too) have the same values as before the interrupt.',
+  ire_B:'count = 0. The ISR was very short: one instruction and mret.',
+  ire_T:'ledOn went from 0 to 1. The timer will call the same ISR again after a set number of ticks.',
+  irh:{save:'Save t0 on the stack: the main program may be using it.',ld:'Load the variable into t0.',inc:'count++',st:'Store the new value of the variable.',rest:'Restore t0 from the stack.',zero:'count = 0: store zero straight to memory.',xor:'ledOn = !ledOn (xori with 1 flips the bit).'},
+  irx_fault:(ins)=>['The instruction cannot complete','',`${ins} reads from address 0, where there is no memory: no decoder answers. This instruction cannot be finished.`],
+  irx_xsave:(pc)=>['Remember','hardware',`mepc = ${pc}: the address of the bad instruction, not the next one. mcause = 5 (Load access fault, top bit 0 = exception). mtval = 0x0000 0000: the forbidden address.`],
+  irx_xjump:(pc)=>['Jump','hardware',`Exceptions always go to the very start of the table: PC = mtvec = ${pc}.`],
+  irx_panic:['Exception handler','',`The ESP32 prints a report in the Serial Monitor and stops the program (Task 15). There is no mret: returning would repeat the same bad instruction.`],
+  ir_cmp:'Interrupt: the cause is outside, the instruction finishes, mepc points to the next one. Exception: the cause is the instruction, it does not finish, mepc points to the bad one.',
+  mc_irq:n=>`interrupt no. ${n}`, mc_exc:'Load access fault',
+  dm_h_setup:'Who copies 32 bytes?', dm_l_mode:'How', dm_m_dma:'DMA: esp_async_memcpy', dm_m_cpu:'CPU: memcpy',
+  dm_ctrl:'DMA controller', dm_bus:'The bus now', dm_check:'Check dst now (memcmp)', dm_h_time:'Timeline',
+  dm_doing:'Doing', dm_work:'work', dm_done:'done', dm_led:'LED',
+  dm_src:'SRC: from where', dm_dst:'DST: to where', dm_len:'LEN: how many bytes', dm_cnt:'copied',
+  dd_idle:'waiting', dd_setup:'sets up the DMA', dd_work:'work++ (free)', dd_isr:'ISR onDone', dd_copy:'copies (memcpy)', dd_after:'keeps working', dd_ret:'memcpy returned',
+  db_free:'free', db_cfg:'CPU → DMA: writes SRC, DST, LEN', db_dma:(k,o)=>`DMA: word ${k}, src+${o} → dst+${o}`, db_cpu:(k,o)=>`CPU: word ${k}, lw src+${o}, sw dst+${o}`, db_irq:'DMA → CPU: “done” interrupt',
+  dm_ok:'OK', dm_err:'ERROR', dm_chk:(s,ok,k)=>`step ${s}: memcmp → ${ok} (${k} of 32 bytes copied)`,
+  dm_on:'on', dm_off:'off', dm_true:'true', dm_false:'false',
+  dx0:['Start','','src holds a text, dst is all zeros. Click Next. At any moment you can check dst with the memcmp button.'],
+  dx_setup:['Setup','CPU → DMA','The CPU writes three things into the DMA registers: from where (src), to where (dst) and how many bytes (32). esp_async_memcpy returns at once: tReturn is very small.'],
+  dx_copy:(k,n)=>['Copy','DMA → memory',`The DMA moves word ${k} (4 bytes) from src to dst. Meanwhile the CPU runs work++: it is free. ${n} of 32 bytes copied.`],
+  dx_done:['Done: interrupt','DMA → CPU','The DMA raises one interrupt at the end. onDone sets done = true and switches the LED on.'],
+  dx_end:w=>['After the interrupt','',`The while (!done) loop ends. work = ${w}: that much work the CPU did during the copy. DMA does not copy faster than the CPU, but the CPU is free meanwhile.`],
+  dx_cset:['memcpy','CPU','The CPU calls memcpy and copies the data itself. Until it finishes, it can do nothing else.'],
+  dx_ccopy:(k,n)=>['Copy','CPU → memory',`The CPU copies word ${k}: lw from src, sw to dst. work does not move. ${n} of 32 bytes copied.`],
+  dx_cend:['memcpy returned','',`The copy took about as long as with DMA, but work = 0: during all that time the CPU did nothing else.`],
+  dm_early:'Too early: the DMA is still copying, part of dst is still zeros. Read the data only after the “done” interrupt.',
+  dl_setup:'setting up the DMA', dl_idle:'idle', dl_irq:'“done” interrupt',
+  ca_h:'How much CPU do interrupts eat? (Task 17)',
+  ca_intro:'Every interrupt costs cycles: saving registers, the jump, the ISR, the return. Pick a device or enter your own numbers.',
+  cp_kb:'keyboard, 20 keys/s', cp_ser:'serial port 100 KB/s, per byte', cp_ssd:'SSD 100 MB/s, per byte', cp_dma:'SSD 100 MB/s, DMA per 4 KB', cp_tim:'timer 1000/s, 200 cycles, 160 MHz',
+  ca_mhz:'CPU clock (MHz)', ca_cyc:'Cycles per interrupt', ca_rate:'Events or bytes per second', ca_per:'Bytes per interrupt',
+  cs_irq:'Interrupts per second', cs_cyc:'Cycles on interrupts / s', cs_pct:'CPU time on interrupts', cs_left:'Left for work',
+  ca_err:'Enter positive numbers.',
+  ca_over:k=>`It would need ${k} CPUs doing nothing else: impossible. Fast devices do not work without DMA.`,
+  ca_mid:'A big piece of the CPU. A faster device would need DMA.',
+  ca_low:'Rare events: interrupts are more than enough.',
+  ca_bar:p=>`interrupts: ${p}`,
+  dm_text:'These 32 bytes go by DMA or CPU.',
+  irc_bad:'# address 0!', irc_v0:'0: exceptions', irc_v1:'1: button A', irc_v2:'2: button B', irc_v3:'3: timer',
+  irc_save:'save t0', irc_rest:'restore t0', irc_panic:'report and stop',
+}};
+const t=(k,...a)=>{let v=T[lang][k];if(v===undefined)v=T.en[k];return typeof v==='function'?v(...a):(v===undefined?k:v);};
+
+/* ---------- wspólne / shared ---------- */
+const ICON={
+  prev:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M11 2 4 8l7 6z" fill="currentColor"/></svg>',
+  next:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 2l7 6-7 6z" fill="currentColor"/></svg>',
+  play:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2l10 6-10 6z" fill="currentColor"/></svg>',
+  pause:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h4v12H3zM9 2h4v12H9z" fill="currentColor"/></svg>',
+  reset:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 1 0 1.6-3.7M3 2v3.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+function explHTML(arr,badge){
+  const [title,who,text]=arr;
+  return `<div class="bn">${badge||''}</div><div><b class="t">${esc(title)}${who?`<span class="who">${esc(who)}</span>`:''}</b><p>${text}</p></div>`;
+}
+function codeHTML(v){return esc(v).replace(/(\/\/[^\n]*|#[^\n]*)/g,'<span class="c">$1</span>');}
+
+/* stepper: prev / next / play / reset */
+function Stepper(ctrlEl,getN,render,interval){
+  const s={i:0,playing:false,timer:null};
+  ctrlEl.innerHTML=`<div class="row">
+    <button data-a="prev">${ICON.prev}<span data-i="a_prev"></span></button>
+    <button data-a="next" class="primary"><span data-i="a_next"></span>${ICON.next}</button>
+    <button data-a="play"><span class="ic">${ICON.play}</span><span class="lb"></span></button>
+    <button data-a="reset">${ICON.reset}<span data-i="a_reset"></span></button></div>
+    <div class="cyc"></div><p class="note" style="margin:0" data-i="keys_note"></p>`;
+  const b=a=>ctrlEl.querySelector(`[data-a="${a}"]`);
+  s.last=()=>getN()-1;
+  s.sync=()=>{
+    b('prev').disabled=s.i<=0; b('next').disabled=s.i>=s.last();
+    b('play').querySelector('.ic').innerHTML=s.playing?ICON.pause:ICON.play;
+    b('play').querySelector('.lb').textContent=t(s.playing?'a_pause':'a_play');
+    ctrlEl.querySelector('.cyc').textContent=t('step',s.i,s.last());
+  };
+  s.go=i=>{s.i=Math.max(0,Math.min(s.last(),i));render();s.sync();};
+  s.stop=()=>{s.playing=false;clearInterval(s.timer);s.timer=null;s.sync();};
+  s.next=()=>{if(s.i<s.last())s.go(s.i+1);};
+  s.prev=()=>{s.stop();s.go(s.i-1);};
+  s.reset=()=>{s.stop();s.go(0);};
+  s.play=()=>{if(s.i>=s.last())s.go(0);s.playing=true;
+    s.timer=setInterval(()=>{if(s.i>=s.last())s.stop();else s.go(s.i+1);},interval||850);s.sync();};
+  s.toggle=()=>s.playing?s.stop():s.play();
+  b('prev').onclick=s.prev; b('next').onclick=()=>{s.stop();s.next();}; b('play').onclick=s.toggle; b('reset').onclick=s.reset;
+  return s;
+}
+function segInit(el,cb){
+  el.querySelectorAll('button').forEach(bt=>bt.addEventListener('click',()=>cb(bt.dataset.v)));
+}
+function segSync(el,v){el.querySelectorAll('button').forEach(bt=>bt.setAttribute('aria-pressed',String(bt.dataset.v===v)));}
+function svgEl(tag,attrs,text){
+  let a='';for(const k in attrs)if(attrs[k]!==undefined&&attrs[k]!==null)a+=` ${k}="${attrs[k]}"`;
+  return `<${tag}${a}>${text!==undefined?text:''}</${tag}>`;
+}
+const txt=(x,y,s,o)=>svgEl('text',Object.assign({x,y,fill:'var(--ink)','font-size':13},o||{}),esc(s));
+
+/* =====================================================================
+   I2C
+   ===================================================================== */
+const I2C_DEVS=[{a:0x27,k:'dev_lcd',rd:0x08},{a:0x68,k:'dev_sensor',rd:0x1A},{a:0x50,k:'dev_mem',rd:0x41}];
+const I2C_TARGETS=[0x27,0x68,0x50,0x3C];
+const I={addr:0x27,rw:'w',data:0x48,slots:[]};
+const i2cDev=()=>I2C_DEVS.find(d=>d.a===I.addr);
+function i2cBuild(){
+  const a=I.addr,rd=I.rw==='r',dev=i2cDev(),s=[];
+  let g=0;
+  s.push({k:'start',drv:'m',v:0,g:g++});
+  for(let b=6;b>=0;b--)s.push({k:'addr',drv:'m',v:(a>>b)&1,n:7-b,g});
+  g++; s.push({k:'rw',drv:'m',v:rd?1:0,g:g++});
+  if(!dev){s.push({k:'ack',drv:'n',v:1,nack:true,after:'addr',g:g++});s.push({k:'stop',drv:'m',v:1,g:g++});I.slots=s;return;}
+  s.push({k:'ack',drv:'d',v:0,after:'addr',g:g++});
+  const byte=rd?dev.rd:I.data;
+  for(let b=7;b>=0;b--)s.push({k:'data',drv:rd?'d':'m',v:(byte>>b)&1,n:8-b,g});
+  g++;
+  if(rd)s.push({k:'ack',drv:'m',v:1,nack:true,after:'read',g:g++});
+  else s.push({k:'ack',drv:'d',v:0,after:'data',g:g++});
+  s.push({k:'stop',drv:'m',v:1,g:g++});
+  I.slots=s;
+}
+const i2cByte=()=>{const d=i2cDev();return I.rw==='r'&&d?d.rd:I.data;};
+const byteStr=b=>hex2(b)+(chr(b)?(lang==='pl'?` („${chr(b)}”)`:` (“${chr(b)}”)`):'');
+function devName(d){return d?t(d.k):t('dev_none');}
+
+function i2cExpl(step){
+  if(step===0)return [t('ex_idle'),''];
+  const s=I.slots[step-1],dev=i2cDev(),dn=devName(dev),A=hex2(I.addr);
+  switch(s.k){
+    case 'start':return [t('ex_start'),''];
+    case 'addr':return [t('ex_addr',s.n,s.v,A,bin(I.addr,7)),''];
+    case 'rw':return [t('ex_rw',s.v),''];
+    case 'ack':
+      if(s.after==='addr')return s.nack?[t('ex_nack_a',A),'']:[t('ex_ack_a',dn,A),''];
+      if(s.after==='data')return [t('ex_ack_d',dn),''];
+      return [t('ex_nack_r',dn),''];
+    case 'data':return [I.rw==='w'?t('ex_data_w',s.n,s.v,dn):t('ex_data_r',s.n,s.v,dn),''];
+    case 'stop':{
+      const r=!dev?t('res_n'):I.rw==='w'?t('res_w',dn,byteStr(I.data)):t('res_r',dn,byteStr(dev.rd));
+      return [t('ex_stop',r),''];
+    }
+  }
+}
+function slotColor(s){return s.k==='start'||s.k==='stop'?'var(--ss)':s.drv==='d'?'var(--dev)':s.drv==='n'?'var(--muted)':'var(--sda)';}
+
+function i2cWave(step){
+  const W=40,X0=70,PRE=34,n=I.slots.length,width=X0+PRE+n*W+30,H=178;
+  const yS=[44,72],yD=[104,132];
+  let o='';
+  // groups (phase labels + bands)
+  const groups=[];I.slots.forEach((s,i)=>{if(!groups.length||groups[groups.length-1].g!==s.g)groups.push({g:s.g,a:i,b:i,s});else groups[groups.length-1].b=i;});
+  const cur=step-1, curG=cur>=0?I.slots[cur].g:-1;
+  groups.forEach(G=>{
+    const x1=X0+PRE+G.a*W,x2=X0+PRE+(G.b+1)*W,s=G.s;
+    let lab=s.k==='start'?'START':s.k==='stop'?'STOP':s.k==='addr'?t('ph_addr',hex2(I.addr)):s.k==='rw'?(s.v?'R':'W'):s.k==='data'?t('ph_data',hex2(i2cByte())):(s.nack?'NACK':'ACK');
+    const col=s.k==='start'||s.k==='stop'?'var(--ss)':s.k==='ack'?(s.nack?'var(--bad)':'var(--dev)'):'var(--sda)';
+    if(G.g===curG)o+=svgEl('rect',{x:x1,y:24,width:x2-x1,height:H-30,rx:4,fill:col,opacity:.13});
+    o+=svgEl('line',{x1,y1:24,x2:x1,y2:H-6,stroke:'var(--rule)','stroke-dasharray':'2 3'});
+    o+=svgEl('text',{x:(x1+x2)/2,y:17,'text-anchor':'middle','font-size':G.g===curG?12.5:11.5,'font-weight':G.g===curG?600:400,fill:G.g===curG?col:'var(--muted)'},esc(lab));
+  });
+  o+=txt(X0-10,yS[0]+19,'SCL',{'text-anchor':'end','font-weight':600,fill:'var(--scl)'});
+  o+=txt(X0-10,yD[0]+19,'SDA',{'text-anchor':'end','font-weight':600,fill:'var(--sda)'});
+  // idle prefix
+  o+=svgEl('polyline',{points:`${X0},${yS[0]} ${X0+PRE},${yS[0]}`,fill:'none',stroke:'var(--scl)','stroke-width':2.2});
+  o+=svgEl('polyline',{points:`${X0},${yD[0]} ${X0+PRE},${yD[0]}`,fill:'none',stroke:'var(--muted)','stroke-width':2.2});
+  let prev=1;
+  I.slots.forEach((s,i)=>{
+    const x=X0+PRE+i*W,f=i>cur?.18:1,Hs=yS[0],Ls=yS[1],Hd=yD[0],Ld=yD[1],yd=v=>v?Hd:Ld;
+    let sc,sd;
+    if(s.k==='start'){sc=[[x,Hs],[x+.8*W,Hs],[x+.8*W,Ls],[x+W,Ls]];sd=[[x,Hd],[x+.45*W,Hd],[x+.45*W,Ld],[x+W,Ld]];}
+    else if(s.k==='stop'){sc=[[x,Ls],[x+.3*W,Ls],[x+.3*W,Hs],[x+W,Hs]];sd=[[x,yd(prev)],[x+.1*W,yd(prev)],[x+.1*W,Ld],[x+.55*W,Ld],[x+.55*W,Hd],[x+W,Hd]];}
+    else{sc=[[x,Ls],[x+.3*W,Ls],[x+.3*W,Hs],[x+.75*W,Hs],[x+.75*W,Ls],[x+W,Ls]];sd=[[x,yd(prev)],[x+.1*W,yd(prev)],[x+.1*W,yd(s.v)],[x+W,yd(s.v)]];}
+    const P=a=>a.map(p=>p.join(',')).join(' ');
+    o+=svgEl('polyline',{points:P(sc),fill:'none',stroke:'var(--scl)','stroke-width':2.2,opacity:f});
+    o+=svgEl('polyline',{points:P(sd),fill:'none',stroke:slotColor(s),'stroke-width':i===cur?3:2.2,'stroke-dasharray':s.drv==='n'?'4 3':null,opacity:f});
+    if(s.k!=='start'&&s.k!=='stop'){
+      const lab=s.k==='rw'?(s.v?'R':'W'):s.k==='ack'?(s.nack?'N':'A'):String(s.v);
+      o+=svgEl('text',{x:x+W/2,y:H-24,'text-anchor':'middle','font-size':12,class:'m',fill:i===cur?'var(--ink)':'var(--muted)','font-weight':i===cur?600:400,opacity:i>cur?.35:1},lab);
+      if(i===cur)o+=svgEl('circle',{cx:x+.52*W,cy:yd(s.v),r:4.5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':2});
+    }
+    prev=s.k==='stop'?1:s.k==='start'?0:s.v;
+  });
+  // byte index labels under data / address
+  const svg=$('i2cWave');svg.setAttribute('viewBox',`0 0 ${width} ${H}`);svg.setAttribute('width',width);svg.setAttribute('height',H);
+  svg.innerHTML=o;
+  svg.setAttribute('aria-label','SCL / SDA');
+}
+function i2cLevels(step){
+  if(step===0)return {scl:1,sda:1};
+  const s=I.slots[step-1];
+  if(s.k==='start')return {scl:1,sda:0};
+  if(s.k==='stop')return {scl:1,sda:1};
+  return {scl:1,sda:s.v};
+}
+function i2cDevState(d,step){
+  if(step===0)return ['idle',''];
+  const cur=step-1,s=I.slots[cur];
+  const nAddr=I.slots.slice(0,step).filter(x=>x.k==='addr').length;
+  const match=d.a===I.addr;
+  if(s.k==='start')return ['listen','info'];
+  if(nAddr<7)return ['listen','info'];
+  if(!match)return ['notmine',''];
+  if(s.k==='rw')return ['mine','ok'];
+  if(s.k==='ack'&&s.after==='addr')return ['ack','act'];
+  if(s.k==='data')return [I.rw==='w'?'rx':'tx',I.rw==='w'?'info':'act'];
+  if(s.k==='ack'&&s.after==='data')return ['ack','act'];
+  if(s.k==='ack'&&s.after==='read')return ['rxack','info'];
+  if(s.k==='stop')return ['done','ok'];
+  return ['listen','info'];
+}
+function stLabel(k,d){
+  if(k==='done')return I.rw==='w'?t('st_done_w',hex2(I.data)):t('st_done_r',hex2(d.rd));
+  return t('st_'+k);
+}
+function masterState(step){
+  if(step===0)return t('m_idle');
+  const s=I.slots[step-1];
+  if(s.k==='stop')return t('m_idle');
+  if(s.k==='ack'&&s.after!=='read')return t('m_wait');
+  if(s.k==='ack')return t('m_nack');
+  if(s.k==='data'&&I.rw==='r')return t('m_rx');
+  return t('m_tx');
+}
+function i2cBus(step){
+  const L=i2cLevels(step),s=step?I.slots[step-1]:null;
+  const drv=s?(s.drv):'x';
+  const yD=62,yC=100,xs=[365,570,775];
+  let o='';
+  // pull-ups
+  o+=txt(196,16,'3,3 V'.replace(',',lang==='pl'?',':'.'),{'font-size':11.5,'text-anchor':'middle',fill:'var(--muted)'});
+  o+=svgEl('line',{x1:176,y1:22,x2:216,y2:22,stroke:'var(--muted)','stroke-width':1.5});
+  [[184,yD],[208,yC]].forEach(([x,y])=>{
+    o+=svgEl('line',{x1:x,y1:22,x2:x,y2:28,stroke:'var(--muted)','stroke-width':1.5});
+    o+=svgEl('rect',{x:x-4,y:28,width:8,height:18,fill:'var(--surface)',stroke:'var(--muted)','stroke-width':1.5,rx:1});
+    o+=svgEl('line',{x1:x,y1:46,x2:x,y2:y,stroke:'var(--muted)','stroke-width':1.5});
+    o+=svgEl('circle',{cx:x,cy:y,r:3,fill:'var(--muted)'});
+  });
+  o+=txt(224,40,t('pullup'),{'font-size':11.5,fill:'var(--muted)'});
+  // lines
+  o+=svgEl('line',{x1:150,y1:yD,x2:858,y2:yD,stroke:'var(--sda)','stroke-width':3.5});
+  o+=svgEl('line',{x1:150,y1:yC,x2:858,y2:yC,stroke:'var(--scl)','stroke-width':3.5});
+  o+=txt(862,yD+4,`SDA = ${L.sda}`,{'font-size':12.5,'font-weight':600,class:'m',fill:'var(--sda)','text-anchor':'end',dy:-10});
+  o+=txt(862,yC+4,`SCL = ${L.scl}`,{'font-size':12.5,'font-weight':600,class:'m',fill:'var(--scl)','text-anchor':'end',dy:-10});
+  o+=txt(270,yD-8,'SDA · GPIO 8',{'font-size':11.5,fill:'var(--sda)'});
+  o+=txt(270,yC-8,'SCL · GPIO 9',{'font-size':11.5,fill:'var(--scl)'});
+  // ESP32
+  const mDrv=drv==='m';
+  o+=svgEl('rect',{x:18,y:36,width:132,height:92,rx:8,fill:'var(--ink)',stroke:mDrv?'var(--isr)':'none','stroke-width':3});
+  o+=txt(84,72,'ESP32-C3',{'text-anchor':'middle',fill:'var(--surface)','font-weight':600,'font-size':14});
+  o+=txt(84,90,t('esp_ctrl'),{'text-anchor':'middle',fill:'var(--surface)','font-size':11.5,opacity:.8});
+  o+=txt(84,146,masterState(step),{'text-anchor':'middle','font-size':12,'font-weight':600,fill:mDrv?'var(--isr)':'var(--muted)'});
+  if(mDrv)o+=svgEl('line',{x1:150,y1:yD,x2:176,y2:yD,stroke:'var(--isr)','stroke-width':6,'stroke-linecap':'round'});
+  // devices
+  I2C_DEVS.forEach((d,k)=>{
+    const cx=xs[k],[st,cl]=i2cDevState(d,step),dim=st==='notmine';
+    const act=s&&d.a===I.addr&&drv==='d';
+    const stroke=act?'var(--isr)':(cl==='ok'||cl==='act')?'var(--dev)':'var(--rule)';
+    o+=svgEl('line',{x1:cx-24,y1:yD,x2:cx-24,y2:150,stroke:act?'var(--isr)':'var(--sda)','stroke-width':act?5:2.5,opacity:dim?.4:1});
+    o+=svgEl('line',{x1:cx+24,y1:yC,x2:cx+24,y2:150,stroke:'var(--scl)','stroke-width':2.5,opacity:dim?.4:1});
+    o+=svgEl('circle',{cx:cx-24,cy:yD,r:4,fill:'var(--sda)'});
+    o+=svgEl('circle',{cx:cx+24,cy:yC,r:4,fill:'var(--scl)'});
+    o+=`<g opacity="${dim?.5:1}">`;
+    o+=svgEl('rect',{x:cx-78,y:150,width:156,height:52,rx:8,fill:'var(--surface)',stroke,'stroke-width':st==='idle'||st==='listen'||dim?1.5:3});
+    o+=txt(cx,172,t(d.k),{'text-anchor':'middle','font-weight':600,'font-size':13.5});
+    o+=txt(cx,191,hex2(d.a)+'  ·  '+stLabel(st,d),{'text-anchor':'middle','font-size':11.5,fill:act?'var(--isr)':'var(--muted)'});
+    o+='</g>';
+    if(act)o+=txt(cx-30,138,t('drives'),{'text-anchor':'end','font-size':11.5,'font-weight':600,fill:'var(--isr)'});
+  });
+  if(s&&drv==='n')o+=txt(560,138,t('lg_n'),{'text-anchor':'middle','font-size':12,'font-weight':600,fill:'var(--bad)'});
+  $('i2cBus').innerHTML=o;
+}
+function i2cDevTable(step){
+  const nAddr=step?I.slots.slice(0,step).filter(x=>x.k==='addr').length:0;
+  const rx=[];for(let i=0;i<nAddr;i++)rx.push((I.addr>>(6-i))&1);
+  let h=`<thead><tr><th>${t('th_dev')}</th><th>${t('th_own')}</th><th>${t('th_recv')}</th><th>${t('th_state')}</th></tr></thead><tbody>`;
+  I2C_DEVS.forEach(d=>{
+    const own=bin(d.a,7).split('');
+    const [st,cl]=i2cDevState(d,step);
+    let recv='<div class="bits">';
+    for(let i=0;i<7;i++){
+      if(i<nAddr){const ok=rx[i]===+own[i];recv+=`<span class="bit ${ok?'on':'x'}">${rx[i]}</span>`;}
+      else recv+=`<span class="bit pend">·</span>`;
+    }
+    recv+='</div>';
+    h+=`<tr><td><b>${esc(t(d.k))}</b></td><td class="mono">${hex2(d.a)} <span style="margin-left:6px"><span class="bits" style="display:inline-flex">${own.map(b=>`<span class="bit">${b}</span>`).join('')}</span></span></td><td>${recv}</td><td><span class="pill ${cl}">${esc(stLabel(st,d))}</span></td></tr>`;
+  });
+  h+='</tbody>';
+  $('i2cDevs').innerHTML=h;
+}
+function i2cLegend(){
+  const it=(c,l,dash)=>`<span><span class="sw" style="background:${dash?'transparent':c};${dash?`border:2px dashed ${c};`:''}"></span>${esc(l)}</span>`;
+  $('i2cLegend').innerHTML=it('var(--scl)',t('lg_scl'))+it('var(--sda)',t('lg_m'))+it('var(--dev)',t('lg_d'))+it('var(--muted)',t('lg_n'),1)+it('var(--ss)',t('lg_ss'))+
+    `<span><span class="sw" style="border-radius:50%;background:var(--surface);border:2px solid var(--ink)"></span>${esc(t('lg_sample'))}</span>`;
+}
+function i2cCode(){
+  const A=hex2(I.addr);
+  let c;
+  if(I.rw==='w')c=`Wire.beginTransmission(${A});      ${t('c_w1')}\nWire.write(${hex2(I.data)});                 ${t('c_w2')}\nbyte err = Wire.endTransmission();  ${t('c_w3')}`;
+  else c=`Wire.requestFrom(${A}, 1);   ${t('c_r1')}\nbyte b = Wire.read();        ${t('c_r2')}`;
+  $('i2cCode').innerHTML=codeHTML(c);
+}
+function i2cRender(){
+  const step=S.i2c.i;
+  i2cBus(step);i2cWave(step);i2cDevTable(step);
+  const [e]=i2cExpl(step);
+  let badge='';
+  $('i2cExpl').innerHTML=explHTML(e,badge);
+}
+function i2cFill(){
+  const sel=$('i2cAddr');
+  sel.innerHTML=I2C_TARGETS.map(a=>{const d=I2C_DEVS.find(x=>x.a===a);return `<option value="${a}"${a===I.addr?' selected':''}>${hex2(a)}: ${esc(d?t(d.k):t('nobody_opt'))}</option>`;}).join('');
+  segSync($('i2cRw'),I.rw);
+  $('i2cDataWrap').style.opacity=I.rw==='w'?1:.45;$('i2cData').disabled=I.rw!=='w';
+  i2cCode();i2cLegend();
+}
+function parseByte(v){
+  v=v.trim();
+  if(/^0x[0-9a-f]{1,2}$/i.test(v))return parseInt(v,16);
+  if(/^\d{1,3}$/.test(v)){const n=+v;return n<=255?n:null;}
+  if([...v].length===1){const c=v.codePointAt(0);return c<=255?c:null;}
+  return null;
+}
+function i2cInit(){
+  i2cBuild();
+  S.i2c=Stepper(document.querySelector('[data-ctrl="i2c"]'),()=>I.slots.length+1,i2cRender,700);
+  $('i2cAddr').addEventListener('change',e=>{I.addr=+e.target.value;i2cBuild();i2cCode();S.i2c.reset();});
+  segInit($('i2cRw'),v=>{I.rw=v;i2cBuild();i2cFill();S.i2c.reset();});
+  $('i2cData').addEventListener('input',e=>{
+    const b=parseByte(e.target.value);
+    if(b===null){$('i2cErr').textContent=t('i2c_err_data');return;}
+    $('i2cErr').textContent='';I.data=b;i2cBuild();i2cCode();S.i2c.reset();
+  });
+}
+
+/* =====================================================================
+   MMIO: rejestry urządzeń / device registers
+   ===================================================================== */
+const MM_DEVS=[
+  {id:'ram',k:'s_mem',lo:0x3FC80000,hi:0x3FCDFFFF,cx:250},
+  {id:'gpio',k:'s_gpio',lo:0x60004000,hi:0x60004FFF,cx:480},
+  {id:'i2c',k:'s_i2c',lo:0x60013000,hi:0x60013FFF,cx:710},
+];
+const GPIO_REGS={0x004:'GPIO_OUT',0x008:'GPIO_SET',0x00C:'GPIO_CLR',0x03C:'GPIO_IN'};
+const I2C_REGS={0x01C:'I2C_DATA'};
+const MM_PRESETS=[
+  {id:'set',k:'mm_p_set',op:'sw',addr:0x60004008,val:0x10},
+  {id:'clr',k:'mm_p_clr',op:'sw',addr:0x6000400C,val:0x10},
+  {id:'in',k:'mm_p_in',op:'lw',addr:0x6000403C},
+  {id:'ram',k:'mm_p_ram',op:'sw',addr:0x3FC80000,val:0x10},
+  {id:'i2c',k:'mm_p_i2c',op:'sw',addr:0x6001301C,val:0x48},
+  {id:'bad',k:'mm_p_bad',op:'lw',addr:0x00000000},
+];
+const M={base:{out:0,btnA:false,btnB:false,ram:0,fifo:[],a4:0},ins:MM_PRESETS[0],preset:'set'};
+const mmDev=a=>MM_DEVS.find(d=>a>=d.lo&&a<=d.hi)||null;
+const gpioIn=st=>((1<<8)|(1<<9)|(st.btnA?0:1<<5)|(st.btnB?0:1<<6)|(st.out&(1<<4)))>>>0;
+function mmRun(st,ins){
+  // returns {dev, reg, after, read, kind}
+  const d=mmDev(ins.addr),after={out:st.out,btnA:st.btnA,btnB:st.btnB,ram:st.ram,fifo:st.fifo.slice(),a4:st.a4};
+  const r={dev:d,reg:null,after,read:0,kind:'ign'};
+  if(!d){r.kind='none';return r;}
+  const off=ins.addr-d.lo;
+  if(d.id==='ram'){
+    r.reg=hexA(ins.addr);
+    if(ins.addr===0x3FC80000){if(ins.op==='sw')after.ram=ins.val>>>0;else r.read=st.ram;}
+    r.kind=ins.op==='sw'?'ram':'ramr';
+  }else if(d.id==='gpio'){
+    const nm=GPIO_REGS[off];r.reg=nm?`${nm} (+${hexN(off,3)})`:`+${hexN(off,3)}`;
+    if(ins.op==='sw'){
+      if(off===0x008){after.out=(st.out|ins.val)>>>0;r.kind='set';}
+      else if(off===0x00C){after.out=(st.out&~ins.val)>>>0;r.kind='clr';}
+      else if(off===0x004){after.out=ins.val>>>0;r.kind='out';}
+    }else{
+      if(off===0x03C){r.read=gpioIn(st);r.kind='in';}
+      else if(off===0x004){r.read=st.out;r.kind='rd';}
+    }
+  }else if(d.id==='i2c'){
+    const nm=I2C_REGS[off];r.reg=nm?`${nm} (+${hexN(off,3)})`:`+${hexN(off,3)}`;
+    if(off===0x01C&&ins.op==='sw'){after.fifo.push(ins.val&0xFF);if(after.fifo.length>6)after.fifo.shift();r.kind='i2c';}
+  }
+  if(ins.op==='lw')after.a4=r.read;
+  return r;
+}
+function mmAsm(ins){
+  const hi=((ins.addr+0x800)>>>12)&0xFFFFF,lo=(ins.addr-hi*4096)|0,base=(hi*4096)>>>0;
+  const L=[`lui  a5, ${hexN(hi)}`.padEnd(24)+`# a5 = ${hexA(base)}`];
+  if(ins.op==='sw')L.push(`li   a4, ${hexN(ins.val)}`.padEnd(24)+`# ${ins.val>>>0}`);
+  L.push(`${ins.op}   a4, ${lo}(a5)`.padEnd(24)+`# ${hexA(ins.addr)}`);
+  return {lines:L,base,lo,short:`${ins.op} a4, ${lo}(a5)`};
+}
+const pinsOf=v=>{const l=[];for(let i=0;i<32;i++)if((v>>>i)&1)l.push(i);return l;};
+function mmState(){
+  const step=S.mmio.i,r=mmRun(M.base,M.ins);
+  const st=step>=3?Object.assign({},r.after,{a4:step>=4?r.after.a4:M.base.a4}):M.base;
+  return {step,r,st};
+}
+function mmSvg(){
+  const {step,r,st}=mmState(),ins=M.ins,asm=mmAsm(ins);
+  const yA=130,yDt=152,yC=174;
+  let o='';
+  o+=svgEl('rect',{x:10,y:10,width:880,height:245,rx:12,fill:'color-mix(in srgb,var(--ink) 3%,transparent)',stroke:'var(--muted)','stroke-width':1.5,'stroke-dasharray':'6 5'});
+  o+=txt(24,31,t('s_chip'),{'font-size':12.5,'font-weight':600,fill:'var(--muted)'});
+  // CPU
+  o+=svgEl('rect',{x:40,y:44,width:110,height:52,rx:8,fill:'var(--ink)'});
+  o+=txt(95,76,'CPU',{'text-anchor':'middle',fill:'var(--surface)','font-weight':600,'font-size':15});
+  o+=svgEl('rect',{x:164,y:56,width:asm.short.length*8.4+20,height:28,rx:5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':1.5});
+  o+=txt(174,75,asm.short,{class:'m','font-size':14,'font-weight':500});
+  // bus lines
+  const lines=[[yA,'var(--addr)','s_addr'],[yDt,'var(--data)','s_data'],[yC,'var(--ctl)','s_ctl']];
+  lines.forEach(([y,c,k])=>{
+    o+=svgEl('line',{x1:95,y1:y,x2:785,y2:y,stroke:c,'stroke-width':3,'stroke-linecap':'round'});
+    o+=txt(793,y+4,t(k),{'font-size':12,'font-weight':600,fill:c});
+  });
+  o+=txt(560,yA-8,t('s_bus'),{'font-size':12,'text-anchor':'middle','font-weight':600,fill:'var(--muted)'});
+  o+=svgEl('line',{x1:95,y1:96,x2:95,y2:yC,stroke:'var(--ink)','stroke-width':3});
+  lines.forEach(([y,c])=>o+=svgEl('circle',{cx:95,cy:y,r:4.5,fill:c}));
+  // devices
+  MM_DEVS.forEach(d=>{
+    const cx=d.cx,mine=r.dev&&r.dev.id===d.id;
+    const hot=step>=2&&mine;
+    o+=svgEl('line',{x1:cx,y1:yA,x2:cx,y2:200,stroke:'var(--ink)','stroke-width':3});
+    lines.forEach(([y,c])=>o+=svgEl('circle',{cx,cy:y,r:4.5,fill:c}));
+    o+=svgEl('rect',{x:cx-86,y:200,width:172,height:46,rx:8,fill:d.id==='ram'?'var(--copy-bg)':'var(--work-bg)',stroke:hot?'var(--ok)':(d.id==='ram'?'var(--copy)':'var(--work)'),'stroke-width':hot?3.5:1.5,opacity:step>=2&&!mine?.55:1});
+    o+=txt(cx,219,t(d.k),{'text-anchor':'middle','font-weight':600,'font-size':13.5});
+    o+=txt(cx,236,`${hexA(d.lo)}…${hexA(d.hi).slice(-4)}`,{'text-anchor':'middle',class:'m','font-size':11,fill:'var(--muted)'});
+    if(step>=2)o+=txt(cx+8,194,mine?t('s_mine'):t('s_notmine'),{'font-size':12,'font-weight':600,fill:mine?'var(--ok)':'var(--muted)'});
+  });
+  // tags on the bus
+  const tag=(y,c,s)=>{const w=s.length*7.9+16;return svgEl('rect',{x:112,y:y-10,width:w,height:20,rx:4,fill:'var(--surface)',stroke:c,'stroke-width':2})+txt(120,y+4.5,s,{class:'m','font-size':12.5,'font-weight':600,fill:c});};
+  if(step>=1)o+=tag(yA,'var(--addr)',hexA(ins.addr));
+  if(step>=3&&r.dev){
+    if(ins.op==='sw'){o+=tag(yDt,'var(--data)',hexN(ins.val)+' →');o+=tag(yC,'var(--ctl)',t('s_write'));}
+    else{o+=tag(yDt,'var(--data)','← '+hexN(r.read));o+=tag(yC,'var(--ctl)',t('s_read'));}
+  }
+  if(step>=3&&!r.dev){o+=tag(yC,'var(--ctl)',ins.op==='sw'?t('s_write'):t('s_read'));o+=txt(460,yDt+5,'✕ '+t('s_nobody'),{'font-size':13,'font-weight':600,fill:'var(--bad)','text-anchor':'middle'});}
+  // pins and parts on the board
+  o+=txt(24,300,t('s_board'),{'font-size':12.5,'font-weight':600,fill:'var(--muted)'});
+  const led=(st.out>>4)&1;
+  [[440,'4'],[480,'5'],[520,'6'],[690,'8'],[730,'9']].forEach(([x,l])=>{
+    o+=svgEl('line',{x1:x,y1:246,x2:x,y2:284,stroke:'var(--muted)','stroke-width':2});
+    o+=svgEl('rect',{x:x-6,y:249,width:12,height:12,fill:'#E0B43C',stroke:'#9A7A1E'});
+    o+=txt(x+9,272,l,{'font-size':11,'font-weight':600,fill:'var(--muted)'});
+  });
+  if(led)o+=svgEl('circle',{cx:440,cy:298,r:18,fill:'#FF5F56',opacity:.28});
+  o+=svgEl('circle',{cx:440,cy:298,r:11,fill:led?'#FF5F56':'color-mix(in srgb,#FF5F56 30%,var(--surface))',stroke:'#B8372B','stroke-width':1.5});
+  o+=txt(440,330,t('s_led'),{'text-anchor':'middle','font-size':11.5});
+  [['A',480,st.btnA],['B',520,st.btnB]].forEach(([n,x,p])=>{
+    o+=`<g class="mmbtn" data-b="${n}" style="cursor:pointer" role="button" tabindex="0" aria-pressed="${p}">`;
+    o+=svgEl('rect',{x:x-12,y:286,width:24,height:24,rx:3,fill:'var(--lcd-frame)'});
+    o+=svgEl('circle',{cx:x,cy:298,r:p?6.5:8,fill:p?'#1E7E4F':'#27C93F'});
+    o+=txt(x,330,n,{'text-anchor':'middle','font-size':11.5,'font-weight':600});
+    o+='</g>';
+  });
+  o+=svgEl('rect',{x:640,y:284,width:140,height:42,rx:5,fill:'var(--lcd-frame)'});
+  o+=svgEl('rect',{x:647,y:291,width:126,height:28,rx:2,fill:'var(--lcd-bg)'});
+  const shown=st.fifo.map(b=>chr(b)||'?').join('');
+  o+=txt(654,310,shown||' ',{class:'m','font-size':14,'font-weight':600,fill:'var(--lcd-ink)'});
+  o+=txt(790,310,t('s_lcd'),{'font-size':11.5,fill:'var(--muted)'});
+  $('mmSvg').innerHTML=o;
+  $('mmSvg').querySelectorAll('.mmbtn').forEach(g=>{
+    const f=()=>{const k=g.dataset.b==='A'?'btnA':'btnB';M.base[k]=!M.base[k];mmRender();};
+    g.addEventListener('click',f);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();f();}});
+  });
+}
+function mmExpl(){
+  const {step,r,st}=mmState(),ins=M.ins,asm=mmAsm(ins),A=hexA(ins.addr),dn=r.dev?t(r.dev.k):'';
+  let e;
+  if(step===0)e=t('mx0',`<code>${esc(asm.short)}</code>`,t('mx_calc',hexA(asm.base),asm.lo,A));
+  else if(step===1)e=t('mx1',`<code>${A}</code>`);
+  else if(step===2){
+    const who=r.dev?t('mx2_who',dn,`<code>${r.dev.id==='ram'?A:hexA(ins.addr).slice(0,8)+'…'}</code>`):t('mx2_none');
+    e=t('mx2',A,who);
+  }else if(step===3){
+    if(!r.dev)e=t('mx3_none',ins.op==='lw');
+    else e=ins.op==='sw'?t('mx3_sw',`<code>${hexN(ins.val)}</code>`,dn,`<code>${esc(r.reg)}</code>`):t('mx3_lw',dn,`<code>${esc(r.reg)}</code>`);
+  }else{
+    const ledTxt=((st.out>>4)&1)?t('led_on'):t('led_off');
+    switch(r.kind){
+      case 'set':e=t('mx4_set',t('pins_list',pinsOf(ins.val)),ledTxt);break;
+      case 'clr':e=t('mx4_clr',t('pins_list',pinsOf(ins.val)),ledTxt);break;
+      case 'out':e=t('mx4_out','',ledTxt);break;
+      case 'in':e=t('mx4_in',`<code>${hexA(r.read)}</code>`,(r.read>>5)&1);break;
+      case 'ram':e=t('mx4_ram',`<code>${A}</code>`);break;
+      case 'ramr':e=t('mx4_ramr',`<code>${hexN(r.read)}</code>`);break;
+      case 'rd':e=t('mx4_ramr',`<code>${hexN(r.read)}</code>`);break;
+      case 'i2c':e=t('mx4_i2c',`<code>${byteStr(ins.val&0xFF)}</code>`);break;
+      case 'none':e=t('mx4_none',ins.op==='lw',ins.op==='lw'?5:7,`<code>${A}</code>`);break;
+      default:e=t('mx4_ign',dn);
+    }
+  }
+  $('mmExpl').innerHTML=explHTML(e,step>=1&&step<=3?step:'');
+}
+function mmBits(){
+  const {step,r}=mmState(),ins=M.ins;
+  let nums='',bits='';
+  for(let i=31;i>=0;i--){
+    const g=i===11?' gap':'';
+    nums+=`<span class="${g.trim()}">${i}</span>`;
+    bits+=`<span class="bit ${i>=12?'hi':'lo'}${g}">${(ins.addr>>>i)&1}</span>`;
+  }
+  const hx=(ins.addr>>>0).toString(16).toUpperCase().padStart(8,'0');
+  $('mmBits').innerHTML=`<div class="bitnums">${nums}</div><div class="bits">${bits}</div>
+    <div class="bits" style="margin-top:6px;font-size:14px"><span style="width:${20*21-2}px;text-align:center;color:var(--addr);font-weight:600">0x${hx.slice(0,5)}</span><span style="width:${12*21-2}px;text-align:center;color:var(--data);font-weight:600;margin-left:7px">0x${hx.slice(5)}</span></div>`;
+  $('mmBitsLegend').innerHTML=`<span><span class="sw" style="background:color-mix(in srgb,var(--addr) 40%,transparent)"></span>${esc(t('mb_hi'))}</span><span><span class="sw" style="background:color-mix(in srgb,var(--data) 40%,transparent)"></span>${esc(t('mb_lo'))}</span>`;
+  // data bits: which pins
+  let v=null,sel=-1;
+  if(ins.op==='sw')v=ins.val>>>0;else if(step>=3&&r.dev)v=r.read;
+  if(r.kind==='in')sel=5;
+  if(v===null){$('mmData').innerHTML='';return;}
+  const isG=r.dev&&r.dev.id==='gpio';
+  let dn='',db='';
+  for(let i=9;i>=0;i--){dn+=`<span>${i}</span>`;db+=`<span class="bit${isG&&((v>>>i)&1)?' on':''}${i===sel?' sel':''}">${(v>>>i)&1}</span>`;}
+  $('mmData').innerHTML=`<h3 style="margin-bottom:4px">${esc(isG?t('mb_pins'):t('mb_val'))}: <span class="mono">${hexN(v)}</span></h3>
+    <div class="scroll"><div class="bitnums">${dn}</div><div class="bits">${db}</div></div>`;
+}
+function mmRegs(){
+  const {step,r,st}=mmState(),b=M.base;
+  const items=[
+    ['mm_reg_out',hexN(st.out,8)+'  ('+t('pins_list',pinsOf(st.out))+')',st.out!==b.out],
+    ['mm_reg_in',hexN(gpioIn(st),8),gpioIn(st)!==gpioIn(b)],
+    ['mm_reg_ram',hexN(st.ram,8),st.ram!==b.ram],
+    ['mm_reg_fifo',st.fifo.length?st.fifo.map(x=>hex2(x)).join(' '):t('mm_empty'),st.fifo.length!==b.fifo.length],
+    ['mm_reg_a4',hexN(st.a4,8),st.a4!==b.a4],
+  ];
+  $('mmRegs').innerHTML=items.map(([k,v,c])=>`<div class="reg${c?' chg':''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`).join('');
+}
+function mmRender(){mmSvg();mmExpl();mmBits();mmRegs();}
+function mmFill(){
+  $('mmPresets').innerHTML=MM_PRESETS.map(p=>`<button data-p="${p.id}" aria-pressed="${M.preset===p.id}">${esc(t(p.k))}</button>`).join('');
+  $('mmPresets').querySelectorAll('button').forEach(bt=>bt.onclick=()=>{
+    mmLoad(MM_PRESETS.find(p=>p.id===bt.dataset.p),bt.dataset.p);
+  });
+  $('mmVal').disabled=$('mmOp').value==='lw';
+}
+function mmLoad(ins,pid){
+  // commit the finished instruction before loading the next one
+  if(S.mmio.i>=3){const r=mmRun(M.base,M.ins),keep=M.base.a4;M.base=r.after;if(S.mmio.i<4)M.base.a4=keep;}
+  M.ins=ins;M.preset=pid;mmFill();S.mmio.reset();
+}
+function parseNum(v){
+  v=v.trim().replace(/[\s_]/g,'');
+  let n;
+  if(/^0x[0-9a-f]{1,8}$/i.test(v))n=parseInt(v,16);
+  else if(/^\d{1,10}$/.test(v))n=+v;
+  else return null;
+  return n<=0xFFFFFFFF?n>>>0:null;
+}
+function mmInit(){
+  S.mmio=Stepper(document.querySelector('[data-ctrl="mmio"]'),()=>5,mmRender,1100);
+  $('mmOp').addEventListener('change',()=>{$('mmVal').disabled=$('mmOp').value==='lw';});
+  $('mmGo').addEventListener('click',()=>{
+    const a=parseNum($('mmAddr').value),v=parseNum($('mmVal').value),op=$('mmOp').value;
+    if(a===null){$('mmErr').textContent=t('mm_err_addr');return;}
+    if(a%4){$('mmErr').textContent=t('mm_err_align');return;}
+    if(op==='sw'&&v===null){$('mmErr').textContent=t('mm_err_val');return;}
+    $('mmErr').textContent='';
+    mmLoad({op,addr:a,val:v||0},'custom');
+  });
+}
+
+/* =====================================================================
+   Kontroler GPIO / GPIO controller
+   ===================================================================== */
+const GP_BASE=0x60004000;
+const GP_REG={w1ts:{off:0x08,name:'OUT_W1TS'},w1tc:{off:0x0C,name:'OUT_W1TC'},enable:{off:0x20,name:'ENABLE'},out:{off:0x04,name:'OUT'},in:{off:0x3C,name:'IN'}};
+const GP_USED={4:'LED',5:'A',6:'B'};
+const gpFresh=()=>({enable:1<<4,out:0,pull:(1<<5)|(1<<6),press:{},a4:null,hl:null,chg:{},last:null});
+let GP=gpFresh();
+const gpBit=(v,n)=>(v>>>n)&1;
+const gpCx=n=>250+(7-n)*96;
+function gpKind(n){
+  const en=gpBit(GP.enable,n),o=gpBit(GP.out,n),pr=!!GP.press[n],pu=gpBit(GP.pull,n);
+  if(en&&pr)return o?'short':'drv0';
+  if(en)return o?'drv1':'drv0';
+  if(pr)return 'press';
+  if(pu)return 'pu';
+  return 'float';
+}
+function gpLevel(n){const k=gpKind(n);return k==='drv1'||k==='pu'?1:k==='drv0'||k==='press'?0:k==='short'?'!':'?';}
+function gpInStr(){let s='';for(let n=7;n>=0;n--){const l=gpLevel(n);s+=l===1||l===0?l:'?';}return s;}
+const gpPins=m=>{const l=[];for(let n=0;n<8;n++)if(gpBit(m,n))l.push(n);return l;};
+const gpPin=n=>t('gp_ps_'+gpKind(n),n);
+function gpAsm(reg,val,op){
+  const off=GP_REG[reg].off,L=['lui  a5, 0x60004'.padEnd(22)+'# a5 = '+hexA(GP_BASE)];
+  if(op==='sw')L.push(`li   a4, ${hexN(val)}`.padEnd(22)+'# '+bin(val&0xFF,8));
+  L.push(`${op}   a4, ${hexN(off,2)}(a5)`.padEnd(22)+`# ${GP_REG[reg].name}, ${hexA(GP_BASE+off)}`);
+  return L;
+}
+function gpWrite(reg,val,cLine,extra){
+  val=val>>>0;
+  const b={enable:GP.enable,out:GP.out};
+  if(reg==='w1ts')GP.out=(GP.out|val)>>>0;
+  else if(reg==='w1tc')GP.out=(GP.out&~val)>>>0;
+  else if(reg==='out')GP.out=val;
+  else if(reg==='enable')GP.enable=val;
+  GP.hl={reg,val};GP.chg={out:(b.out^GP.out)&0xFF,enable:(b.enable^GP.enable)&0xFF};
+  const chOut=gpPins(GP.chg.out),chEn=gpPins(GP.chg.enable);
+  let text;
+  if(reg==='w1ts'||reg==='w1tc')text=t('gp_x_'+reg,`<code>${hexN(val,2)}</code>`,t('pins_list',gpPins(val&0xFF)),`<code>${hexN(b.out,2)}</code>`,`<code>${hexN(GP.out,2)}</code>`);
+  else if(reg==='out'){
+    text=t('gp_x_out',hexN(val,2),`<code>${hexN(b.out,2)}</code>`,`<code>${hexN(GP.out,2)}</code>`);
+    const lost=gpPins(b.out&~val&0xFF);if(lost.length)text+=' '+t('gp_x_out_lost',t('pins_list',lost));
+  }else if(reg==='enable')text=t('gp_x_en',`<code>${hexN(b.enable,2)}</code>`,`<code>${hexN(GP.enable,2)}</code>`);
+  else text=t('gp_x_inw');
+  const eff=[];
+  if(reg==='enable'){chEn.forEach(n=>eff.push(t(gpBit(GP.enable,n)?'gp_en_on':'gp_en_off',n)+' '+gpPin(n)));if(!chEn.length)eff.push(t('gp_nochange'));}
+  else if(reg!=='in'){chOut.forEach(n=>eff.push(gpBit(GP.enable,n)?gpPin(n):t('gp_nodrv',n)));if(!chOut.length)eff.push(t('gp_nochange'));}
+  if(extra)eff.push(extra);
+  GP.last={title:t('gp_t_'+reg),who:t('gp_who_w'),text:text+(eff.length?'<br>'+eff.join('<br>'):''),
+    code:[cLine||`GPIO_${GP_REG[reg].name} = ${hexN(val,2)};`,...gpAsm(reg,val,'sw')]};
+  gpRender();
+}
+function gpRead(cLine){
+  let v=0;const rnd=[];
+  for(let n=0;n<8;n++){const l=gpLevel(n);let b=l===1?1:0;if(l==='?'||l==='!'){b=Math.random()<.5?1:0;rnd.push(n);}v|=b<<n;}
+  GP.a4=v>>>0;GP.hl={reg:'in',val:GP.a4};GP.chg={};
+  let text=t('gp_x_in',`<code>${hexN(GP.a4,2)}</code>`,`<code>${bin(GP.a4,8)}</code>`)+'<br>'+t('gp_x_in_btn',gpBit(GP.a4,5),gpBit(GP.a4,6));
+  if(rnd.length)text+='<br>'+t('gp_x_in_rnd',t('pins_list',rnd));
+  GP.last={title:t('gp_t_in'),who:t('gp_who_r'),text,code:[cLine||'uint32_t a4 = GPIO_IN;',...gpAsm('in',0,'lw')]};
+  gpRender();
+}
+function gpPress(n){
+  GP.press[n]=!GP.press[n];GP.hl=null;GP.chg={};
+  let text=t(GP.press[n]?'gp_x_press':'gp_x_release',GP_USED[n],n)+'<br>'+gpPin(n);
+  if(gpKind(n)==='short')text+='<br>'+t('gp_x_short_why');
+  GP.last={title:t('gp_t_btn'),who:t('gp_who_b'),text,code:[t('gp_c_board')]};
+  gpRender();
+}
+function gpPull(n){
+  GP.pull=(GP.pull^(1<<n))>>>0;GP.hl=null;GP.chg={};
+  const text=t(gpBit(GP.pull,n)?'gp_x_pu_on':'gp_x_pu_off',n)+'<br>'+gpPin(n)+'<br>'+t('gp_x_iomux');
+  GP.last={title:t('gp_t_pu'),who:'IO_MUX',text,code:[t('gp_c_pu',n)]};
+  gpRender();
+}
+const GP_PRE=[
+  {c:'pinMode(4, OUTPUT)',f:()=>gpWrite('enable',GP.enable|0x10,'pinMode(4, OUTPUT);',t('gp_note_enw1ts'))},
+  {c:'digitalWrite(4, HIGH)',f:()=>gpWrite('w1ts',0x10,'digitalWrite(4, HIGH);')},
+  {c:'digitalWrite(4, LOW)',f:()=>gpWrite('w1tc',0x10,'digitalWrite(4, LOW);')},
+  {c:'digitalRead(5)',f:()=>gpRead('int a = (GPIO_IN >> 5) & 1;   // digitalRead(5)')},
+  {c:'GPIO_OUT = 0x20',f:()=>gpWrite('out',0x20,'GPIO_OUT = 0x20;   // '+t('gp_c_out'))},
+  {c:'pinMode(5, OUTPUT)',f:()=>gpWrite('enable',GP.enable|0x20,'pinMode(5, OUTPUT);   // '+t('gp_c_bad'),t('gp_note_enw1ts'))},
+  {c:'digitalWrite(5, HIGH)',f:()=>gpWrite('w1ts',0x20,'digitalWrite(5, HIGH);')},
+  {c:'pinMode(5, INPUT_PULLUP)',f:()=>{GP.pull=(GP.pull|0x20)>>>0;gpWrite('enable',GP.enable&~0x20,'pinMode(5, INPUT_PULLUP);',t('gp_note_pu5'));}},
+];
+function gpSvg(){
+  const ROWS=[['w1ts',50],['w1tc',92],['enable',142],['out',184]],YIN=350;
+  let o='<defs><marker id="gpArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--isr)"/></marker>'+
+    '<marker id="gpArrM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>';
+  // row labels
+  const lab=(y,a,b,mono)=>txt(12,y-2,a,{'font-size':12.5,'font-weight':600,class:mono?'m':null})+txt(12,y+13,b,{'font-size':11,fill:'var(--muted)'});
+  ROWS.forEach(([r,y])=>o+=lab(y,`${GP_REG[r].name} +${hexN(GP_REG[r].off,2)}`,t('gp_rd_'+r),1));
+  o+=lab(226,t('gp_l_drv'),t('gp_l_drv_s'));o+=lab(290,t('gp_l_pin'),t('gp_l_pin_s'));
+  o+=lab(YIN,`IN +${hexN(0x3C,2)}`,t('gp_rd_in'),1);o+=lab(420,t('gp_l_board'),t('gp_l_board_s'));
+  o+=svgEl('line',{x1:200,y1:117,x2:970,y2:117,stroke:'var(--rule)','stroke-dasharray':'3 4'});
+  const cell=(x,y,v,o2)=>{
+    o2=o2||{};
+    const fill=o2.hot?'var(--isr-bg)':v==='1'?'color-mix(in srgb,var(--ink) 10%,var(--surface))':'var(--surface)';
+    let s=`<g class="gpbit" data-r="${o2.r}" data-n="${o2.n}" style="cursor:pointer" role="button" tabindex="0">`;
+    s+=svgEl('rect',{x:x-17,y:y-13,width:34,height:26,rx:4,fill,stroke:o2.hot?'var(--isr)':'var(--rule)','stroke-width':o2.hot?2.5:1.2});
+    s+=txt(x,y+5,v,{'text-anchor':'middle',class:'m','font-size':14,'font-weight':v==='1'?600:400,fill:v==='·'?'var(--muted)':'var(--ink)'});
+    return s+'</g>';
+  };
+  for(let n=7;n>=0;n--){
+    const x=gpCx(n),used=GP_USED[n]!==undefined,en=gpBit(GP.enable,n),ob=gpBit(GP.out,n),k=gpKind(n),lv=gpLevel(n),pu=gpBit(GP.pull,n);
+    o+=txt(x,22,'GPIO '+n,{'text-anchor':'middle','font-size':12.5,'font-weight':600,fill:used?'var(--ink)':'var(--muted)'});
+    o+=`<g opacity="${used?1:.55}">`;
+    // W1TS / W1TC: which OUT bits the last write changed
+    if(GP.hl&&(GP.hl.reg==='w1ts'||GP.hl.reg==='w1tc')&&gpBit(GP.hl.val,n)){
+      const y1=GP.hl.reg==='w1ts'?50:92;
+      o+=svgEl('path',{d:`M${x-17},${y1} H${x-29} V184 H${x-20}`,fill:'none',stroke:'var(--isr)','stroke-width':2,'marker-end':'url(#gpArr)'});
+    }
+    // ENABLE switches the driver
+    const ec=en?'var(--ok)':'var(--idle)';
+    o+=svgEl('path',{d:`M${x+17},142 H${x+31} V226 H${x+9}`,fill:'none',stroke:ec,'stroke-width':2.2});
+    o+=svgEl('circle',{cx:x+9,cy:226,r:3.2,fill:ec});
+    // OUT into the driver
+    o+=svgEl('line',{x1:x,y1:197,x2:x,y2:208,stroke:en?'var(--ink)':'var(--idle)','stroke-width':2});
+    o+=svgEl('polygon',{points:`${x-16},208 ${x+16},208 ${x},244`,fill:en?'var(--surface)':'var(--sunken)',stroke:en?'var(--ink)':'var(--idle)','stroke-width':2,'stroke-dasharray':en?null:'4 3'});
+    if(!en)o+=txt(x,221,t('gp_off'),{'text-anchor':'middle','font-size':10,'font-weight':600,fill:'var(--muted)'});
+    const dc=!en?'var(--idle)':ob?'var(--isr)':'var(--ink)';
+    o+=svgEl('line',{x1:x,y1:244,x2:x,y2:280,stroke:dc,'stroke-width':en?3:2,'stroke-dasharray':en?null:'4 3'});
+    // pull-up (clickable)
+    const pc=pu?'var(--ink)':'var(--idle)',pd=pu?null:'3 3';
+    o+=`<g class="gppull" data-n="${n}" style="cursor:pointer" role="button" tabindex="0" aria-pressed="${!!pu}">`;
+    o+=svgEl('rect',{x:x-46,y:232,width:30,height:64,fill:'transparent'});
+    o+=svgEl('path',{d:`M${x-10},290 H${x-32} V272`,fill:'none',stroke:pc,'stroke-width':1.8,'stroke-dasharray':pd});
+    o+=svgEl('rect',{x:x-37,y:252,width:10,height:20,rx:1.5,fill:pu?'var(--surface)':'transparent',stroke:pc,'stroke-width':1.8,'stroke-dasharray':pd});
+    o+=svgEl('line',{x1:x-32,y1:252,x2:x-32,y2:245,stroke:pc,'stroke-width':1.8,'stroke-dasharray':pd});
+    o+=txt(x-32,241,'3,3V'.replace(',',lang==='pl'?',':'.'),{'text-anchor':'middle','font-size':9.5,fill:pu?'var(--muted)':'var(--idle)'});
+    o+='</g>';
+    // the pin
+    const pinC={1:'var(--isr)',0:'var(--ink)','?':'var(--idle)','!':'var(--bad)'}[lv];
+    if(k==='short')o+=svgEl('circle',{cx:x,cy:290,r:19,fill:'var(--bad)',opacity:.25});
+    o+=svgEl('rect',{x:x-10,y:280,width:20,height:20,rx:2,fill:pinC});
+    const lt=lv===1?(lang==='pl'?'3,3 V':'3.3 V'):lv===0?'0 V':lv==='?'?'?':t('gp_short');
+    o+=txt(x-14,320,lt,{'text-anchor':'end','font-size':11.5,'font-weight':600,fill:lv==='!'?'var(--bad)':'var(--muted)'});
+    o+=svgEl('line',{x1:x,y1:300,x2:x,y2:333,stroke:'var(--muted)','stroke-width':1.8,'marker-end':'url(#gpArrM)'});
+    // what is on the board
+    if(used){
+      o+=svgEl('path',{d:`M${x+10},290 H${x+30} V405`,fill:'none',stroke:'var(--work)','stroke-width':2});
+      if(n===4){
+        const on=lv===1;
+        if(on)o+=svgEl('circle',{cx:x+30,cy:418,r:19,fill:'#FF5F56',opacity:.3});
+        o+=svgEl('circle',{cx:x+30,cy:418,r:11,fill:on?'#FF5F56':'color-mix(in srgb,#FF5F56 30%,var(--surface))',stroke:'#B8372B','stroke-width':1.5});
+      }else{
+        const p=!!GP.press[n];
+        o+=`<g class="gpbtn" data-n="${n}" style="cursor:pointer" role="button" tabindex="0" aria-pressed="${p}">`;
+        o+=svgEl('rect',{x:x+18,y:406,width:24,height:24,rx:3,fill:'var(--lcd-frame)'});
+        o+=svgEl('circle',{cx:x+30,cy:418,r:p?6.5:8,fill:p?'#1E7E4F':'#27C93F'});
+        o+='</g>';
+      }
+      o+=txt(x+48,422,GP_USED[n],{'font-size':12,'font-weight':600});
+      o+=svgEl('line',{x1:x+30,y1:430,x2:x+30,y2:441,stroke:'var(--muted)','stroke-width':1.8});
+      [[9,441],[6,445],[3,449]].forEach(([w,y])=>o+=svgEl('line',{x1:x+30-w,y1:y,x2:x+30+w,y2:y,stroke:'var(--muted)','stroke-width':1.8}));
+    }
+    // register cells
+    ROWS.forEach(([r,y])=>{
+      let v,hot=false;
+      if(r==='w1ts'||r==='w1tc'){v=GP.hl&&GP.hl.reg===r?String(gpBit(GP.hl.val,n)):'·';hot=v==='1';}
+      else{v=String(gpBit(r==='out'?GP.out:GP.enable,n));hot=!!(GP.chg[r]&&gpBit(GP.chg[r],n));}
+      o+=cell(x,y,v,{r,n,hot});
+    });
+    o+=cell(x,YIN,lv===1||lv===0?String(lv):'?',{r:'in',n,hot:GP.hl&&GP.hl.reg==='in'});
+    o+='</g>';
+  }
+  $('gpSvg').innerHTML=o;
+  const act=(sel,f)=>$('gpSvg').querySelectorAll(sel).forEach(g=>{
+    g.addEventListener('click',()=>f(g));
+    g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();f(g);}});
+  });
+  act('.gpbit',g=>{
+    const r=g.dataset.r,n=+g.dataset.n,m=(1<<n)>>>0;
+    if(r==='w1ts'||r==='w1tc')gpWrite(r,m,`GPIO_${GP_REG[r].name} = 1 << ${n};`);
+    else if(r==='out')gpWrite('out',GP.out^m,`GPIO_OUT = ${hexN(GP.out^m,2)};   // bit ${n}`);
+    else if(r==='enable')gpWrite('enable',GP.enable^m,`GPIO_ENABLE = ${hexN(GP.enable^m,2)};   // bit ${n}`);
+    else gpRead();
+  });
+  act('.gpbtn',g=>gpPress(+g.dataset.n));
+  act('.gppull',g=>gpPull(+g.dataset.n));
+}
+function gpRender(){
+  gpSvg();
+  $('gpExpl').innerHTML=GP.last?explHTML([GP.last.title,GP.last.who,GP.last.text],''):explHTML(t('gp_intro'),'');
+  $('gpCode').hidden=!GP.last;
+  $('gpCode').innerHTML=GP.last?GP.last.code.map((s,i)=>`<span class="l${i===0?' act k':''}">${codeHTML(s)}</span>`).join(''):'';
+  const reg=(k,v,c)=>`<div class="reg${c?' chg':''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  const hl=GP.hl||{};
+  $('gpRegs').innerHTML=reg('gp_reg_out',hexN(GP.out,2)+'  ('+bin(GP.out,8)+')',!!GP.chg.out)+
+    reg('gp_reg_en',hexN(GP.enable,2)+'  ('+bin(GP.enable,8)+')',!!GP.chg.enable)+
+    reg('gp_reg_in',gpInStr(),hl.reg==='in')+
+    reg('gp_reg_w1ts',hl.reg==='w1ts'?hexN(hl.val,2):'—',hl.reg==='w1ts')+
+    reg('gp_reg_w1tc',hl.reg==='w1tc'?hexN(hl.val,2):'—',hl.reg==='w1tc')+
+    reg('gp_reg_a4',GP.a4===null?'—':hexN(GP.a4,2),hl.reg==='in');
+  const it=(st,l)=>`<span><span class="sw" style="${st}"></span>${esc(l)}</span>`;
+  $('gpLegend').innerHTML=it('background:var(--isr)',t('gp_lg_hi'))+it('background:var(--ink)',t('gp_lg_lo'))+it('background:var(--idle)',t('gp_lg_fl'))+
+    it('background:var(--bad)',t('gp_lg_sh'))+it('border:2px solid var(--ok)',t('gp_lg_on'))+it('border:2px dashed var(--idle)',t('gp_lg_offd'))+it('background:var(--isr-bg);border:2px solid var(--isr)',t('gp_lg_set'));
+}
+function gpFill(){
+  $('gpPresets').innerHTML=GP_PRE.map((p,i)=>`<button class="mono" data-g="${i}">${esc(p.c)}</button>`).join('')+`<button data-g="reset">${esc(t('gp_reset'))}</button>`;
+  $('gpPresets').querySelectorAll('button').forEach(b=>b.onclick=()=>{
+    if(b.dataset.g==='reset'){GP=gpFresh();gpRender();}else GP_PRE[+b.dataset.g].f();
+  });
+}
+function gpInit(){}
+
+/* =====================================================================
+   Polling a przerwania / polling vs interrupts
+   ===================================================================== */
+const PDUR=10000,SPIN_RATE=40000;
+const P={t:0,playing:false,presses:[],hold:null,mode:'work',bounce:false,deb:false,lastTs:0,raf:0,started:false};
+function poCompute(tn){
+  const pr=P.presses.filter(p=>p.a<=tn).map(p=>({a:p.a,b:p.b===null?Infinity:p.b,vb:Math.min(p.b===null?tn:p.b,tn)}));
+  const edges=[];
+  pr.forEach((p,i)=>{const k=P.bounce?3:1;for(let j=0;j<k;j++){const e={t:p.a+j*2,vis:p.a+j*60,press:i};if(e.t<=tn)edges.push(e);}});
+  let irq=0,lastT=-1e9;
+  edges.forEach(e=>{e.counted=!P.deb||(e.t-lastT>=50);if(e.counted){irq++;lastT=e.t;}});
+  const pressInfo=pr.map((p,i)=>({irq:edges.filter(e=>e.press===i&&e.counted).length,poll:0}));
+  let poll=0,checks=0,checkList=[];
+  if(P.mode==='work'){
+    for(let c=2000;c<=PDUR;c+=2000){
+      if(c>tn)break;
+      const hitI=pr.findIndex(p=>c>=p.a&&c<p.b);
+      checkList.push({t:c,hit:hitI>=0});
+      if(hitI>=0){poll++;pressInfo[hitI].poll++;}
+    }
+    checks=checkList.length;
+  }else{
+    checks=Math.floor(tn/1000*SPIN_RATE);
+    pr.forEach((p,i)=>{const k=P.bounce?3:1;const n=[...Array(k).keys()].filter(j=>p.a+j*2<=tn).length;poll+=n;pressInfo[i].poll=n;});
+  }
+  return {pr,edges,irq,poll,checks,checkList,pressInfo};
+}
+const PX=t0=>152+t0*0.082;
+function poSvg(C){
+  const tn=P.t;let o='';
+  const yH=32,yL=58,pY=84,iY=148,bh=30;
+  // labels
+  o+=txt(10,50,t('po_r_btn'),{'font-size':13,'font-weight':600});
+  o+=txt(10,pY+20,t('po_r_poll'),{'font-size':13,'font-weight':600});
+  o+=txt(10,iY+20,t('po_r_irq'),{'font-size':13,'font-weight':600});
+  // axis
+  o+=svgEl('line',{x1:PX(0),y1:204,x2:PX(PDUR),y2:204,stroke:'var(--rule)','stroke-width':1.5});
+  for(let s=0;s<=10;s++){o+=svgEl('line',{x1:PX(s*1000),y1:200,x2:PX(s*1000),y2:208,stroke:'var(--muted)'});o+=txt(PX(s*1000),224,s+' '+t('po_sec'),{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});}
+  // button signal (visual bounce stretched)
+  let pts=[[PX(0),yH]];
+  C.pr.forEach(p=>{
+    const ys=[];
+    if(P.bounce){[[0,yL],[25,yH],[60,yL],[85,yH],[120,yL]].forEach(([d,y])=>{if(p.a+d/30<=tn)ys.push([p.a+d,y]);});}
+    else ys.push([p.a,yL]);
+    ys.forEach(([tt,y])=>{const x=PX(tt);const prevY=pts[pts.length-1][1];pts.push([x,prevY]);pts.push([x,y]);});
+    const endV=Math.max(p.vb,p.a+(P.bounce?120:0));
+    if(p.b!==Infinity&&p.b<=tn){pts.push([PX(endV),yL]);pts.push([PX(endV),yH]);}
+    else{pts.push([PX(Math.max(tn,p.a+(P.bounce?120:0))),yL]);}
+  });
+  const lastY=pts[pts.length-1][1];
+  if(lastY===yH)pts.push([PX(tn),yH]);
+  o+=svgEl('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'var(--work)','stroke-width':2.4,'stroke-linejoin':'round'});
+  o+=txt(PX(0)-6,yH+4,'1',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
+  o+=txt(PX(0)-6,yL+4,'0',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
+  // polling row
+  const blk=(x1,x2,y,c,op,extra)=>svgEl('rect',Object.assign({x:x1,y,width:Math.max(0,x2-x1),height:bh,fill:c,opacity:op},extra||{}));
+  if(P.mode==='work'){
+    for(let k=0;k<5;k++){
+      const a=k*2000,b=a+2000;
+      o+=blk(PX(a),PX(b),pY,'var(--work)',.18);
+      if(a<tn)o+=blk(PX(a),PX(Math.min(b,tn)),pY,'var(--work)',.9);
+      const cx=PX(b)-7;
+      o+=blk(cx,cx+7,pY,'var(--poll)',b<=tn?1:.3);
+    }
+    C.checkList.forEach(c=>{o+=txt(PX(c.t)-4,pY-5,c.hit?'+1':'✕',{'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:c.hit?'var(--ok)':'var(--muted)'});});
+  }else{
+    o+=blk(PX(0),PX(PDUR),pY,'var(--poll)',.16);
+    if(tn>0){o+=blk(PX(0),PX(tn),pY,'var(--poll)',.9);o+=blk(PX(0),PX(tn),pY,'url(#poHatch)',1);}
+  }
+  // interrupt row
+  o+=blk(PX(0),PX(PDUR),iY,'var(--work)',.18);
+  if(tn>0)o+=blk(PX(0),PX(tn),iY,'var(--work)',.9);
+  C.edges.forEach(e=>{
+    const x=PX(e.vis);
+    if(e.counted)o+=blk(x,x+6,iY,'var(--isr)',1);
+    else o+=blk(x,x+6,iY,'var(--surface)',1,{stroke:'var(--isr)','stroke-width':1.5});
+  });
+  // press markers
+  C.pr.forEach((p,i)=>{
+    const x=PX(p.a)+3,inf=C.pressInfo[i];
+    const nc=Math.ceil((p.a+1)/2000)*2000,decided=P.mode==='spin'||nc<=tn;
+    const pc=inf.poll>0?'var(--ok)':decided?'var(--bad)':'var(--muted)';
+    o+=svgEl('circle',{cx:x,cy:pY+bh+8,r:5,fill:pc});
+    o+=svgEl('circle',{cx:x,cy:iY+bh+8,r:5,fill:inf.irq>0?'var(--ok)':'var(--bad)'});
+    if(inf.irq>1)o+=txt(x+8,iY+bh+12,'×'+inf.irq,{'font-size':11,'font-weight':600,fill:'var(--bad)'});
+    if(inf.poll>1)o+=txt(x+8,pY+bh+12,'×'+inf.poll,{'font-size':11,'font-weight':600,fill:'var(--isr)'});
+  });
+  // cursor
+  o+=svgEl('line',{x1:PX(tn),y1:22,x2:PX(tn),y2:204,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
+  const defs=`<defs><pattern id="poHatch" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="1.5" height="6" fill="var(--surface)" opacity=".45"/></pattern></defs>`;
+  $('poSvg').innerHTML=defs+o;
+}
+function poLcd(C){
+  const l1=t('lcd1').padEnd(12)+String(C.poll).padStart(4),l2=t('lcd2').padEnd(12)+String(C.irq).padStart(4);
+  $('poLcd').textContent=l1.slice(0,16)+'\n'+l2.slice(0,16);
+}
+function poStats(C){
+  const n=C.pr.length;
+  const st=(k,v,cl,sub)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b>${sub?`<span>${sub}</span>`:''}</div>`;
+  let sub='';
+  if(P.mode==='spin'&&C.checks>0)sub=esc(t('po_s_useful'))+': '+fmtP(C.poll/C.checks*100);
+  $('poStats').innerHTML=st('po_s_press',n)+st('po_s_poll',C.poll,C.poll===n?'good':C.poll<n?'bad':'bad')+st('po_s_irq',C.irq,C.irq===n?'good':'bad')+st('po_s_checks',fmt(C.checks),'',sub);
+}
+function poExpl(C){
+  let e;
+  if(P.t===0&&!P.playing)e=t('px_start');
+  else if(P.t<PDUR)e=t('px_run');
+  else{
+    const n=C.pr.length;let s='';
+    if(P.mode==='work'){s+=t('px_work',C.poll,n);if(C.pressInfo.some(x=>x.poll>1))s+=' '+t('px_twice');}
+    else s+=t('px_spin',fmt(C.checks),C.poll,fmtP(C.checks?C.poll/C.checks*100:0));
+    s+='<br>'+t('px_irq',C.irq);
+    if(P.bounce&&!P.deb)s+=' '+t('px_bnc');
+    if(P.bounce&&P.deb)s+=' '+t('px_deb');
+    s+=`<br><b>${esc(t('px_key'))}</b>`;
+    e=[t('px_end'),'',s];
+  }
+  $('poExpl').innerHTML=explHTML(e,'');
+}
+function poCode(C){
+  const tn=P.t,lastCheck=C.checkList.length?C.checkList[C.checkList.length-1].t:-1e9;
+  const recentCheck=P.mode==='work'&&tn-lastCheck<350&&tn>0;
+  const running=P.playing||(tn>0&&tn<PDUR);
+  let L;
+  if(P.mode==='work'){
+    L=[['void loop() {',''],[`  delay(2000);                    ${t('pc_work')}`,running&&!recentCheck?'w':''],
+       [`  if (digitalRead(BTN_A) == LOW)  ${t('pc_check')}`,recentCheck?'p':''],['    count++;',recentCheck&&C.checkList[C.checkList.length-1].hit?'p':''],
+       ['  lcd.setCursor(0, 1); lcd.print(count);',''],['}','']];
+  }else{
+    L=[['void loop() {',''],[`  int now = digitalRead(BTN_A);    ${t('pc_spin')}`,running?'p':''],['  checks++;',running?'p':''],
+       ['  if (last == HIGH && now == LOW) presses++;',''],['  last = now;',running?'p':''],['}','']];
+  }
+  $('poCodeH1').textContent=t(P.mode==='work'?'po_code_work':'po_code_spin');
+  $('poCode1').innerHTML=L.map(([s,c])=>`<span class="l${c?' act '+c:''}">${codeHTML(s)}</span>`).join('');
+  const le=C.edges.length?C.edges[C.edges.length-1]:null;
+  const hot=le&&tn-le.t<400;
+  let R;
+  if(P.deb)R=[['void IRAM_ATTR onPress() {',hot?'i':''],['  uint32_t now = millis();',''],[`  if (now - lastTime < 50) return;  ${t('pc_bounce')}`,hot&&!le.counted?'i':''],['  lastTime = now;',''],['  count++;',hot&&le.counted?'i':''],['}','']];
+  else R=[['void IRAM_ATTR onPress() {',hot?'i':''],['  count++;',hot?'i':''],['}',''],['',''],['attachInterrupt(digitalPinToInterrupt(BTN_A),',''],['                onPress, FALLING);','']];
+  $('poCode2').innerHTML=R.map(([s,c])=>`<span class="l${c?' act':''}">${codeHTML(s)||' '}</span>`).join('');
+}
+function poLegend(){
+  const it=(c,l,o)=>`<span><span class="sw" style="${o||`background:${c}`}"></span>${esc(l)}</span>`;
+  $('poLegend').innerHTML=it('var(--work)',t('lg_work'))+it('var(--poll)',t('lg_poll'))+it('var(--isr)',t('lg_isr'))+
+    it('',t('lg_hit'),'background:var(--ok);border-radius:50%')+it('',t('lg_miss'),'background:var(--bad);border-radius:50%')+(P.bounce?`<span>${esc(t('lg_bnc'))}</span>`:'');
+}
+function poCtrlSync(){
+  const c=document.querySelector('[data-ctrl="poll"]');
+  const pb=c.querySelector('[data-a="play"]');
+  pb.querySelector('.ic').innerHTML=P.playing?ICON.pause:ICON.play;
+  pb.querySelector('.lb').textContent=t(P.playing?'a_pause':(P.t===0?'a_start':'a_play'));
+  pb.disabled=P.t>=PDUR;
+  c.querySelector('.cyc').textContent=(P.t/1000).toFixed(1).replace('.',lang==='pl'?',':'.')+' / 10 s';
+}
+function poRender(){
+  const C=poCompute(P.t);
+  poSvg(C);poLcd(C);poStats(C);poExpl(C);poCode(C);poCtrlSync();
+  segSync($('poMode'),P.mode);$('poBounce').checked=P.bounce;$('poDeb').checked=P.deb;$('poDeb').disabled=!P.bounce;
+}
+function poTick(ts){
+  if(!P.playing)return;
+  const dt=P.lastTs?Math.min(100,ts-P.lastTs):0;P.lastTs=ts;
+  P.t=Math.min(PDUR,P.t+dt);
+  if(P.t>=PDUR){if(P.hold){P.hold.b=PDUR;P.hold=null;$('poBtn').classList.remove('down');}P.playing=false;}
+  poRender();
+  if(P.playing)P.raf=requestAnimationFrame(poTick);
+}
+function poPlay(){if(P.t>=PDUR)return;P.playing=true;P.lastTs=0;cancelAnimationFrame(P.raf);P.raf=requestAnimationFrame(poTick);poRender();}
+function poPause(){P.playing=false;cancelAnimationFrame(P.raf);poRender();}
+function poReset(keep){poPause();P.t=0;P.hold=null;if(!keep)P.presses=[];poRender();}
+function poDown(){
+  if(P.hold||P.t>=PDUR)return;
+  if(!P.playing)poPlay();
+  P.hold={a:P.t,b:null};P.presses.push(P.hold);$('poBtn').classList.add('down');
+}
+function poUp(){
+  if(!P.hold)return;
+  P.hold.b=Math.max(P.t,P.hold.a+60);P.hold=null;$('poBtn').classList.remove('down');
+}
+function poPreset(k){
+  poReset();
+  P.presses=k===1?[900,2600,4300,5500,7700].map(a=>({a,b:a+140})):[{a:1500,b:2400},{a:5700,b:8300}];
+  poPlay();
+}
+function poInit(){
+  const c=document.querySelector('[data-ctrl="poll"]');
+  c.innerHTML=`<div class="row"><button data-a="play" class="primary"><span class="ic">${ICON.play}</span><span class="lb"></span></button>
+    <button data-a="reset">${ICON.reset}<span data-i="a_reset"></span></button></div><div class="cyc"></div><p class="note" style="margin:0" data-i="keys_note_poll"></p>`;
+  c.querySelector('[data-a="play"]').onclick=()=>P.playing?poPause():poPlay();
+  c.querySelector('[data-a="reset"]').onclick=()=>poReset();
+  segInit($('poMode'),v=>{P.mode=v;poRender();});
+  $('poBounce').addEventListener('change',e=>{P.bounce=e.target.checked;if(!P.bounce)P.deb=false;poLegend();poRender();});
+  $('poDeb').addEventListener('change',e=>{P.deb=e.target.checked;poRender();});
+  $('poP1').onclick=()=>poPreset(1);$('poP2').onclick=()=>poPreset(2);
+  const b=$('poBtn');
+  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}poDown();});
+  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,poUp));
+  b.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();poDown();}});
+  b.addEventListener('keyup',e=>{if(e.key==='Enter')poUp();});
+}
+
+/* =====================================================================
+   Przerwanie krok po kroku / interrupt step by step
+   ===================================================================== */
+const MA=i=>(0x42000100+4*i)>>>0, VA=i=>(0x42000400+4*i)>>>0, HA=i=>(0x42000500+4*i)>>>0;
+const IR_MAIN=['add  a1, a1, a0','lw   a0, 0(s0)','addi s0, s0, 4','sw   a1, 0(s1)','bnez t0, loop'];
+const IR_BAD='lw   a0, 0(zero)';
+const IR_H={
+  A:{name:'onA',lines:[['sw   t0, 0(sp)','save'],['lw   t0, 0(gp)','ld','# t0 = count'],['addi t0, t0, 1','inc','# t0 + 1'],['sw   t0, 0(gp)','st','# count = t0'],['lw   t0, 0(sp)','rest'],['mret','ret']]},
+  B:{name:'onB',lines:[['sw   zero, 0(gp)','zero','# count = 0'],['mret','ret']]},
+  T:{name:'onTimer',lines:[['sw   t0, 0(sp)','save'],['lw   t0, 4(gp)','ld','# t0 = ledOn'],['xori t0, t0, 1','xor','# !ledOn'],['sw   t0, 4(gp)','st','# ledOn = t0'],['lw   t0, 0(sp)','rest'],['mret','ret']]},
+  X:{name:'trap_exc',lines:[['call panic_handler','panic']]},
+};
+const R={src:'A',at:1,trace:[]};
+const irIns=i=>R.src==='X'&&i===1?IR_BAD:IR_MAIN[i];
+const irShort=s=>s.replace(/\s+/g,' ');
+function irBuild(){
+  const src=R.src,at=src==='X'?1:R.at,st=[];
+  const regs={pc:MA(0),mepc:null,mcause:null,mtval:null,count:3,led:0,t0:7};
+  const push=o=>st.push(Object.assign({regs:Object.assign({},regs)},o));
+  for(let i=0;i<at;i++){regs.pc=MA(i);push({w:'main',line:i,kind:'run',strip:['m',irShort(irIns(i))]});}
+  regs.pc=MA(at);
+  if(src==='X'){
+    push({w:'main',line:at,kind:'fault',badge:1,strip:['x',irShort(irIns(at))]});
+    regs.mepc=MA(at);regs.mcause=5;regs.mtval=0;push({w:'hw',line:at,kind:'xsave',badge:2,strip:['t','trap']});
+    regs.pc=VA(0);push({w:'vec',line:0,kind:'xjump',badge:3,strip:['i','j trap_exc']});
+    regs.pc=HA(0);push({w:'hand',line:0,kind:'panic',strip:['i','panic']});
+    R.trace=st;return;
+  }
+  push({w:'main',line:at,kind:'irq',badge:1,strip:['m',irShort(irIns(at))]});
+  const n={A:1,B:2,T:3}[src],nx=at===4?0:at+1;
+  regs.mepc=MA(nx);regs.mcause=(0x80000000|n)>>>0;push({w:'hw',line:at,kind:'save',badge:2,n,nx,strip:['t','trap']});
+  regs.pc=VA(n);push({w:'vec',line:n,kind:'jump',badge:3,n,strip:['i','j '+IR_H[src].name]});
+  IR_H[src].lines.forEach((L,j)=>{
+    regs.pc=HA(j);
+    switch(L[1]){
+      case 'ld':regs.t0=src==='T'?regs.led:regs.count;break;
+      case 'inc':regs.t0=regs.t0+1;break;
+      case 'xor':regs.t0=regs.t0^1;break;
+      case 'st':if(src==='T')regs.led=regs.t0;else regs.count=regs.t0;break;
+      case 'rest':regs.t0=7;break;
+      case 'zero':regs.count=0;break;
+    }
+    push({w:'hand',line:j,kind:L[1]==='ret'?'ret':'h',hk:L[1],badge:L[1]==='ret'?4:'',strip:['i',irShort(L[0])]});
+  });
+  for(let k=0;k<2;k++){
+    const i=(nx+k)%5;regs.pc=MA(i);
+    push({w:'main',line:i,kind:k===1?'end':'cont',strip:['m',irShort(irIns(i))]});
+  }
+  R.trace=st;
+}
+function irCodePanel(el,rows,cur,seen){
+  el.innerHTML=rows.map((r,i)=>{
+    let cl='l';
+    if(cur&&cur.i===i)cl+=' act'+(cur.c?' '+cur.c:'');
+    else if(seen.has(i))cl+=' seen';
+    return `<span class="${cl}"><span class="a">${hexN(r.a,8).slice(-4)}  </span>${codeHTML(r.s)}</span>`;
+  }).join('');
+}
+function irRender(){
+  const i=S.irq.i,s=R.trace[i],src=R.src,H=IR_H[src];
+  const prev=i>0?R.trace[i-1].regs:s.regs;
+  // code panels
+  const seenM=new Set(),seenV=new Set(),seenH=new Set();
+  R.trace.slice(0,i).forEach(x=>{if(x.w==='main')seenM.add(x.line);if(x.w==='vec')seenV.add(x.line);if(x.w==='hand')seenH.add(x.line);});
+  const mainRows=IR_MAIN.map((_,k)=>({a:MA(k),s:(k===0?'loop: ':'      ')+irIns(k)+(R.src==='X'&&k===1?'   '+t('irc_bad'):'')}));
+  const vecRows=[0,1,2,3].map(k=>({a:VA(k),s:`j ${['trap_exc','onA','onB','onTimer'][k]}`.padEnd(13)+'# '+t('irc_v'+k)}));
+  const hRows=H.lines.map((L,k)=>({a:HA(k),s:(k===0?H.name+':':'').padEnd(10)+L[0]+(L[2]?'  '+L[2]:L[1]==='save'?'  # '+t('irc_save'):L[1]==='rest'?'  # '+t('irc_rest'):L[1]==='panic'?'  # '+t('irc_panic'):'')}));
+  let cM=null,cV=null,cH=null;
+  if(s.w==='main')cM={i:s.line,c:s.kind==='fault'?'p':s.kind==='irq'?'':'k'};
+  if(s.w==='hw')cM={i:s.line,c:src==='X'?'p':''};
+  if(s.w==='vec')cV={i:s.line,c:''};
+  if(s.w==='hand')cH={i:s.line,c:''};
+  irCodePanel($('irMain'),mainRows,cM,seenM);
+  irCodePanel($('irVec'),vecRows,cV,seenV);
+  irCodePanel($('irHand'),hRows,cH,seenH);
+  $('irHandH').textContent=t('ir_hand',H.name);
+  // explanation
+  const srcN=src==='X'?'':t('ir_src_name')[src];
+  const ins=`<code>${esc(irShort(irIns(s.line||0)))}</code>`;
+  let e;
+  switch(s.kind){
+    case 'run':e=t('irx_run',`<code>${esc(irShort(irIns(s.line)))}</code>`,hexA(MA(s.line)));break;
+    case 'irq':e=t('irx_irq',srcN,ins);break;
+    case 'save':e=t('irx_save',`<code>${hexA(MA(s.nx))}</code>`,`<code>${hexA(s.regs.mcause)}</code>`,s.n,R.at===4);break;
+    case 'jump':e=t('irx_jump',s.n,`<code>${hexA(VA(s.n))}</code>`,`<code>${H.name}</code>`);break;
+    case 'h':e=t('irx_h',t('irh')[s.hk]);break;
+    case 'ret':e=t('irx_ret',`<code>${hexA(s.regs.mepc)}</code>`);break;
+    case 'cont':e=t('irx_cont',`<code>${esc(irShort(irIns(s.line)))}</code>`);break;
+    case 'end':e=t('irx_end',t('ire_'+src)+'<br>'+esc(t('ir_cmp')));break;
+    case 'fault':e=t('irx_fault',ins);break;
+    case 'xsave':e=t('irx_xsave',`<code>${hexA(MA(1))}</code>`);break;
+    case 'xjump':e=t('irx_xjump',`<code>${hexA(VA(0))}</code>`);break;
+    case 'panic':{const p=t('irx_panic');e=[p[0],p[1],p[2]+'<br>'+esc(t('ir_cmp'))];break;}
+  }
+  $('irExpl').innerHTML=explHTML(e,s.badge||'');
+  // registers
+  const r=s.regs,dash='—';
+  const mc=r.mcause===null?dash:hexA(r.mcause)+'  ('+(r.mcause&0x80000000?t('mc_irq',r.mcause&0xFF):t('mc_exc'))+')';
+  const items=[['PC',hexA(r.pc),r.pc!==prev.pc],['mepc',r.mepc===null?dash:hexA(r.mepc),r.mepc!==prev.mepc],['mcause',mc,r.mcause!==prev.mcause],
+    ['mtval',r.mtval===null?dash:hexA(r.mtval),r.mtval!==prev.mtval],['mtvec',hexA(VA(0)),false],['t0',String(r.t0),r.t0!==prev.t0],
+    ['count',String(r.count),r.count!==prev.count],['ledOn',String(r.led),r.led!==prev.led]];
+  $('irRegs').innerHTML=items.map(([k,v,c])=>`<div class="reg${c&&i>0?' chg':''}"><span class="mono">${k}</span><b>${esc(v)}</b></div>`).join('');
+  // strip
+  $('irStrip').innerHTML=R.trace.slice(0,i+1).map(x=>`<span class="${x.strip[0]}">${esc(x.strip[1]==='trap'?t('ir_trap'):x.strip[1])}</span>`).join('');
+  const it=(c,l)=>`<span><span class="sw" style="${c}"></span>${esc(l)}</span>`;
+  $('irLegend').innerHTML=it('background:var(--work)',t('ir_lg_m'))+it('border:1.5px dashed var(--isr)',t('ir_lg_t'))+it('background:var(--isr)',t('ir_lg_i'))+(src==='X'?it('background:var(--bad)',t('ir_lg_x')):'');
+  // serial monitor
+  const ser=$('irSerial');
+  if(s.kind==='panic'){
+    ser.hidden=false;
+    ser.innerHTML=`Guru Meditation Error: Core  0 panic'ed (<span class="r">Load access fault</span>). Exception was unhandled.\nMEPC    : <span class="r">0x42000104</span>  RA      : 0x420000F8\nMCAUSE  : <span class="r">0x00000005</span>  MTVAL   : <span class="r">0x00000000</span>`;
+  }else ser.hidden=true;
+}
+function irFill(){
+  segSync($('irSrc'),R.src);
+  $('irAt').innerHTML=IR_MAIN.map((s,k)=>`<option value="${k}"${k===R.at?' selected':''}>${hexA(MA(k))}  ${esc(irShort(s))}</option>`).join('');
+  $('irAtWrap').hidden=R.src==='X';
+  $('irSetupNote').textContent=t(R.src==='X'?'ir_note_x':'ir_note_irq');
+}
+function irInit(){
+  irBuild();
+  S.irq=Stepper(document.querySelector('[data-ctrl="irq"]'),()=>R.trace.length,irRender,1000);
+  segInit($('irSrc'),v=>{R.src=v;irBuild();irFill();S.irq.reset();});
+  $('irAt').addEventListener('change',e=>{R.at=+e.target.value;irBuild();S.irq.reset();});
+}
+
+/* =====================================================================
+   DMA
+   ===================================================================== */
+const DN=32,DWORDS=8,DSRC=0x3FC80000,DDST=0x3FC80100;
+const D={mode:'dma',checks:[]};
+const dmSrcBytes=()=>{let s=t('dm_text');s=(s+'.'.repeat(DN)).slice(0,DN);return [...s].map(c=>c.charCodeAt(0));};
+const dmLast=()=>D.mode==='dma'?11:10;
+function dmInfo(step){
+  const dma=D.mode==='dma';
+  const copying=step>=2&&step<=9;
+  const words=step<2?0:Math.min(DWORDS,step-1);
+  const copied=words*4;
+  let cpu,bus='free',dmaAct='idle',work=0;
+  if(dma){
+    work=500*Math.min(DWORDS,Math.max(0,step-1));
+    if(step===0)cpu='idle';else if(step===1)cpu='setup';else if(copying)cpu='work';else if(step===10)cpu='isr';else cpu='after';
+    if(step===1)bus='cfg';else if(copying){bus='dma';dmaAct='copy';}else if(step===10)bus='irq';
+  }else{
+    if(step===0)cpu='idle';else if(step<=9)cpu='copy';else cpu='ret';
+    if(copying)bus='cpu';
+  }
+  return {dma,copying,words,copied,cpu,bus,dmaAct,work,done:dma&&step>=10,led:dma&&step>=10,cur:copying?words:0};
+}
+function dmRender(){
+  const step=S.dma.i,I=dmInfo(step),src=dmSrcBytes();
+  // explanation
+  let e,badge='';
+  if(step===0)e=t('dx0');
+  else if(I.dma){
+    if(step===1){e=t('dx_setup');badge=1;}
+    else if(I.copying){e=t('dx_copy',I.words,I.copied);badge=2;}
+    else if(step===10){e=t('dx_done');badge=3;}
+    else e=t('dx_end',fmt(I.work));
+  }else{
+    if(step===1)e=t('dx_cset');else if(I.copying)e=t('dx_ccopy',I.words,I.copied);else e=t('dx_cend');
+  }
+  $('dmExpl').innerHTML=explHTML(e,badge);
+  // CPU
+  const doing={idle:'dd_idle',setup:'dd_setup',work:'dd_work',isr:'dd_isr',after:'dd_after',copy:'dd_copy',ret:'dd_ret'}[I.cpu];
+  const reg=(k,v,c,raw)=>`<div class="reg${c?' chg':''}"><span>${raw?k:esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  const pv=step>0?dmInfo(step-1):I;
+  $('dmCpu').innerHTML=reg('dm_doing',t(doing),false)+reg('<span class="mono">work</span>',fmt(I.work),I.work!==pv.work,1)+
+    reg('<span class="mono">done</span>',I.dma?(I.done?t('dm_true'):t('dm_false')):'—',I.done!==pv.done,1)+reg('dm_led',I.led?t('dm_on'):t('dm_off'),I.led!==pv.led);
+  const set=I.dma&&step>=1;
+  $('dmRegs').innerHTML=reg('dm_src',set?hexA(DSRC):'—',I.dma&&step===1)+reg('dm_dst',set?hexA(DDST):'—',I.dma&&step===1)+
+    reg('dm_len',set?'32':'—',I.dma&&step===1)+reg('dm_cnt',I.copied+' / 32',I.copying);
+  $('dmProg').style.width=(I.copied/DN*100)+'%';
+  const busTxt=I.bus==='free'?t('db_free'):I.bus==='cfg'?t('db_cfg'):I.bus==='irq'?t('db_irq'):I.bus==='dma'?t('db_dma',I.words,(I.words-1)*4):t('db_cpu',I.words,(I.words-1)*4);
+  $('dmBus').innerHTML=`<span>${esc(t('dm_bus'))}</span><b style="font-size:14px;color:${I.bus==='dma'||I.bus==='cpu'?'var(--copy)':I.bus==='irq'?'var(--isr)':I.bus==='cfg'?'var(--poll)':'var(--muted)'}">${esc(busTxt)}</b>`;
+  // memory
+  const cell=(b,cl)=>`<div class="${cl}">${b?esc(String.fromCharCode(b)).replace(' ','␣'):'0'}</div>`;
+  $('dmSrc').innerHTML=src.map((b,k)=>cell(b,I.copying&&Math.floor(k/4)===I.words-1?'now':'')).join('');
+  $('dmDst').innerHTML=src.map((b,k)=>k<I.copied?cell(b,I.copying&&Math.floor(k/4)===I.words-1?'now':'full'):cell(0,'')).join('');
+  $('dmSrcA').textContent=hexA(DSRC);$('dmDstA').textContent=hexA(DDST);
+  // checks
+  const CL=D.checks.slice(-5).reverse();
+  $('dmChecks').innerHTML=CL.map((c,j)=>`<li class="${c.ok?'ok':'bad'}">${esc(t('dm_chk',c.s,c.ok?t('dm_ok'):t('dm_err'),c.k))}${!c.ok&&j===0?'<br>'+esc(t('dm_early')):''}</li>`).join('');
+  dmCode(step,I);dmTimeline(step);
+}
+function dmCode(step,I){
+  let L,act=[];
+  if(I.dma){
+    L=['static bool IRAM_ATTR onDone(...) {','  done = true;','  digitalWrite(LED, HIGH);','  return false;','}','','done = false;',
+       'esp_async_memcpy(dma, dst, src, N, onDone, NULL);  // 1','while (!done) {','  work++;                                         // 2','}','lcd.print(work);'];
+    if(step===1)act=[7];else if(I.copying)act=[8,9];else if(step===10)act=[0,1,2,3];else if(step===11)act=[11];
+  }else{
+    L=['uint32_t work = 0;','memcpy(dst, src, N);   // CPU','lcd.print(work);       // 0'];
+    if(step>=1&&step<=9)act=[1];else if(step===10)act=[2];
+  }
+  const cls=I.copying?(I.dma?'w':'c'):step===10&&I.dma?'':'k';
+  $('dmCode').innerHTML=L.map((s,k)=>`<span class="l${act.includes(k)?' act '+cls:''}">${codeHTML(s)||' '}</span>`).join('');
+}
+function dmTimeline(step){
+  const last=dmLast(),X0=80,w=(1000-X0-10)/last;
+  let o='';
+  o+=txt(10,40,'CPU',{'font-size':13,'font-weight':600});o+=txt(10,86,'DMA',{'font-size':13,'font-weight':600});
+  for(let s=1;s<=last;s++){
+    const I=dmInfo(s),x=X0+(s-1)*w,op=s<=step?1:.2;
+    const cc={setup:'var(--poll)',work:'var(--work)',isr:'var(--isr)',after:'var(--work)',copy:'var(--copy)',ret:'var(--work)'}[I.cpu];
+    o+=svgEl('rect',{x:x+1,y:22,width:w-2,height:28,rx:3,fill:cc,opacity:op});
+    o+=svgEl('rect',{x:x+1,y:68,width:w-2,height:28,rx:3,fill:I.dmaAct==='copy'?'var(--copy)':'var(--idle)',opacity:I.dmaAct==='copy'?op:op*.6});
+    if(s===step){o+=svgEl('rect',{x:x-1,y:18,width:w+2,height:82,rx:5,fill:'none',stroke:'var(--ink)','stroke-width':2});}
+  }
+  o+=txt(X0,114,'t →',{'font-size':11.5,fill:'var(--muted)'});
+  $('dmSvg').innerHTML=o;
+  const it=(c,l)=>`<span><span class="sw" style="background:${c}"></span>${esc(l)}</span>`;
+  $('dmLegend').innerHTML=(D.mode==='dma'?it('var(--poll)',t('dl_setup')):'')+it('var(--work)',t('lg_work'))+it('var(--copy)',t('lg_copy'))+(D.mode==='dma'?it('var(--isr)',t('dl_irq')):'')+it('var(--idle)',t('dl_idle'));
+}
+function dmInit(){
+  S.dma=Stepper(document.querySelector('[data-ctrl="dma"]'),()=>dmLast()+1,dmRender,800);
+  segInit($('dmMode'),v=>{D.mode=v;D.checks=[];segSync($('dmMode'),v);S.dma.reset();});
+  $('dmCheck').addEventListener('click',()=>{const I=dmInfo(S.dma.i);D.checks.push({s:S.dma.i,ok:I.copied===DN,k:I.copied});dmRender();});
+}
+
+/* ---------- kalkulator / calculator ---------- */
+const CA_PRE=[
+  {k:'cp_kb',v:[1000,1000,20,1]},{k:'cp_ser',v:[1000,1000,100000,1]},{k:'cp_ssd',v:[1000,1000,100000000,1]},
+  {k:'cp_dma',v:[1000,1000,100000000,4000]},{k:'cp_tim',v:[160,200,1000,1]}];
+let caSel=2;
+const caIds=['caMhz','caCyc','caRate','caPer'];
+function caFill(){
+  $('caPresets').innerHTML=CA_PRE.map((p,i)=>`<button data-i2="${i}" aria-pressed="${i===caSel}">${esc(t(p.k))}</button>`).join('');
+  $('caPresets').querySelectorAll('button').forEach(b=>b.onclick=()=>{caSel=+b.dataset.i2;CA_PRE[caSel].v.forEach((v,k)=>$(caIds[k]).value=v);caFill();caCalc();});
+}
+function caNum(id){const v=$(id).value.trim().replace(/[\s_\u00A0\u202F]/g,'').replace(',','.');const n=Number(v);return v!==''&&isFinite(n)&&n>0?n:null;}
+function caCalc(){
+  const [mhz,cyc,rate,per]=caIds.map(caNum);
+  if([mhz,cyc,rate,per].some(x=>x===null)){$('caErr').textContent=t('ca_err');return;}
+  $('caErr').textContent='';
+  const irq=rate/per,cps=irq*cyc,hz=mhz*1e6,pct=cps/hz*100;
+  const st=(k,v,cl)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
+  $('caStats').innerHTML=st('cs_irq',fmt(Math.round(irq*1000)/1000))+st('cs_cyc',fmt(Math.round(cps)))+st('cs_pct',fmtP(pct),pct>100?'bad':pct<5?'good':'')+st('cs_left',fmtP(Math.max(0,100-pct)),pct>=100?'bad':'');
+  const bar=$('caBar');bar.querySelector('i').style.width=Math.min(100,pct)+'%';
+  bar.querySelector('span').textContent=t('ca_bar',fmtP(pct));
+  $('caFormula').textContent=`${fmt(irq)} × ${fmt(cyc)} / ${fmt(hz)} × 100% = ${fmtP(pct)}`;
+  $('caNote').textContent=pct>100?t('ca_over',fmt(Math.ceil(pct/100))):pct>=5?t('ca_mid'):t('ca_low');
+}
+function caInit(){
+  CA_PRE[caSel].v.forEach((v,k)=>$(caIds[k]).value=v);
+  caIds.forEach(id=>$(id).addEventListener('input',()=>{caSel=-1;caFill();caCalc();}));
+}
+
+/* =====================================================================
+   aplikacja / app
+   ===================================================================== */
+const S={};
+const MODS=['i2c','mmio','gpio','poll','irq','dma'];
+let cur='i2c';
+try{const h=location.hash.slice(1);if(MODS.includes(h))cur=h;else{const s=localStorage.getItem('ioSimMod');if(MODS.includes(s))cur=s;}}catch(e){}
+function renderAll(){
+  i2cFill();S.i2c.go(S.i2c.i);
+  mmFill();S.mmio.go(S.mmio.i);
+  gpFill();gpRender();
+  poLegend();poRender();
+  irFill();S.irq.go(S.irq.i);
+  segSync($('dmMode'),D.mode);S.dma.go(S.dma.i);
+  caFill();caCalc();
+}
+function applyLang(){
+  document.documentElement.lang=lang;document.title=t('doc_title');
+  document.querySelectorAll('[data-i]').forEach(el=>{el.textContent=t(el.dataset.i);});
+  document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===lang)));
+  renderAll();
+}
+function showMod(m){
+  if(S[cur]&&S[cur].stop)S[cur].stop();
+  if(cur==='poll'&&m!=='poll'){poUp();poPause();}
+  cur=m;
+  MODS.forEach(k=>{$('mod-'+k).hidden=k!==m;});
+  document.querySelectorAll('#topics button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.mod===m)));
+  try{localStorage.setItem('ioSimMod',m);history.replaceState(null,'','#'+m);}catch(e){}
+}
+document.querySelectorAll('#topics button').forEach(b=>b.addEventListener('click',()=>showMod(b.dataset.mod)));
+document.querySelectorAll('.langs button').forEach(b=>b.addEventListener('click',()=>{
+  lang=b.dataset.lang;try{localStorage.setItem('ioSimLang',lang);}catch(e){}GP.last=null;applyLang();
+}));
+const typing=e=>{const tg=e.target;return tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable);};
+document.addEventListener('keydown',e=>{
+  if(typing(e)||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(cur==='poll'){
+    if(e.key===' '){e.preventDefault();if(!e.repeat)poDown();}
+    return;
+  }
+  const s=S[cur];if(!s)return;
+  if(e.key==='ArrowRight'){e.preventDefault();s.stop();s.next();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();s.prev();}
+  else if(e.key===' '&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();s.toggle();}
+});
+document.addEventListener('keyup',e=>{if(cur==='poll'&&e.key===' '){e.preventDefault();poUp();}});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(MODS.includes(h)&&h!==cur)showMod(h);});
+window.addEventListener('blur',()=>{if(cur==='poll')poUp();});
+
+i2cInit();mmInit();poInit();irInit();dmInit();caInit();
+applyLang();
+showMod(cur);
+})();
+</script>
+</body>
+</html>

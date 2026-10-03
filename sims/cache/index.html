@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<script>(function(){try{if(new URLSearchParams(location.search).get('embed')==='1')document.documentElement.classList.add('embed');}catch(e){}})();</script>
+<style>html.embed .wrap{max-width:none;padding:14px 18px 48px}html.embed .topbar h1,html.embed .langs{display:none}</style>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symulator cache direct-mapped</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --sunken:#EAEEF2; --ink:#16202B; --muted:#5B6673; --rule:#D5DBE1;
+  --tag:#6D4FC2; --tag-bg:#EEE9FB; --idx:#0E7F7B; --idx-bg:#E1F4F2; --off:#A86A12; --off-bg:#FBF0DC;
+  --hit:#1E7E4F; --hit-bg:#E2F3EA; --miss:#B8372B; --miss-bg:#FBE7E4; --focus:#2F6FDB;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542;
+    --tag:#B3A1F0; --tag-bg:#2A2248; --idx:#5FD0C9; --idx-bg:#123533; --off:#E8B25A; --off-bg:#3A2A10;
+    --hit:#5FD19A; --hit-bg:#15352A; --miss:#F08A7E; --miss-bg:#3E1C19; --focus:#7FA8F0;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1419; --surface:#171E26; --sunken:#1E2731; --ink:#E6EBF0; --muted:#93A0AD; --rule:#2B3542;
+  --tag:#B3A1F0; --tag-bg:#2A2248; --idx:#5FD0C9; --idx-bg:#123533; --off:#E8B25A; --off-bg:#3A2A10;
+  --hit:#5FD19A; --hit-bg:#15352A; --miss:#F08A7E; --miss-bg:#3E1C19; --focus:#7FA8F0;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header h1{font-size:26px;font-weight:600;margin:0 0 4px;letter-spacing:-0.01em}
+header p{margin:0;color:var(--muted);max-width:70ch}
+.layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;margin-top:22px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px}
+.side{display:flex;flex-direction:column;gap:14px}
+@media (min-width:901px){.side{position:sticky;top:calc(16px + env(safe-area-inset-top,0px))}}
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-size:16px;font-weight:600;margin:0 0 10px}
+label{display:block;font-size:13px;color:var(--muted);margin:0 0 4px}
+.field{margin-bottom:10px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+select,input{width:100%;font:inherit;font-family:var(--mono);font-size:14px;color:var(--ink);background:var(--sunken);border:1px solid var(--rule);border-radius:6px;padding:7px 9px}
+button{font:inherit;font-size:14px;font-weight:500;color:var(--ink);background:var(--surface);border:1px solid var(--rule);border-radius:6px;padding:7px 12px;cursor:pointer}
+button:hover{background:var(--sunken)}
+button.primary{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+button.primary:hover{opacity:.9}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted);margin:6px 0 0}
+.err{font-size:13px;color:var(--miss);margin:6px 0 0;min-height:1em}
+.presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+.presets button{padding:6px 0;font-size:13px}
+.mono{font-family:var(--mono)}
+.t{color:var(--tag)} .i{color:var(--idx)} .o{color:var(--off)}
+
+.addr-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.addr-big{font-family:var(--mono);font-size:28px;font-weight:500;letter-spacing:.02em}
+.badge{font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px}
+.badge.hit{background:var(--hit-bg);color:var(--hit)} .badge.miss{background:var(--miss-bg);color:var(--miss)}
+.bits-scroll{overflow-x:auto;margin:14px 0 6px}
+.bits{display:flex;gap:2px;font-family:var(--mono);font-size:14px;min-width:max-content}
+.bit{width:20px;text-align:center;padding:4px 0;border-radius:3px}
+.bit.t{background:var(--tag-bg)} .bit.i{background:var(--idx-bg)} .bit.o{background:var(--off-bg)}
+.bit.gap{margin-left:6px}
+.bitnums{display:flex;gap:2px;font-family:var(--mono);font-size:11px;color:var(--muted);min-width:max-content}
+.bitnums span{width:20px;text-align:center}
+.bitnums span.gap{margin-left:6px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-top:8px}
+.legend b{font-weight:500}
+.sw{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:0}
+.calc{margin-top:14px;font-family:var(--mono);font-size:14px;line-height:1.9;background:var(--sunken);border-radius:8px;padding:10px 14px;overflow-x:auto;white-space:nowrap}
+.why{margin-top:10px;font-size:14px}
+.empty{color:var(--muted);font-size:14px;margin:0}
+
+.tbl-scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{font-size:12px;font-weight:500;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid var(--rule);font-family:var(--mono);white-space:nowrap}
+tr.cur-hit td{background:var(--hit-bg)} tr.cur-miss td{background:var(--miss-bg)}
+td.dim{color:var(--muted)}
+.hm{font-weight:600} .hm.h{color:var(--hit)} .hm.m{color:var(--miss)}
+
+.grid-scroll{overflow-x:auto}
+.mgrid{display:grid;gap:3px;min-width:max-content}
+.mgrid .hd{font-size:11px;color:var(--idx);text-align:center;font-family:var(--mono);padding-bottom:2px}
+.mgrid .rl{font-size:11px;color:var(--tag);font-family:var(--mono);display:flex;align-items:center;justify-content:flex-end;padding-right:6px;white-space:nowrap}
+.cell{white-space:nowrap;font-family:var(--mono);font-size:12px;padding:7px 10px;text-align:center;border:1px solid var(--rule);border-radius:5px;background:var(--surface);color:var(--ink);cursor:pointer}
+.cell:hover{border-color:var(--muted)}
+.cell.col{background:var(--idx-bg)}
+.cell.in{background:var(--sunken);border-color:var(--idx);font-weight:500}
+.cell.now{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.stat{background:var(--sunken);border-radius:8px;padding:8px 12px}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:20px;font-weight:500}
+.hist-scroll{max-height:360px;overflow:auto}
+.code{margin:0;font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--sunken);border-radius:8px;padding:12px 16px;overflow-x:auto;white-space:pre}
+.code .c{color:var(--muted)} .code .k{color:var(--tag)} .code .n{color:var(--off);font-weight:500}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr)}.addr-big{font-size:22px}}
+@media (prefers-reduced-motion:no-preference){.flash{animation:fl .5s ease-out}@keyframes fl{from{outline:3px solid var(--focus)}to{outline:3px solid transparent}}}
+
+.progs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.progs button{padding:8px 6px;font-size:13px;text-align:left;line-height:1.3}
+.progs button small{display:block;font-weight:400;color:var(--muted);font-size:12px}
+.progs button.on{border-color:var(--ink);background:var(--sunken)}
+.progs button.on small{color:var(--ink)}
+details{margin-top:8px;font-size:13px;color:var(--muted)} summary{cursor:pointer}
+.code-h{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:14px 0 6px}
+.code-h:first-of-type{margin-top:0}
+.code-h h3{font-size:14px;font-weight:600;margin:0}
+.code-h button{padding:4px 10px;font-size:13px}
+td.w{font-size:13px} td.w.dim{color:var(--muted)}
+td.w.acc{outline:2px solid var(--ink);outline-offset:-3px;border-radius:4px;font-weight:500}
+.valline{margin-top:6px;font-size:14px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.langs{display:flex;gap:6px}
+.langs button{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:13px}
+.langs button svg{width:22px;height:14px;border-radius:2px;box-shadow:0 0 0 1px var(--rule);display:block}
+.langs button[aria-pressed="true"]{border-color:var(--ink);background:var(--sunken)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar">
+  <div>
+    <h1 data-i="title"></h1>
+    <p data-i="intro"></p>
+  </div>
+  <div class="langs" role="group" aria-label="Język / Language">
+    <button data-lang="pl" aria-pressed="false"><svg viewBox="0 0 16 10" aria-hidden="true"><rect width="16" height="5" fill="#fff"/><rect y="5" width="16" height="5" fill="#DC143C"/></svg>PL</button>
+    <button data-lang="en" aria-pressed="false"><svg viewBox="0 0 60 30" aria-hidden="true"><clipPath id="ukS"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="ukT"><path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z"/></clipPath><g clip-path="url(#ukS)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" clip-path="url(#ukT)" stroke="#C8102E" stroke-width="4"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="side">
+  <section class="panel">
+    <h2 data-i="h_build"></h2>
+    <div class="two">
+      <div class="field"><label for="lines" data-i="l_lines"></label>
+        <select id="lines"><option>1</option><option>2</option><option selected>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select></div>
+      <div class="field"><label for="bsize" data-i="l_bsize"></label>
+        <select id="bsize" style="font-family:var(--sans)"><option value="4" selected></option><option value="8"></option><option value="16"></option><option value="32"></option><option value="64"></option></select></div>
+    </div>
+    <p class="note" id="capacity"></p>
+    <p class="note" data-i="note_build"></p>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_progs"></h2>
+    <div class="progs">
+      <button data-p="1">Program 1<small></small></button>
+      <button data-p="2">Program 2<small></small></button>
+      <button data-p="3">Program 3<small></small></button>
+      <button data-p="4">Program 4<small></small></button>
+    </div>
+    <p class="note" id="progDesc" style="margin:0"></p>
+    <details id="progExp" style="display:none"><summary data-i="exp_summary"></summary><div id="progExpBody" style="margin-top:6px"></div></details>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_run"></h2>
+    <div class="row"><button id="stepBtn" data-i="b_step"></button><button class="primary" id="allBtn" data-i="b_all"></button><button id="restartBtn" data-i="b_restart"></button></div>
+    <p class="note" id="queueInfo"></p>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_single"></h2>
+    <div class="field"><label for="addr" data-i="l_addr"></label>
+      <input id="addr" value="0x10000000" autocomplete="off" spellcheck="false"></div>
+    <div class="row"><button class="primary" id="readBtn" data-i="b_read"></button></div>
+    <p class="err" id="addrErr"></p>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_custom"></h2>
+    <div class="field"><label for="sStart" data-i="l_start"></label><input id="sStart" value="0x10000000"></div>
+    <div class="two">
+      <div class="field"><label for="sStride" data-i="l_stride"></label><input id="sStride" value="4"></div>
+      <div class="field"><label for="sN" data-i="l_n"></label><input id="sN" value="8"></div>
+    </div>
+    <div class="field"><label for="sPasses" data-i="l_passes"></label><input id="sPasses" value="2"></div>
+    <div class="row"><button id="loadBtn" data-i="b_load"></button></div>
+    <p class="err" id="seqErr"></p>
+  </section>
+</aside>
+
+<main class="main">
+  <section class="panel" id="codePanel" style="display:none">
+    <h2 id="codeTitle"></h2>
+    <div class="code-h"><h3>C</h3><button data-copy="c" data-i="b_copy"></button></div>
+    <pre class="code" id="cBox"></pre>
+    <div class="code-h"><h3 data-i="asm_h"></h3><button data-copy="asm" data-i="b_copy"></button></div>
+    <pre class="code" id="asmBox"></pre>
+    <p class="note" id="codeNote"></p>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_last"></h2>
+    <div id="last"></div>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_cache"></h2>
+    <div class="tbl-scroll"><table>
+      <thead id="cacheHead"></thead>
+      <tbody id="cacheBody"></tbody>
+    </table></div>
+    <p class="note" data-i="cache_note"></p>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_grid"></h2>
+    <p class="note" style="margin:0 0 10px" data-i="grid_note"></p>
+    <div class="grid-scroll"><div class="mgrid" id="mgrid"></div></div>
+    <div class="row" style="margin-top:10px"><button id="upBtn" data-i="b_up"></button><button id="downBtn" data-i="b_down"></button></div>
+  </section>
+
+  <section class="panel">
+    <h2 data-i="h_hist"></h2>
+    <div class="stats">
+      <div class="stat"><span data-i="st_n"></span><b id="stN">0</b></div>
+      <div class="stat"><span data-i="st_h"></span><b id="stH">0</b></div>
+      <div class="stat"><span data-i="st_m"></span><b id="stM">0</b></div>
+      <div class="stat"><span>Hit rate</span><b id="stR">–</b></div>
+    </div>
+    <div class="hist-scroll"><table>
+      <thead id="histHead"></thead>
+      <tbody id="histBody"></tbody>
+    </table></div>
+  </section>
+</main>
+</div>
+</div>
+
+<script>
+(function(){
+const MAXA=0xFFFFFFFF, ROWS=8, BASE=0x10000000;
+let L=4,B=4,lines=[],hist=[],seen=new Set(),queue=[],total=0,last=null,rowBase=null;
+let mem=new Map(), source=null, code=null, lang='pl';
+const $=id=>document.getElementById(id);
+const log2=n=>Math.round(Math.log2(n));
+const hex=(n,w)=>'0x'+n.toString(16).toUpperCase().padStart(w||1,'0');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+/* ---------- tłumaczenia / translations ---------- */
+const T={
+pl:{
+  doc_title:'Symulator cache direct-mapped',
+  title:'Symulator cache direct-mapped',
+  intro:'Wybierz program albo wpisz adres i zobacz, do którego bloku, linii i z jakim tagiem trafia każdy odczyt. Cache pamięta, co już wczytał, więc kolejne odczyty dają hit albo miss tak jak w Ripes.',
+  h_build:'Budowa cache', l_lines:'Liczba linii', l_bsize:'Rozmiar bloku',
+  note_build:'Zmiana budowy czyści cache i uruchamia wybrany program od początku.',
+  h_progs:'Programy', exp_summary:'Pokaż przewidywany hit rate',
+  prog_hint:'Wybierz program. Pojawi się jego kod w C i w asemblerze RISC-V, a odczyty trafią do kolejki.',
+  custom_loaded:'Załadowano własną sekwencję. Wybierz program, żeby wrócić do gotowych przykładów.',
+  h_run:'Wykonanie', b_step:'Krok', b_all:'Wykonaj wszystko', b_restart:'Od początku',
+  h_single:'Pojedynczy odczyt', l_addr:'Adres (hex z 0x albo dziesiętnie)', b_read:'Odczytaj',
+  h_custom:'Własna sekwencja', l_start:'Adres początkowy', l_stride:'Krok (bajty)', l_n:'Odczytów na przebieg', l_passes:'Liczba przebiegów', b_load:'Załaduj',
+  asm_h:'RISC-V (do wklejenia w Ripes)', b_copy:'Kopiuj', copied:'Skopiowano',
+  h_last:'Ostatni odczyt', h_cache:'Zawartość cache',
+  cache_note:'Obramowane słowo to to, które odczytał ostatni <span class="mono">lw</span>. Słowa bez nazwy nie należą do żadnej tablicy programu i mają wartość 0.',
+  h_grid:'Pamięć ułożona w kolumny',
+  grid_note:'Kolumna to <span class="i">linia</span>, wiersz to <span class="t">tag</span>. Obramowane bloki są teraz w cache. Kliknij blok, żeby go odczytać.',
+  b_up:'Wiersze wyżej', b_down:'Wiersze niżej',
+  h_hist:'Historia odczytów', st_n:'Odczyty', st_h:'Hity', st_m:'Missy',
+  th_line:'Linia', th_block:'Blok', th_addrs:'Adresy', th_word:'Słowo', empty_line:'pusta',
+  th_addr:'Adres', th_read:'Odczytano', th_res:'Wynik', th_what:'Co się stało', no_reads:'Brak odczytów.',
+  line:'linia', block:'blok',
+  last_empty:'Wybierz program i kliknij „Krok”, wpisz adres w „Pojedynczy odczyt” albo kliknij blok w siatce pamięci.',
+  lw_reads:'lw odczytuje:', bits:'bity', idx_label:'index (linia)', idx_zero:'index: 0 bitów (jedna linia)',
+  f_block:'blok &nbsp;= ⌊adres / rozmiar bloku⌋', f_line:'linia = blok mod liczba linii', f_tag:'tag &nbsp;&nbsp;= ⌊blok / liczba linii⌋', f_off:'offset = adres mod rozmiar bloku',
+  byte_in_line:'bajt w linii', word_no:'słowo nr ',
+  q_none:'Nic nie jest załadowane. Wybierz program albo własną sekwencję.',
+  q_prog:(a,b)=>'Wykonano '+a+' z '+b+' odczytów.', q_done:b=>'Koniec: wykonano wszystkie '+b+' odczytów.',
+  why_hit:(l,t)=>'linia '+l+' ma już tag '+t, why_empty:'linia była pusta', why_first_empty:'pierwszy odczyt bloku, linia była pusta',
+  why_seen:'blok był już w cache, ale został wyrzucony; ', why_first:'pierwszy odczyt bloku; ', why_evict:(b,t)=>'wyrzuca blok '+b+' (tag '+t+')',
+  capacity:(l,w,nw,b,ib,ob)=>'Pojemność: '+l+' '+linesW(l)+' × '+w+' = '+nw+' '+wordsW(nw)+' = <span class="mono">'+b+' B</span>. Słowo ma 4 B, więc najmniejszy blok to 1 słowo. Adres: <span class="t">tag</span> | <span class="i">index '+ib+' b</span> | <span class="o">offset '+ob+' b</span>.',
+  expect_head:l=>'Przy '+l+' '+(l===1?'linii':'liniach')+':', expect_block:'blok',
+  code_note:(l,w,sl,wl)=>'W Ripes, zakładka Cache, data cache: 1 way, '+l+' '+linesW(l)+' ('+sl+' w polu 2^N Sets), '+w+' na linię ('+wl+' w polu 2^N Words per Line). Tablice zaczynają się pod 0x10000000, domyślnym początkiem sekcji .data w Ripes. Rejestr x10 trzyma sum.',
+  e_addr:'Podaj adres od 0 do 0xFFFFFFFF, np. 0x10000040 albo 64.',
+  e_fields:'Uzupełnij wszystkie pola liczbami (adres może być w hex).', e_base:'Adres początkowy musi być co najmniej 0x10000000 (początek arr).',
+  e_align:'lw czyta całe słowa, więc adres i krok muszą być wielokrotnością 4.', e_max:'Maksymalnie 5000 odczytów naraz.',
+  e_over:'Sekwencja wychodzi poza 0xFFFFFFFF.', e_big:'Tablica wyszłaby większa niż 4 MB. Zmniejsz krok albo liczbę odczytów.',
+  custom_title:(st,sd,n,p)=>'Własna sekwencja: start '+st+', krok '+sd+' B, '+n+' × '+p,
+  c_zeros:'// same zera', c_passes:'// przebiegi', c_stride:(sd,w)=>'// krok '+sd+' B = '+w,
+  a_passes:'r: liczba przebiegów', a_start:k=>'start: &arr['+k+']', a_n:'i: odczytów na przebieg', a_stride:sd=>'krok: +'+sd+' B', a_words:k=>k+' '+wordsW(k),
+  tip:(b,a0,a1,nm)=>'blok '+b+' | adresy '+a0+' – '+a1+(nm?' | zaczyna się od '+nm:'')
+},
+en:{
+  doc_title:'Direct-mapped cache simulator',
+  title:'Direct-mapped cache simulator',
+  intro:'Pick a program or type an address to see which block, line and tag each read lands in. The cache remembers what it has loaded, so later reads hit or miss just like in Ripes.',
+  h_build:'Cache structure', l_lines:'Number of lines', l_bsize:'Block size',
+  note_build:'Changing the structure clears the cache and restarts the selected program.',
+  h_progs:'Programs', exp_summary:'Show expected hit rate',
+  prog_hint:'Pick a program. Its C and RISC-V code will appear and its reads will be queued.',
+  custom_loaded:'Custom sequence loaded. Pick a program to go back to the examples.',
+  h_run:'Run', b_step:'Step', b_all:'Run all', b_restart:'Restart',
+  h_single:'Single read', l_addr:'Address (hex with 0x or decimal)', b_read:'Read',
+  h_custom:'Custom sequence', l_start:'Start address', l_stride:'Stride (bytes)', l_n:'Reads per pass', l_passes:'Number of passes', b_load:'Load',
+  asm_h:'RISC-V (paste into Ripes)', b_copy:'Copy', copied:'Copied',
+  h_last:'Last read', h_cache:'Cache contents',
+  cache_note:'The outlined word is the one read by the last <span class="mono">lw</span>. Words without a name are not part of any program array and hold 0.',
+  h_grid:'Memory laid out in columns',
+  grid_note:'A column is a <span class="i">line</span>, a row is a <span class="t">tag</span>. Outlined blocks are in the cache now. Click a block to read it.',
+  b_up:'Rows up', b_down:'Rows down',
+  h_hist:'Read history', st_n:'Reads', st_h:'Hits', st_m:'Misses',
+  th_line:'Line', th_block:'Block', th_addrs:'Addresses', th_word:'Word', empty_line:'empty',
+  th_addr:'Address', th_read:'Value read', th_res:'Result', th_what:'What happened', no_reads:'No reads yet.',
+  line:'line', block:'block',
+  last_empty:'Pick a program and click “Step”, type an address under “Single read”, or click a block in the memory grid.',
+  lw_reads:'lw reads:', bits:'bits', idx_label:'index (line)', idx_zero:'index: 0 bits (one line)',
+  f_block:'block &nbsp;= ⌊address / block size⌋', f_line:'line &nbsp;&nbsp;= block mod number of lines', f_tag:'tag &nbsp;&nbsp;&nbsp;= ⌊block / number of lines⌋', f_off:'offset = address mod block size',
+  byte_in_line:'byte in the line', word_no:'word ',
+  q_none:'Nothing loaded. Pick a program or a custom sequence.',
+  q_prog:(a,b)=>'Done '+a+' of '+b+' reads.', q_done:b=>'Finished: all '+b+' reads done.',
+  why_hit:(l,t)=>'line '+l+' already holds tag '+t, why_empty:'the line was empty', why_first_empty:'first read of this block, the line was empty',
+  why_seen:'the block was in the cache before but got evicted; ', why_first:'first read of this block; ', why_evict:(b,t)=>'evicts block '+b+' (tag '+t+')',
+  capacity:(l,w,nw,b,ib,ob)=>'Capacity: '+l+' '+linesW(l)+' × '+w+' = '+nw+' '+wordsW(nw)+' = <span class="mono">'+b+' B</span>. A word is 4 B, so the smallest block is 1 word. Address: <span class="t">tag</span> | <span class="i">index '+ib+' b</span> | <span class="o">offset '+ob+' b</span>.',
+  expect_head:l=>'With '+l+' '+linesW(l)+':', expect_block:'block',
+  code_note:(l,w,sl,wl)=>'In Ripes, Cache tab, data cache: 1 way, '+l+' '+linesW(l)+' ('+sl+' in the 2^N Sets field), '+w+' per line ('+wl+' in the 2^N Words per Line field). Arrays start at 0x10000000, the default start of the .data section in Ripes. Register x10 holds sum.',
+  e_addr:'Enter an address from 0 to 0xFFFFFFFF, e.g. 0x10000040 or 64.',
+  e_fields:'Fill in all fields with numbers (the address can be hex).', e_base:'The start address must be at least 0x10000000 (start of arr).',
+  e_align:'lw reads whole words, so the address and stride must be multiples of 4.', e_max:'At most 5000 reads at once.',
+  e_over:'The sequence goes past 0xFFFFFFFF.', e_big:'The array would be larger than 4 MB. Reduce the stride or the number of reads.',
+  custom_title:(st,sd,n,p)=>'Custom sequence: start '+st+', stride '+sd+' B, '+n+' × '+p,
+  c_zeros:'// all zeros', c_passes:'// passes', c_stride:(sd,w)=>'// stride '+sd+' B = '+w,
+  a_passes:'r: number of passes', a_start:k=>'start: &arr['+k+']', a_n:'i: reads per pass', a_stride:sd=>'stride: +'+sd+' B', a_words:k=>k+' '+wordsW(k),
+  tip:(b,a0,a1,nm)=>'block '+b+' | addresses '+a0+' – '+a1+(nm?' | starts with '+nm:'')
+}};
+const t=k=>T[lang][k];
+function wordsW(n){if(lang==='en')return n===1?'word':'words';return n===1?'słowo':((n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'słowa':'słów');}
+function linesW(n){if(lang==='en')return n===1?'line':'lines';return n===1?'linia':((n%10>=2&&n%10<=4&&(n%100<10||n%100>=20))?'linie':'linii');}
+const words=b=>(b/4)+' '+wordsW(b/4);
+const pct=x=>{const s=(Math.round(x*1000)/10).toString();return (lang==='pl'?s.replace('.',','):s)+'%';};
+
+function parse(s){
+  s=String(s).trim().replace(/_/g,'');
+  let v=null;
+  if(/^0x[0-9a-f]+$/i.test(s)) v=parseInt(s.slice(2),16);
+  else if(/^\d+$/.test(s)) v=parseInt(s,10);
+  if(v===null||!isFinite(v)||v<0||v>MAXA) return null;
+  return v;
+}
+function word(addr){const a=addr-(addr%4);return mem.get(a)||{name:'',value:0};}
+function wordLabel(w){return w.name?w.name+' = '+w.value:hex(w.value,8);}
+
+/* ---------- programy / programs ---------- */
+function layout(arrs){
+  const m=new Map(),start={};let a=BASE;
+  arrs.forEach(r=>{start[r.name]=a;
+    if(r.rows){for(let i=0;i<r.rows;i++)for(let j=0;j<r.cols;j++){m.set(a,{name:r.name+'['+i+']['+j+']',value:r.f(i,j)});a+=4;}}
+    else{for(let i=0;i<r.cols;i++){m.set(a,{name:r.name+'['+i+']',value:r.f(i)});a+=4;}}
+  });
+  return {m,start};
+}
+function cDecl(r){
+  if(r.rows){
+    const rows=[];for(let i=0;i<r.rows;i++){const v=[];for(let j=0;j<r.cols;j++)v.push(String(r.f(i,j)).padStart(2));rows.push('    {'+v.join(', ')+'}');}
+    return 'int '+r.name+'['+r.rows+']['+r.cols+'] = {\n'+rows.join(',\n')+'\n};';
+  }
+  const v=[];for(let i=0;i<r.cols;i++)v.push(r.f(i));
+  return 'int '+r.name+'['+r.cols+'] = {'+v.join(', ')+'};';
+}
+function asmData(r){
+  const out=[];
+  if(r.rows){for(let i=0;i<r.rows;i++){const v=[];for(let j=0;j<r.cols;j++)v.push(r.f(i,j));out.push([i?'':r.name+':','.word '+v.join(', '),'# '+r.name+'['+i+'][…]']);}}
+  else{const v=[];for(let i=0;i<r.cols;i++)v.push(r.f(i));for(let k=0;k<v.length;k+=8)out.push([k?'':r.name+':','.word '+v.slice(k,k+8).join(', '),'# '+r.name+'['+k+'…'+Math.min(k+7,v.length-1)+']']);}
+  return out;
+}
+function asmText(dataRows,textRows){
+  const rows=[['','.data',''],...dataRows,['','.text',''],...textRows].map(r=>[r[0],r[1],r[2]?(r[2].startsWith('#')?r[2]:'# '+r[2]):'']);
+  const lw=Math.max(...rows.map(r=>r[0].length))+1;
+  const cw=Math.max(...rows.map(r=>r[1].length))+3;
+  return rows.map(r=>{const dir=r[1]==='.data'||r[1]==='.text';const s=dir?r[1]:(r[0].padEnd(lw)+r[1]);return r[2]&&!dir?s.padEnd(lw+cw)+r[2]:s;}).join('\n');
+}
+const tr=o=>typeof o==='string'?o:o[lang];
+const A4=[{name:'a',cols:4,f:i=>i+1}];
+const A16=[{name:'a',cols:16,f:i=>i+1}];
+const M84=[{name:'m',rows:8,cols:4,f:(i,j)=>10*i+j}];
+const PROGS={
+  1:{sub:{pl:'tablica dwa razy',en:'array twice'},arrs:A4,
+    desc:{pl:'Sumuje 4 kolejne elementy tablicy, a potem robi to jeszcze raz. Drugi przebieg czyta to samo co pierwszy (lokalność czasowa), a sąsiednie elementy leżą obok siebie w pamięci (lokalność przestrzenna).',
+          en:'Sums 4 consecutive array elements, then does it again. The second pass reads the same data as the first (temporal locality), and neighbouring elements sit next to each other in memory (spatial locality).'},
+    acc:s=>{const r=[];for(let k=0;k<2;k++)for(let i=0;i<4;i++)r.push(s.a+4*i);return r;},
+    c:{pl:'int sum = 0;\nfor (int r = 0; r < 2; r++)        // dwa przebiegi\n    for (int i = 0; i < 4; i++)    // element po elemencie\n        sum += a[i];',
+       en:'int sum = 0;\nfor (int r = 0; r < 2; r++)        // two passes\n    for (int i = 0; i < 4; i++)    // element by element\n        sum += a[i];'},
+    asm:[['','li   x9, 2',{pl:'r: dwa przebiegi',en:'r: two passes'}],['outer:','la   x5, a','p = &a[0]'],['','li   x6, 4',{pl:'i: 4 elementy',en:'i: 4 elements'}],['loop:','lw   x7, 0(x5)','x7 = a[i]'],['','add  x10, x10, x7','sum += a[i]'],['','addi x5, x5, 4',{pl:'i+1: następne słowo (+4 B)',en:'i+1: next word (+4 B)'}],['','addi x6, x6, -1',''],['','bnez x6, loop',''],['','addi x9, x9, -1',''],['','bnez x9, outer','']]},
+  2:{sub:{pl:'co czwarty element',en:'every 4th element'},arrs:A16,
+    desc:{pl:'Sumuje tylko a[0], a[4], a[8] i a[12], dwa razy. Kolejne odczyty są od siebie o 16 B, więc nie korzystają z sąsiadów w bloku, a przy małym bloku trafiają w tę samą linię.',
+          en:'Sums only a[0], a[4], a[8] and a[12], twice. Consecutive reads are 16 B apart, so they get no help from neighbours in the block, and with a small block they land in the same line.'},
+    acc:s=>{const r=[];for(let k=0;k<2;k++)for(let i=0;i<16;i+=4)r.push(s.a+4*i);return r;},
+    c:{pl:'int sum = 0;\nfor (int r = 0; r < 2; r++)        // dwa przebiegi\n    for (int i = 0; i < 16; i += 4) // co czwarty element\n        sum += a[i];',
+       en:'int sum = 0;\nfor (int r = 0; r < 2; r++)        // two passes\n    for (int i = 0; i < 16; i += 4) // every 4th element\n        sum += a[i];'},
+    asm:[['','li   x9, 2',{pl:'r: dwa przebiegi',en:'r: two passes'}],['outer:','la   x5, a','p = &a[0]'],['','li   x6, 4',{pl:'4 odczyty: a[0], a[4], a[8], a[12]',en:'4 reads: a[0], a[4], a[8], a[12]'}],['loop:','lw   x7, 0(x5)','x7 = a[i]'],['','add  x10, x10, x7','sum += a[i]'],['','addi x5, x5, 16',{pl:'i+4: przeskok o 4 słowa (+16 B)',en:'i+4: skip 4 words (+16 B)'}],['','addi x6, x6, -1',''],['','bnez x6, loop',''],['','addi x9, x9, -1',''],['','bnez x9, outer','']]},
+  3:{sub:{pl:'macierz wierszami',en:'matrix by rows'},arrs:M84,
+    desc:{pl:'Sumuje macierz 8 × 4 wiersz po wierszu. W C macierz leży w pamięci wierszami, więc kolejne odczyty to kolejne słowa (+4 B).',
+          en:'Sums an 8 × 4 matrix row by row. C stores a matrix row by row, so consecutive reads are consecutive words (+4 B).'},
+    acc:s=>{const r=[];for(let i=0;i<8;i++)for(let j=0;j<4;j++)r.push(s.m+4*(4*i+j));return r;},
+    c:{pl:'int sum = 0;\nfor (int i = 0; i < 8; i++)        // wiersze\n    for (int j = 0; j < 4; j++)    // kolumny\n        sum += m[i][j];',
+       en:'int sum = 0;\nfor (int i = 0; i < 8; i++)        // rows\n    for (int j = 0; j < 4; j++)    // columns\n        sum += m[i][j];'},
+    asm:[['','la   x5, m',{pl:'x5 = &m[i][0], zaczynamy od i = 0',en:'x5 = &m[i][0], start with i = 0'}],['','li   x8, 8',{pl:'i: 8 wierszy',en:'i: 8 rows'}],['rows:','mv   x11, x5','p = &m[i][0]'],['','li   x6, 4',{pl:'j: 4 kolumny',en:'j: 4 columns'}],['cols:','lw   x7, 0(x11)','x7 = m[i][j]'],['','add  x10, x10, x7','sum += m[i][j]'],['','addi x11, x11, 4',{pl:'j+1: sąsiednie słowo (+4 B)',en:'j+1: next word (+4 B)'}],['','addi x6, x6, -1',''],['','bnez x6, cols',''],['','addi x5, x5, 16',{pl:'i+1: następny wiersz (+16 B)',en:'i+1: next row (+16 B)'}],['','addi x8, x8, -1',''],['','bnez x8, rows','']]},
+  4:{sub:{pl:'macierz kolumnami',en:'matrix by columns'},arrs:M84,
+    desc:{pl:'Ta sama macierz i ta sama suma, ale kolumna po kolumnie. Każdy kolejny odczyt przeskakuje o cały wiersz (+16 B), więc sąsiedzi w bloku czekają, aż wrócimy do nich w następnej kolumnie.',
+          en:'Same matrix and same sum, but column by column. Each read jumps a whole row (+16 B), so the neighbours in a block wait until we come back for them in the next column.'},
+    acc:s=>{const r=[];for(let j=0;j<4;j++)for(let i=0;i<8;i++)r.push(s.m+4*(4*i+j));return r;},
+    c:{pl:'int sum = 0;\nfor (int j = 0; j < 4; j++)        // kolumny\n    for (int i = 0; i < 8; i++)    // wiersze\n        sum += m[i][j];',
+       en:'int sum = 0;\nfor (int j = 0; j < 4; j++)        // columns\n    for (int i = 0; i < 8; i++)    // rows\n        sum += m[i][j];'},
+    asm:[['','la   x5, m',{pl:'x5 = &m[0][j], zaczynamy od j = 0',en:'x5 = &m[0][j], start with j = 0'}],['','li   x6, 4',{pl:'j: 4 kolumny',en:'j: 4 columns'}],['cols:','mv   x11, x5','p = &m[0][j]'],['','li   x8, 8',{pl:'i: 8 wierszy',en:'i: 8 rows'}],['rows:','lw   x7, 0(x11)','x7 = m[i][j]'],['','add  x10, x10, x7','sum += m[i][j]'],['','addi x11, x11, 16',{pl:'i+1: następny wiersz (+16 B)',en:'i+1: next row (+16 B)'}],['','addi x8, x8, -1',''],['','bnez x8, rows',''],['','addi x5, x5, 4',{pl:'j+1: następna kolumna (+4 B)',en:'j+1: next column (+4 B)'}],['','addi x6, x6, -1',''],['','bnez x6, cols','']]}
+};
+function buildProg(id){
+  const P=PROGS[id],lay=layout(P.arrs);
+  const dataRows=[];P.arrs.forEach(r=>dataRows.push(...asmData(r)));
+  return {mem:lay.m,accesses:P.acc(lay.start),title:'Program '+id+': '+tr(P.sub),
+    c:P.arrs.map(cDecl).join('\n')+'\n\n'+tr(P.c),
+    asm:asmText(dataRows,P.asm.map(r=>[r[0],r[1],tr(r[2])]))};
+}
+function buildCustom(st,sd,n,p){
+  const off=(st-BASE)/4,S=sd/4,K=off+(n-1)*S+1;
+  const m=new Map();for(let k=0;k<K;k++)m.set(BASE+4*k,{name:'arr['+k+']',value:0});
+  const acc=[];for(let k=0;k<p;k++)for(let j=0;j<n;j++)acc.push(st+j*sd);
+  const idx=off?(off+' + i * '+S):(S===1?'i':'i * '+S);
+  const c='int arr['+K+'];                     '+t('c_zeros')+'\nint sum = 0;\nfor (int r = 0; r < '+p+'; r++)        '+t('c_passes')+'\n    for (int i = 0; i < '+n+'; i++)\n        sum += arr['+idx+'];      '+t('c_stride')(sd,words(sd));
+  const r=[['','li   x9, '+p,t('a_passes')],['outer:','la   x5, arr','p = &arr[0]']];
+  if(off) r.push(['','addi x5, x5, '+(off*4),t('a_start')(off)]);
+  r.push(['','li   x6, '+n,t('a_n')],['loop:','lw   x7, 0(x5)','x7 = arr[…]'],['','add  x10, x10, x7','sum += …']);
+  if(sd<=2047) r.push(['','addi x5, x5, '+sd,t('a_stride')(sd)]); else r.push(['','li   x12, '+sd,''],['','add  x5, x5, x12',t('a_stride')(sd)]);
+  r.push(['','addi x6, x6, -1',''],['','bnez x6, loop',''],['','addi x9, x9, -1',''],['','bnez x9, outer','']);
+  return {mem:m,accesses:acc,title:t('custom_title')(hex(st,8),sd,n,p),c,asm:asmText([['arr:','.zero '+(K*4),t('a_words')(K)]],r)};
+}
+function build(){return source.type==='prog'?buildProg(source.id):buildCustom(...source.args);}
+
+/* ---------- symulacja / simulation ---------- */
+function simRate(acc,l,b){const c=Array.from({length:l},()=>({v:0,t:0}));let h=0;acc.forEach(a=>{const bl=Math.floor(a/b),i=bl%l,tg=Math.floor(bl/l);if(c[i].v&&c[i].t===tg)h++;else c[i]={v:1,t:tg};});return acc.length?h/acc.length:0;}
+function resetCache(){
+  lines=Array.from({length:L},()=>({v:false,tag:0,block:0}));
+  hist=[];seen=new Set();last=null;rowBase=null;
+}
+function restart(){
+  resetCache();
+  if(source){const b=build();mem=b.mem;queue=b.accesses.slice();total=queue.length;code=b;}
+  else{queue=[];total=0;}
+  render();
+}
+function access(addr){
+  const block=Math.floor(addr/B), line=block%L, tag=Math.floor(block/L), e=lines[line];
+  const hit=e.v&&e.tag===tag;
+  const why={hit,line,tag,empty:!e.v,seen:seen.has(block),eb:e.block,et:e.tag};
+  if(!hit){e.v=true;e.tag=tag;e.block=block;}
+  seen.add(block);
+  last={addr,block,line,tag,hit,why,w:word(addr)};
+  hist.push(last);
+}
+function whyText(w){
+  if(w.hit) return t('why_hit')(w.line,hex(w.tag));
+  if(w.empty) return w.seen?t('why_empty'):t('why_first_empty');
+  return (w.seen?t('why_seen'):t('why_first'))+t('why_evict')(w.eb,hex(w.et));
+}
+
+/* ---------- widok / view ---------- */
+function hl(text,cm,kw){
+  return text.split('\n').map(line=>{
+    const i=line.indexOf(cm);const cd=i<0?line:line.slice(0,i),com=i<0?'':line.slice(i);
+    let h=esc(cd).replace(kw,'<span class="k">$1</span>').replace(/(\.data|\.text|\.word|\.zero)/g,'<span class="n">$1</span>');
+    return h+(com?'<span class="c">'+esc(com)+'</span>':'');
+  }).join('\n');
+}
+function renderCode(){
+  if(!code){$('codePanel').style.display='none';return;}
+  $('codeTitle').textContent=code.title;
+  $('cBox').innerHTML=hl(code.c,'//',/\b(int|for)\b/g);
+  $('asmBox').innerHTML=hl(code.asm,'#',/\b(li|la|lw|add|addi|bnez|mv)\b/g);
+  $('codeNote').textContent=t('code_note')(L,words(B),log2(L),log2(B/4));
+  $('codePanel').style.display='';
+}
+function renderSide(){
+  $('capacity').innerHTML=t('capacity')(L,words(B),L*B/4,L*B,log2(L),log2(B));
+  if(!source) $('progDesc').textContent=t('prog_hint');
+  else if(source.type==='prog') $('progDesc').textContent=tr(PROGS[source.id].desc);
+  else $('progDesc').textContent=t('custom_loaded');
+  if(source&&source.type==='prog'&&code){
+    $('progExp').style.display='';
+    $('progExpBody').innerHTML=t('expect_head')(L)+'<br>'+[4,16].map(b=>t('expect_block')+' '+words(b)+': <b class="mono">'+pct(simRate(code.accesses,L,b))+'</b>').join('<br>');
+  } else $('progExp').style.display='none';
+  $('queueInfo').textContent=!source?t('q_none'):(queue.length?t('q_prog')(total-queue.length,total):t('q_done')(total));
+  document.querySelectorAll('.progs button').forEach(b=>b.classList.toggle('on',!!source&&source.type==='prog'&&source.id===b.dataset.p));
+}
+function renderLast(){
+  const el=$('last');
+  if(!last){el.innerHTML='<p class="empty">'+t('last_empty')+'</p>';return;}
+  const a=last.addr, ob=log2(B), ib=log2(L);
+  let bits='',nums='';
+  for(let k=31;k>=0;k--){
+    const b=Math.floor(a/Math.pow(2,k))%2;
+    const c=k<ob?'o':(k<ob+ib?'i':'t');
+    const g=(k<31&&(k+1)%4===0)?' gap':'';
+    bits+='<span class="bit '+c+g+'">'+b+'</span>';
+    nums+='<span class="'+g.trim()+'">'+(k%4===0?k:'')+'</span>';
+  }
+  const res=last.hit?'<span class="badge hit">HIT</span>':'<span class="badge miss">MISS</span>';
+  el.innerHTML=
+    '<div class="addr-head"><div class="addr-big">'+hex(a,8)+' <span style="font-size:15px;color:var(--muted)">= '+a+'</span></div>'+res+'</div>'+
+    '<p class="valline">'+t('lw_reads')+' <b class="mono">'+esc(wordLabel(last.w))+'</b></p>'+
+    '<div class="bits-scroll"><div class="bits">'+bits+'</div><div class="bitnums">'+nums+'</div></div>'+
+    '<div class="legend"><span><i class="sw" style="background:var(--tag)"></i><b class="t">tag</b> '+t('bits')+' 31–'+(ob+ib)+'</span>'+
+    (ib?'<span><i class="sw" style="background:var(--idx)"></i><b class="i">'+t('idx_label')+'</b> '+t('bits')+' '+(ob+ib-1)+'–'+ob+'</span>':'<span class="i">'+t('idx_zero')+'</span>')+
+    '<span><i class="sw" style="background:var(--off)"></i><b class="o">offset</b> '+t('bits')+' '+(ob-1)+'–0</span></div>'+
+    '<div class="calc">'+t('f_block')+' = ⌊'+a+' / '+B+'⌋ <span style="color:var(--muted)">('+words(B)+' = '+B+' B)</span> = <b>'+last.block+'</b><br>'+
+    t('f_line').replace(/^(linia|line)/,'<span class="i">$1</span>')+' = '+last.block+' mod '+L+' = <b class="i">'+last.line+'</b><br>'+
+    t('f_tag').replace(/^tag/,'<span class="t">tag</span>')+' = ⌊'+last.block+' / '+L+'⌋ = <b class="t">'+last.tag+'</b> ('+hex(last.tag)+')<br>'+
+    t('f_off').replace(/^offset/,'<span class="o">offset</span>')+' = '+a+' mod '+B+' = <b class="o">'+(a%B)+'</b> ('+t('byte_in_line')+(B>4?', '+t('word_no')+Math.floor((a%B)/4):'')+')</div>'+
+    '<p class="why">'+(last.hit?'Hit: ':'Miss: ')+esc(whyText(last.why))+'.</p>';
+}
+function renderCache(){
+  const W=B/4;
+  let h='<tr><th>'+t('th_line')+'</th><th>Valid</th><th>Tag</th><th>'+t('th_block')+'</th><th>'+t('th_addrs')+'</th>';
+  for(let k=0;k<W;k++)h+='<th>'+t('th_word')+' '+k+'</th>';
+  $('cacheHead').innerHTML=h+'</tr>';
+  h='';
+  for(let i=0;i<L;i++){
+    const e=lines[i];
+    const cur=last&&last.line===i?(last.hit?' class="cur-hit"':' class="cur-miss"'):'';
+    if(!e.v){h+='<tr'+cur+'><td class="i">'+i+'</td><td class="dim">0</td><td class="dim">–</td><td class="dim">–</td><td class="dim">'+t('empty_line')+'</td>'+'<td class="w dim">–</td>'.repeat(W)+'</tr>';continue;}
+    const a0=e.block*B;
+    h+='<tr'+cur+'><td class="i">'+i+'</td><td>1</td><td class="t">'+hex(e.tag)+'</td><td>'+e.block+'</td><td>'+hex(a0,8)+(B>4?' – '+hex(a0+B-1,8):'')+'</td>';
+    for(let k=0;k<W;k++){
+      const wa=a0+4*k,w=word(wa);
+      const acc=last&&last.line===i&&Math.floor(last.addr/4)*4===wa;
+      h+='<td class="w'+(w.name?'':' dim')+(acc?' acc':'')+'">'+esc(wordLabel(w))+'</td>';
+    }
+    h+='</tr>';
+  }
+  $('cacheBody').innerHTML=h;
+}
+function renderGrid(){
+  const maxRow=Math.floor(Math.floor(MAXA/B)/L);
+  if(rowBase===null){
+    const tags=lines.filter(e=>e.v).map(e=>e.tag);
+    if(last) tags.push(last.tag);
+    else if(queue.length) tags.push(Math.floor(Math.floor(queue[0]/B)/L));
+    if(tags.length){
+      const lo=Math.min(...tags),hi=Math.max(...tags);
+      rowBase=(hi-lo+1<=ROWS)?lo:Math.max(0,(last?last.tag:lo)-3);
+    } else rowBase=Math.floor(Math.floor(BASE/B)/L);
+  }
+  rowBase=Math.max(0,Math.min(rowBase,maxRow-ROWS+1));
+  const g=$('mgrid');
+  g.style.gridTemplateColumns='auto repeat('+L+',minmax(max-content,1fr))';
+  let h='<div></div>';
+  for(let c=0;c<L;c++) h+='<div class="hd">'+t('line')+' '+c+'</div>';
+  for(let r=rowBase;r<rowBase+ROWS&&r<=maxRow;r++){
+    h+='<div class="rl">tag '+hex(r)+'</div>';
+    for(let c=0;c<L;c++){
+      const b=r*L+c;
+      let cls='cell';
+      if(last&&b===last.block) cls+=' now';
+      else if(lines[c].v&&lines[c].tag===r) cls+=' in';
+      else if(last&&c===last.line) cls+=' col';
+      const w=word(b*B);
+      h+='<button class="'+cls+'" data-b="'+b+'" title="'+esc(t('tip')(b,hex(b*B,8),hex(b*B+B-1,8),w.name))+'">'+t('block')+' '+b+'</button>';
+    }
+  }
+  g.innerHTML=h;
+}
+function renderHist(){
+  $('histHead').innerHTML='<tr><th>#</th><th>'+t('th_addr')+'</th><th>'+t('th_read')+'</th><th>'+t('th_block')+'</th><th>'+t('th_line')+'</th><th>Tag</th><th>'+t('th_res')+'</th><th>'+t('th_what')+'</th></tr>';
+  const n=hist.length,hts=hist.filter(x=>x.hit).length;
+  $('stN').textContent=n;$('stH').textContent=hts;$('stM').textContent=n-hts;
+  $('stR').textContent=n?pct(hts/n):'–';
+  let h='';
+  const from=Math.max(0,n-400);
+  for(let k=n-1;k>=from;k--){
+    const x=hist[k];
+    h+='<tr><td class="dim">'+(k+1)+'</td><td>'+hex(x.addr,8)+'</td><td>'+esc(wordLabel(x.w))+'</td><td>'+x.block+'</td><td class="i">'+x.line+'</td><td class="t">'+hex(x.tag)+'</td><td class="hm '+(x.hit?'h">H':'m">M')+'</td><td style="font-family:var(--sans)">'+esc(whyText(x.why))+'</td></tr>';
+  }
+  if(!n) h='<tr><td colspan="8" class="dim" style="font-family:var(--sans)">'+t('no_reads')+'</td></tr>';
+  $('histBody').innerHTML=h;
+}
+function render(){renderSide();renderCode();renderLast();renderCache();renderGrid();renderHist();}
+
+function setLang(l){
+  lang=l;
+  try{localStorage.setItem('cacheSimLang',l);}catch(e){}
+  document.documentElement.lang=l;
+  document.title=t('doc_title');
+  document.querySelectorAll('[data-i]').forEach(el=>{el.innerHTML=t(el.dataset.i);});
+  document.querySelectorAll('#bsize option').forEach(o=>{o.textContent=words(+o.value)+' ('+o.value+' B)';});
+  document.querySelectorAll('.progs button').forEach(b=>{b.querySelector('small').textContent=tr(PROGS[b.dataset.p].sub);});
+  document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===l)));
+  $('addrErr').textContent='';$('seqErr').textContent='';
+  if(source){const b=build();code.c=b.c;code.asm=b.asm;code.title=b.title;}
+  render();
+}
+
+/* ---------- zdarzenia / events ---------- */
+document.querySelectorAll('.langs button').forEach(b=>b.onclick=()=>setLang(b.dataset.lang));
+$('lines').onchange=e=>{L=+e.target.value;restart();};
+$('bsize').onchange=e=>{B=+e.target.value;restart();};
+document.querySelectorAll('.progs button').forEach(b=>b.onclick=()=>{
+  source={type:'prog',id:b.dataset.p};
+  $('progExp').open=false;
+  restart();
+});
+$('loadBtn').onclick=()=>{
+  const st=parse($('sStart').value),sd=parse($('sStride').value),n=parse($('sN').value),p=parse($('sPasses').value);
+  const err=k=>{$('seqErr').textContent=k?t(k):'';};
+  if(st===null||sd===null||n===null||p===null||n<1||p<1) return err('e_fields');
+  if(st<BASE) return err('e_base');
+  if(st%4||sd%4) return err('e_align');
+  if(n*p>5000) return err('e_max');
+  if(st+sd*(n-1)>MAXA) return err('e_over');
+  if((st-BASE)+sd*n>4*1024*1024) return err('e_big');
+  err('');
+  source={type:'custom',args:[st,sd,n,p]};
+  restart();
+};
+$('stepBtn').onclick=()=>{if(!queue.length)return;const a=queue.shift();$('addr').value=hex(a,8);access(a);rowBase=null;render();};
+$('allBtn').onclick=()=>{if(!queue.length)return;let a;while(queue.length){a=queue.shift();access(a);}$('addr').value=hex(a,8);rowBase=null;render();};
+$('restartBtn').onclick=restart;
+$('readBtn').onclick=()=>{
+  const v=parse($('addr').value);
+  if(v===null){$('addrErr').textContent=t('e_addr');return;}
+  $('addrErr').textContent='';access(v);rowBase=null;render();
+};
+$('addr').addEventListener('keydown',e=>{if(e.key==='Enter')$('readBtn').click();});
+$('addr').addEventListener('input',()=>{$('addrErr').textContent='';});
+$('mgrid').addEventListener('click',e=>{
+  const c=e.target.closest('.cell');if(!c)return;
+  const addr=+c.dataset.b*B;$('addr').value=hex(addr,8);
+  access(addr);render();
+});
+$('upBtn').onclick=()=>{rowBase=Math.max(0,(rowBase||0)-ROWS);renderGrid();};
+$('downBtn').onclick=()=>{rowBase=(rowBase||0)+ROWS;renderGrid();};
+document.querySelectorAll('[data-copy]').forEach(btn=>btn.onclick=async()=>{
+  if(!code)return;const txt=btn.dataset.copy==='c'?code.c:code.asm;
+  try{await navigator.clipboard.writeText(txt);}
+  catch(e){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}ta.remove();}
+  btn.textContent=t('copied');setTimeout(()=>{btn.textContent=t('b_copy');},1500);
+});
+
+let initLang=null;
+try{const q=new URLSearchParams(location.search).get('lang');if(q==='pl'||q==='en')initLang=q;}catch(e){}
+if(!initLang){try{const s=localStorage.getItem('cacheSimLang');if(s==='pl'||s==='en')initLang=s;}catch(e){}}
+if(!initLang) initLang=(navigator.language||'pl').toLowerCase().startsWith('pl')?'pl':'en';
+resetCache();
+setLang(initLang);
+})();
+</script>
+</body>
+</html>
