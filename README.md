@@ -20,3 +20,6 @@ Everything runs in the browser, nothing to install. Open `index.html`, or publis
 - `sims/<name>/index.html`: the simulators; the page loads them with `?embed=1&lang=pl|en`, which hides their own header and topic picker
 
 Each simulator also works on its own: open `sims/<name>/index.html` directly.
+
+After changing a simulator, increase `VERSION` in `index.html`: the page adds it to the address of each simulator,
+so that browsers load the new copy instead of an old one from their cache.

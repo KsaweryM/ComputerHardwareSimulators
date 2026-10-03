@@ -122,6 +122,8 @@ const T={
   pl:{title:'Symulatory: Computer Hardware',intro:'Interaktywne ćwiczenia do wykładów 3 do 8. Wybierz wykład i temat po lewej.',lect:n=>`Wykład ${n}`},
   en:{title:'Computer Hardware simulators',intro:'Interactive exercises for Lectures 3 to 8. Pick a lecture and a topic on the left.',lect:n=>`Lecture ${n}`},
 };
+// bump this after changing a simulator, so that browsers load the new copy instead of a cached one
+const VERSION='3';
 const ITEMS={};GROUPS.forEach(g=>g.items.forEach(it=>{it.g=g;ITEMS[it.id]=it;}));
 const lastIn={};GROUPS.forEach(g=>{lastIn[g.n]=g.items[0].id;});
 
@@ -156,7 +158,7 @@ function sync(){
 function show(id){
   cur=id;const it=ITEMS[id];lastIn[it.g.n]=id;
   try{localStorage.setItem('hwSimItem',id);history.replaceState(null,'','#'+id);}catch(e){}
-  const base=`sims/${it.sim}/index.html?embed=1&lang=${lang}`;
+  const base=`sims/${it.sim}/index.html?embed=1&lang=${lang}&v=${VERSION}`;
   // the same simulator in the same language only changes its hash, so it is not reloaded
   $('frame').src=base+(it.mod?'#'+it.mod:'');
   sync();

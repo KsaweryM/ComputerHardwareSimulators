@@ -179,18 +179,6 @@ td.w.acc{outline:2px solid var(--ink);outline-offset:-3px;border-radius:4px;font
     <div class="row"><button class="primary" id="readBtn" data-i="b_read"></button></div>
     <p class="err" id="addrErr"></p>
   </section>
-
-  <section class="panel">
-    <h2 data-i="h_custom"></h2>
-    <div class="field"><label for="sStart" data-i="l_start"></label><input id="sStart" value="0x10000000"></div>
-    <div class="two">
-      <div class="field"><label for="sStride" data-i="l_stride"></label><input id="sStride" value="4"></div>
-      <div class="field"><label for="sN" data-i="l_n"></label><input id="sN" value="8"></div>
-    </div>
-    <div class="field"><label for="sPasses" data-i="l_passes"></label><input id="sPasses" value="2"></div>
-    <div class="row"><button id="loadBtn" data-i="b_load"></button></div>
-    <p class="err" id="seqErr"></p>
-  </section>
 </aside>
 
 <main class="main">
@@ -279,7 +267,7 @@ pl:{
   lw_reads:'lw odczytuje:', bits:'bity', idx_label:'index (linia)', idx_zero:'index: 0 bitów (jedna linia)',
   f_block:'blok &nbsp;= ⌊adres / rozmiar bloku⌋', f_line:'linia = blok mod liczba linii', f_tag:'tag &nbsp;&nbsp;= ⌊blok / liczba linii⌋', f_off:'offset = adres mod rozmiar bloku',
   byte_in_line:'bajt w linii', word_no:'słowo nr ',
-  q_none:'Nic nie jest załadowane. Wybierz program albo własną sekwencję.',
+  q_none:'Nic nie jest załadowane. Wybierz program.',
   q_prog:(a,b)=>'Wykonano '+a+' z '+b+' odczytów.', q_done:b=>'Koniec: wykonano wszystkie '+b+' odczytów.',
   why_hit:(l,t)=>'linia '+l+' ma już tag '+t, why_empty:'linia była pusta', why_first_empty:'pierwszy odczyt bloku, linia była pusta',
   why_seen:'blok był już w cache, ale został wyrzucony; ', why_first:'pierwszy odczyt bloku; ', why_evict:(b,t)=>'wyrzuca blok '+b+' (tag '+t+')',
@@ -321,7 +309,7 @@ en:{
   lw_reads:'lw reads:', bits:'bits', idx_label:'index (line)', idx_zero:'index: 0 bits (one line)',
   f_block:'block &nbsp;= ⌊address / block size⌋', f_line:'line &nbsp;&nbsp;= block mod number of lines', f_tag:'tag &nbsp;&nbsp;&nbsp;= ⌊block / number of lines⌋', f_off:'offset = address mod block size',
   byte_in_line:'byte in the line', word_no:'word ',
-  q_none:'Nothing loaded. Pick a program or a custom sequence.',
+  q_none:'Nothing loaded. Pick a program.',
   q_prog:(a,b)=>'Done '+a+' of '+b+' reads.', q_done:b=>'Finished: all '+b+' reads done.',
   why_hit:(l,t)=>'line '+l+' already holds tag '+t, why_empty:'the line was empty', why_first_empty:'first read of this block, the line was empty',
   why_seen:'the block was in the cache before but got evicted; ', why_first:'first read of this block; ', why_evict:(b,t)=>'evicts block '+b+' (tag '+t+')',
@@ -596,7 +584,7 @@ function setLang(l){
   document.querySelectorAll('#bsize option').forEach(o=>{o.textContent=words(+o.value)+' ('+o.value+' B)';});
   document.querySelectorAll('.progs button').forEach(b=>{b.querySelector('small').textContent=tr(PROGS[b.dataset.p].sub);});
   document.querySelectorAll('.langs button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===l)));
-  $('addrErr').textContent='';$('seqErr').textContent='';
+  $('addrErr').textContent='';
   if(source){const b=build();code.c=b.c;code.asm=b.asm;code.title=b.title;}
   render();
 }
@@ -610,19 +598,6 @@ document.querySelectorAll('.progs button').forEach(b=>b.onclick=()=>{
   $('progExp').open=false;
   restart();
 });
-$('loadBtn').onclick=()=>{
-  const st=parse($('sStart').value),sd=parse($('sStride').value),n=parse($('sN').value),p=parse($('sPasses').value);
-  const err=k=>{$('seqErr').textContent=k?t(k):'';};
-  if(st===null||sd===null||n===null||p===null||n<1||p<1) return err('e_fields');
-  if(st<BASE) return err('e_base');
-  if(st%4||sd%4) return err('e_align');
-  if(n*p>5000) return err('e_max');
-  if(st+sd*(n-1)>MAXA) return err('e_over');
-  if((st-BASE)+sd*n>4*1024*1024) return err('e_big');
-  err('');
-  source={type:'custom',args:[st,sd,n,p]};
-  restart();
-};
 $('stepBtn').onclick=()=>{if(!queue.length)return;const a=queue.shift();$('addr').value=hex(a,8);access(a);rowBase=null;render();};
 $('allBtn').onclick=()=>{if(!queue.length)return;let a;while(queue.length){a=queue.shift();access(a);}$('addr').value=hex(a,8);rowBase=null;render();};
 $('restartBtn').onclick=restart;
