@@ -290,14 +290,10 @@ svg .m{font-family:var(--mono)}
   <div class="grp" data-grp="g6">
     <button class="gh" data-grp="g6" aria-expanded="false"><span class="gnum">6</span><span><small data-i="lect6"></small><b data-i="g6n"></b></span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <div class="items">
-      <button data-mod="poll"><span data-i="tp_poll"></span><small data-i="tp_poll_s"></small></button>
       <button data-mod="intr"><span data-i="tp_intr"></span><small data-i="tp_intr_s"></small></button>
       <button data-mod="irq"><span data-i="tp_irq"></span><small data-i="tp_irq_s"></small></button>
       <button data-mod="tick"><span data-i="tp_tick"></span><small data-i="tp_tick_s"></small></button>
       <button data-mod="slice"><span data-i="tp_slice"></span><small data-i="tp_slice_s"></small></button>
-      <button data-mod="ctx"><span data-i="tp_ctx"></span><small data-i="tp_ctx_s"></small></button>
-      <button data-mod="states"><span data-i="tp_states"></span><small data-i="tp_states_s"></small></button>
-      <button data-mod="shared"><span data-i="tp_shared"></span><small data-i="tp_shared_s"></small></button>
     </div>
   </div>
   <div class="grp" data-grp="g7">
@@ -348,34 +344,6 @@ svg .m{font-family:var(--mono)}
   </div>
 
   <!-- ================= POLLING vs INTERRUPT ================= -->
-  <div class="stack mod" id="mod-poll" hidden style="margin-top:0">
-    <section class="panel">
-      <h2 data-i="po_h_setup"></h2>
-      <div class="opts">
-        <div class="opt"><label data-i="po_l_mode"></label><div class="seg" id="poMode"><button data-v="work" data-i="po_m_work"></button><button data-v="spin" data-i="po_m_spin"></button></div></div>
-      </div>
-      <div class="grid2e" style="margin-top:14px">
-        <div><h3 id="poCodeH1"></h3><pre class="code" id="poCode1"></pre></div>
-        <div><h3 data-i="po_code_isr"></h3><pre class="code" id="poCode2"></pre></div>
-      </div>
-    </section>
-    <div class="ctrlbar" data-ctrl="poll"></div>
-    <section class="panel">
-      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
-        <div class="bigbtn"><button id="poBtn" aria-label="A">A</button><span class="note" style="margin:0" data-i="po_hold"></span></div>
-        <div class="lcd"><pre id="poLcd"></pre></div>
-        <div style="flex:1;min-width:240px"><div class="stats" id="poStats"></div></div>
-      </div>
-    </section>
-    <section class="panel">
-      <h2 data-i="po_h_time"></h2>
-      <div class="scroll"><svg id="poSvg" viewBox="0 0 1000 250" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
-      <div class="legend" id="poLegend"></div>
-      <div class="expl" id="poExpl" style="margin-top:12px"></div>
-    </section>
-  </div>
-
-  <!-- ================= INTERRUPT STEP BY STEP ================= -->
   <div class="stack mod" id="mod-irq" hidden style="margin-top:0">
     <section class="panel">
       <h2 data-i="ir_h_setup"></h2>
@@ -448,109 +416,17 @@ svg .m{font-family:var(--mono)}
     </section>
     <div class="ctrlbar" data-ctrl="slice"></div>
     <section class="panel">
-      <h2 data-i="sl_h_core"></h2>
-      <div class="scroll"><svg id="slZoom" viewBox="0 0 1000 96" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
-      <div class="scroll" style="margin-top:6px"><svg id="slCore" viewBox="0 0 1000 78" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
-      <div class="stats" id="slStats" style="margin-top:10px"></div>
+      <h2 data-i="sl_h_us"></h2>
+      <div class="scroll"><svg id="slRun" viewBox="0 0 1000 176" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
+      <div class="expl" id="slExpl" style="margin-top:12px"></div>
     </section>
     <section class="panel">
-      <h2 data-i="sl_h_us"></h2>
-      <div class="grid3">
-        <div class="thr" style="--c:var(--ta)"><div class="hd"><b data-i="sl_a"></b><span id="slStA"></span></div>
-          <div class="leds"><div class="led" id="slLed" style="--c:var(--led1)"><i></i><small>LED</small></div></div></div>
-        <div class="thr" style="--c:var(--tb)"><div class="hd"><b data-i="sl_b"></b><span id="slStB"></span></div>
-          <div class="bignum" id="slCnt">0</div></div>
-        <div class="thr" style="--c:var(--tc)"><div class="hd"><b data-i="sl_c"></b><span id="slStC"></span></div>
-          <div class="row"><div class="bigbtn sm"><button id="slBtn" aria-label="button">btn</button></div><div id="slSeen" class="note" style="margin:0;flex:1;min-width:120px"></div></div></div>
-      </div>
-      <div class="scroll" style="margin-top:12px"><svg id="slUs" viewBox="0 0 1000 150" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
-      <div class="expl" id="slExpl" style="margin-top:12px"></div>
+      <h2 data-i="sl_h_core"></h2>
+      <div class="scroll"><svg id="slCore" viewBox="0 0 1000 78" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
     </section>
   </div>
 
   <!-- ================= CONTEXT SWITCH ================= -->
-  <div class="stack mod" id="mod-ctx" hidden style="margin-top:0">
-    <section class="panel">
-      <h2 data-i="cx_h_setup"></h2>
-      <div class="opts">
-        <div class="opt"><label data-i="cx_l_names"></label><label class="chk"><input type="checkbox" id="cxFr"><span data-i="cx_fr"></span></label></div>
-      </div>
-      <p class="note" data-i="cx_note"></p>
-    </section>
-    <div class="ctrlbar" data-ctrl="ctx"></div>
-    <section class="panel">
-      <div class="expl" id="cxExpl"></div>
-      <div class="grid3" style="margin-top:14px">
-        <div><h3 id="cxCpuH"></h3><div class="regs" id="cxCpu" style="grid-template-columns:minmax(0,1fr)"></div></div>
-        <div><h3 data-i="cx_stacks"></h3><div id="cxStacks"></div></div>
-        <div><h3 id="cxTblH"></h3><div id="cxTbl"></div></div>
-      </div>
-      <div class="legend" id="cxLegend"></div>
-    </section>
-    <section class="panel" id="cxAsmP">
-      <h2 data-i="cx_h_asm"></h2>
-      <div class="grid2e">
-        <div><h3 data-i="cx_asm_save"></h3><pre class="code" id="cxAsm1"></pre></div>
-        <div><h3 data-i="cx_asm_rest"></h3><pre class="code" id="cxAsm3"></pre></div>
-      </div>
-      <h3 style="margin-top:12px" data-i="cx_asm_pick"></h3><pre class="code" id="cxAsm2"></pre>
-      <p class="note" data-i="cx_asm_note"></p>
-    </section>
-  </div>
-
-  <!-- ================= STATES AND PRIORITIES ================= -->
-  <div class="stack mod" id="mod-states" hidden style="margin-top:0">
-    <section class="panel">
-      <h2 data-i="st_h_setup"></h2>
-      <div class="opts">
-        <div class="opt"><label data-i="st_l_scn"></label><div class="seg" id="stScn"><button data-v="c" data-i="st_s_c"></button><button data-v="h" data-i="st_s_h"></button><button data-v="all" data-i="st_s_all"></button></div></div>
-        <div class="opt"><label data-i="st_l_btn"></label><button id="stPress" class="primary" data-i="st_press"></button></div>
-      </div>
-      <pre class="code" id="stCode" style="margin-top:14px"></pre>
-    </section>
-    <div class="ctrlbar" data-ctrl="states"></div>
-    <section class="panel">
-      <div class="expl" id="stExpl"></div>
-      <div class="scroll" style="margin-top:12px"><svg id="stSvg" viewBox="0 0 1000 300" style="width:100%;min-width:700px;display:block" role="img"></svg></div>
-      <div class="legend" id="stLegend"></div>
-    </section>
-    <div class="grid2e">
-      <section class="panel">
-        <h2 data-i="st_h_lists"></h2>
-        <div id="stLists"></div>
-      </section>
-      <section class="panel">
-        <h2 data-i="st_h_cpu"></h2>
-        <div class="bar" id="stBar"></div>
-        <div class="legend" id="stBarLegend"></div>
-      </section>
-    </div>
-  </div>
-
-  <!-- ================= SHARED COUNTER ================= -->
-  <div class="stack mod" id="mod-shared" hidden style="margin-top:0">
-    <section class="panel">
-      <h2 data-i="sc_h_setup"></h2>
-      <pre class="code" id="scCode"></pre>
-      <p class="note" data-i="sc_note"></p>
-    </section>
-    <div class="ctrlbar" data-ctrl="shared"></div>
-    <section class="panel">
-      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
-        <div class="memcell" style="min-width:150px"><span>counter</span><b id="scVal">0</b></div>
-        <div style="flex:1;min-width:240px"><div class="stats" id="scStats"></div></div>
-      </div>
-      <div class="scroll" style="margin-top:12px"><svg id="scSvg" viewBox="0 0 1000 150" style="width:100%;min-width:640px;display:block" role="img"></svg></div>
-      <div class="legend" id="scLegend"></div>
-      <div class="expl" id="scExpl" style="margin-top:12px"></div>
-    </section>
-    <section class="panel">
-      <h2 data-i="sc_h_hist"></h2>
-      <div class="chips" id="scHist"></div>
-    </section>
-  </div>
-
-  <!-- ================= RACE STEP BY STEP ================= -->
   <div class="stack mod" id="mod-race" hidden style="margin-top:0">
     <section class="panel">
       <h2 data-i="rc_h_setup"></h2>
@@ -653,26 +529,21 @@ const T={
 pl:{
   doc_title:'Symulator współbieżności: przerwania, planista, wątki',
   title:'Od przycisku do puli wątków',
-  intro:'Interaktywne ćwiczenia do wykładów 6, 7 i 8: polling i przerwania, tick timera, kwanty czasu, przełączanie kontekstu, stany zadań, wyścig, mutex, zakleszczenie oraz producent i konsument. Najpierw przewiduj, potem sprawdzaj.',
+  intro:'Interaktywne ćwiczenia do wykładów 6, 7 i 8: przerwania, tick timera, kwanty czasu, wyścig, mutex, zakleszczenie oraz producent i konsument. Najpierw przewiduj, potem sprawdzaj.',
   h_topics:'Temat',
   g6:'Wykład 6: przerwania i planista', g6n:'Przerwania i planista', g7n:'Wątki i synchronizacja', g8n:'Zakleszczenie i współpraca', lect6:'Wykład 6', lect7:'Wykład 7', lect8:'Wykład 8', g7:'Wykład 7: wątki i synchronizacja', g8:'Wykład 8: zakleszczenie i współpraca',
   tp_intr:'Przerwanie', tp_intr_s:'płytka pracuje, przerwanie jej przerywa',
-  tp_poll:'Polling a przerwanie', tp_poll_s:'Symulator 1: naciskaj i porównaj',
   tp_irq:'Przerwanie krok po kroku', tp_irq_s:'Symulator 1: mepc, ISR, mret',
   tp_tick:'Timer i tick', tp_tick_s:'Symulatory 2 i 3: trzy diody',
-  tp_slice:'Kwant czasu', tp_slice_s:'Symulator 4: A, B, C na zmianę',
-  tp_ctx:'Przełączanie kontekstu', tp_ctx_s:'Symulatory 5 i 7: stosy i TCB',
-  tp_states:'Stany i priorytety', tp_states_s:'Symulator 6: Ready, Blocked, IDLE',
-  tp_shared:'Wspólny licznik', tp_shared_s:'Symulator 6: 3 + 3 = ?',
-  tp_race:'Wyścig krok po kroku', tp_race_s:'Symulator 8: lw, addi, sw',
-  tp_mutex:'Mutex', tp_mutex_s:'Symulator 9: jeden wątek naraz',
-  tp_dead:'Zakleszczenie', tp_dead_s:'Symulator 10: graf oczekiwania',
-  tp_pc:'Producent-konsument', tp_pc_s:'Symulator 11: bufor o rozmiarze 1 do 8',
+  tp_slice:'Kwant czasu', tp_slice_s:'Symulator 4: trzech biegaczy',
+  tp_race:'Wyścig krok po kroku', tp_race_s:'Symulator 5: lw, addi, sw',
+  tp_mutex:'Mutex', tp_mutex_s:'Symulator 6: jeden wątek naraz',
+  tp_dead:'Zakleszczenie', tp_dead_s:'Symulator 7: graf oczekiwania',
+  tp_pc:'Producent-konsument', tp_pc_s:'Symulator 8: bufor o rozmiarze 1 do 8',
   a_prev:'Wstecz', a_next:'Dalej', a_play:'Odtwarzaj', a_pause:'Pauza', a_reset:'Od nowa', a_start:'Start',
   step:(i,n)=>`krok ${i} / ${n}`,
   keys_note:'Klawisze: ← → kroki, spacja odtwarza',
-  keys_note_poll:'Przycisk A: przytrzymaj myszą albo spacją',
-  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'gotowe',
+  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'gotowe', cx_task:k=>`zadanie ${k}`,
 
   in_h_setup:'Program', in_l_slow:'Tempo', in_slow:'zwolnij ISR do 0,6 s (naprawdę trwa kilka µs)',
   in_main:'Program główny: loop()', in_isr:'Przerwanie: ISR', in_hold:'naciśnij myszą lub spacją', in_h_time:'Oś czasu: ostatnie 10 sekund',
@@ -688,13 +559,7 @@ pl:{
   in_lg_main:'program główny pracuje', in_lg_wait:'program główny wstrzymany', in_lg_isr:'ISR', in_lg_btn:'naciśnięcie przycisku',
   in_c_work:'praca: liczymy', in_c_lcd:'pokaż na LCD', in_c_isr:'ISR', lcd_work:'Praca:', lcd_press:'Presses:',
   in_keys:'Przycisk A: kliknij myszą albo spacją',
-  po_h_setup:'Program', po_l_mode:'Co robi loop() przy pollingu', po_m_work:'2 s pracy, potem jedno sprawdzenie', po_m_spin:'tylko sprawdza',
-  po_code_isr:'Przerwanie', po_code_work:'Polling: 2 s pracy, jedno sprawdzenie', po_code_spin:'Polling: tylko sprawdza',
-  po_hold:'przytrzymaj myszą lub spacją', po_h_time:'Oś czasu: 10 sekund, te same naciśnięcia dla obu programów',
-  po_r_btn:'Przycisk A', po_r_poll:'CPU: polling', po_r_irq:'CPU: przerwania',
   lcd1:'Polling:', lcd2:'Przerwanie:',
-  po_s_press:'Naciśnięcia', po_s_poll:'Policzył polling', po_s_irq:'Policzyło przerwanie', po_s_isr:'Czas CPU w ISR',
-  po_s_isr_sub:(n,us)=>`${n} × ${us} µs`, po_s_checks:n=>`sprawdzeń: ${n}`,
   px_start_t:'Gotowe do startu', px_start:'Kliknij <b>Start</b> i naciskaj przycisk A, na przykład 5 krótkich kliknięć. Oba programy dostają dokładnie te same naciśnięcia.',
   px_run_t:'Trwa pomiar', px_run:'Naciskaj przycisk A, krótko i długo. Obserwuj, kiedy CPU sprawdza przycisk, a kiedy wchodzi do ISR (cienka pomarańczowa kreska).',
   px_end:'Wynik po 10 s',
@@ -739,69 +604,20 @@ pl:{
   tk_th_want:'powinna co', tk_th_n:'zmian', tk_th_iv:'odstępy między zmianami', tk_th_late:'największe spóźnienie', tk_range:(a,b)=>`od ${a} do ${b} ms`,
   tk_c_every:'co 100 ms', tk_c_lcd:'kilka ms', tk_c_empty:'nic: diody obsługuje ISR', tk_lbl:(i,s)=>`tick ${i} · ${s}`, tk_ticks:'ticki', tk_time:'czas',
 
-  sl_h_setup:'Planista', sl_l_slice:'Kwant czasu', sl_note:'Zadania A, B i C mają ten sam priorytet i zawsze są Ready. Dostają rdzeń po kolei (round robin). A zaczyna w chwili 0.',
-  sl_h_core:'Co naprawdę robi rdzeń', sl_h_us:'Jak to wygląda dla nas',
+  sl_h_setup:'Planista', sl_runs:'biegnie', sl_waits:'czeka', sl_l_slice:'Kwant czasu', sl_note:'Zadania A, B i C mają ten sam priorytet i zawsze są Ready. Dostają rdzeń po kolei (round robin). Każde zadanie przesuwa swojego biegacza, ale tylko w swoim kwancie.',
+  sl_h_core:'Kto ma rdzeń', sl_h_us:'Trzech biegaczy',
   sl_a:'A miga diodą', sl_b:'B liczy', sl_c:'C czyta przyciski',
-  sl_zoom:'Pierwsze 12 ms', sl_zoom_s:'kto ma rdzeń?', sl_reveal:'Pokaż odpowiedź', sl_core:'3 sekundy', sl_core_s:'każdy pasek to kwant',
+  sl_zoom:'Pierwsze 12 ms', sl_zoom_s:'kto ma rdzeń?', sl_reveal:'Pokaż odpowiedź', sl_core:'rdzeń', sl_core_s:'każdy pasek to kwant',
   sl_s_slice:'Kwant', sl_s_per:'Przełączeń na sekundę', sl_s_done:'Przełączeń do tej pory', sl_s_now:'Teraz działa',
   sl_press_hint:'Kliknij przycisk w trakcie odtwarzania.', sl_wait:'C jeszcze nie zauważyło naciśnięcia…', sl_seen:ms=>`C zauważyło naciśnięcie po ${ms} ms.`,
   sl_r_led:'dioda (A)', sl_r_cnt:'licznik (B)', sl_r_btn:'przyciski (C)',
   sl_x0_t:'Trzy zadania, jeden rdzeń', sl_x0:'Kliknij <b>Start</b>. Rdzeń wykonuje naraz tylko jedno zadanie. Czy będzie to widać?',
-  sl_x_short_t:'Wygląda na to, że wszystko działa naraz', sl_x_short:s=>`Każde zadanie dostaje rdzeń na ${s} ms, potem następne. To dużo krócej niż cokolwiek, co zauważymy: dioda miga równo, licznik rośnie płynnie, a przycisk reaguje od razu.`,
-  sl_x_long_t:'Teraz widać, że zadania się zmieniają', sl_x_long:(s,w)=>`Kwant to ${s} ms. Dioda miga tylko w kwancie A, a potem stoi przez ${w} ms, gdy działają B i C. Licznik rośnie schodkami, a C zauważa przycisk dopiero w swoim kwancie.`,
-  sl_keys:'Przycisk C działa w trakcie odtwarzania',
+  sl_x_short_t:'Wygląda na to, że wszystko działa naraz', sl_x_short:s=>`Każda kolejka trwa tylko ${s} ms: za krótko, żeby to zobaczyć. Biegacze zdają się biec razem.`,
+  sl_x_long_t:'Teraz widać, że zadania się zmieniają', sl_x_long:s=>`Kwant to ${s} ms. Naraz biegnie tylko jeden biegacz, dwaj pozostali czekają na swoją kolej.`,
+  sl_keys:'Zmień kwant i kliknij Start jeszcze raz.',
 
-  cx_h_setup:'Ustawienia', cx_l_names:'Nazwy', cx_fr:'nazwy z FreeRTOS', cx_note:'Kontekst to 3 rejestry: PC, t0 i t1, po 4 bajty. Przed każdym krokiem przewiduj, co się zmieni, potem kliknij Dalej.',
-  cx_stacks:'Stosy', cx_h_asm:'Zapis i odtworzenie rejestrów (uproszczone)', cx_asm_save:'Zapisz stare zadanie (krok 2)', cx_asm_pick:'Wybierz (krok 3)', cx_asm_rest:'Odtwórz nowe zadanie (krok 4)',
-  cx_asm_note:'Na podstawie portu FreeRTOS dla RISC-V (portASM.S), skrócone do naszych trzech rejestrów.',
-  cx_sched:'planista', cx_task:k=>`zadanie ${k}`, cx_cpu:'CPU', cx_sched_pc:'kod planisty', cx_savedpc:'zapisany PC', cx_top:'szczyt', cx_data:k=>`dane ${k}`, cx_stack:k=>`Stos zadania ${k}`,
-  cx_tbl:'Zapisane sp', cx_next_b:'Następne zadanie: B.', cx_next_q:'Następne zadanie: ?', cx_tcbs:'TCB i pxCurrentTCB', cx_tcb_note:'pxTopOfStack to pierwsze pole TCB: zapisany sp.',
-  cx_lg_rd:'odczytane', cx_lg_wr:'zapisane',
-  cx_t0:'Działa zadanie A', cx_t1:'1. Tick', cx_t2:'2. Zapisz A', cx_t3:'3. Wybierz B', cx_t4:'4. Odtwórz B',
-  cx_s0:'Rejestry CPU należą teraz do A: PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000. Na stosie B czeka zapisany kontekst B.',
-  cx_s1:'Przychodzi przerwanie timera. CPU zapisuje PC zadania A w mepc (0x0210) i skacze do planisty.',
-  cx_s2:'PC (z mepc), t0 i t1 idą na stos A: 3 rejestry × 4 bajty = 12 = 0xC. sp ← 0x2000 − 0xC = 0x1FF4. Ten nowy szczyt stosu A trafia do tabeli zapisanych sp.',
-  cx_s3:'Planista wybiera następne zadanie: B. Zmienia się tylko to, które zadanie jest bieżące.',
-  cx_s4:'sp ← zapisany sp B = 0x2FF4. Ze stosu B wracają PC = 0x0308, t0 = 42, t1 = 9, a sp ← 0x2FF4 + 0xC = 0x3000. B działa dalej, jakby nic się nie stało.',
-  cx_fr0:'Działa A, więc pxCurrentTCB wskazuje na TCB A (0x4000). PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000.',
-  cx_fr1:'Przerwanie timera: mepc ← 0x0210 i skok do obsługi przerwania FreeRTOS.',
-  cx_fr2:'Kod z lewej: rejestry i PC (przez csrr t0, mepc) idą na stos A, a potem <code>sw sp, 0(t0)</code> zapisuje sp = 0x1FF4 w polu pxTopOfStack w TCB A. Uwaga: t0 trzyma teraz adres TCB A.',
-  cx_fr3:'<code>vTaskSwitchContext</code> wybiera zadanie o najwyższym priorytecie, które jest Ready. Zmienia tylko pxCurrentTCB: teraz wskazuje na TCB B (0x4100).',
-  cx_fr4:'<code>lw sp, 0(t0)</code> z t0 = adres TCB B: sp ← pxTopOfStack B = 0x2FF4. Potem wracają PC (przez mepc), t0 = 42, t1 = 9, a sp = 0x3000. mret: B działa dalej.',
-  cx_q_s1:'<b>Przewiduj:</b> gdzie trafi PC zadania A, gdy przyjdzie przerwanie?',
-  cx_q_s2:'<b>Przewiduj:</b> jakie wartości trafią na stos A? Ile wyniesie zapisany sp A?',
-  cx_q_s3:'<b>Przewiduj:</b> co zmieni wybór następnego zadania?',
-  cx_q_s4:'<b>Przewiduj:</b> ile wyniosą PC, t0, t1 i sp po odtworzeniu B? Gdzie jest teraz t0 = 7 zadania A?',
-  cx_q_fr1:'<b>Przewiduj:</b> na które TCB wskazuje pxCurrentTCB?',
-  cx_q_fr2:'<b>Przewiduj:</b> jaka będzie wartość pxTopOfStack w TCB A?',
-  cx_q_fr3:'<b>Przewiduj:</b> co zmienia vTaskSwitchContext?',
-  cx_q_fr4:'<b>Przewiduj:</b> która linia asemblera ustawia nowy sp? Na jaką wartość?',
-  cx_q_end:'t0 = 7 zadania A czeka na stosie A. Planista odtworzy je przy następnym przełączeniu na A, dokładnie tak jak teraz wartości B.',
 
-  st_h_setup:'Zadania', st_l_scn:'Scenariusz', st_s_c:'C czeka 3 ms', st_s_h:'+ przycisk w 7,5 ms', st_s_all:'A, B i C czekają',
-  st_l_btn:'Przycisk dla H', st_press:'Naciśnij przycisk',
-  st_h_lists:'Listy planisty', st_h_cpu:'Użycie CPU', st_prio:n=>`priorytet ${n}`, st_axis:'czas; co 1 ms tick, A, B i C zmieniają się na każdym ticku',
-  st_lg_run:'Running', st_lg_ready:'Ready', st_lg_blk:'Blocked', st_lg_idle:'IDLE', st_lg_press:'naciśnięcie przycisku',
-  st_x0_t:'0 ms', st_x0:'A, B i C mają priorytet 1 i biorą rdzeń po kolei co 1 ms. H ma priorytet 2 i czeka na przycisk (Blocked). Klikaj Dalej co 1 ms albo naciśnij przycisk.',
-  st_ran1:k=>`Działało ${k}.`, st_ran2:(a,b)=>`Najpierw działało ${a}, potem ${b}.`, st_x_t:(a,b)=>`Od ${a} do ${b} ms`,
-  st_x_idle:'Nikt nie był Ready, więc procesor wykonywał zadanie IDLE.',
-  st_e_wake:(k,ms)=>`W ${ms} ${k} skończyło czekać i jest znowu Ready.`, st_e_press:ms=>`W ${ms} naciśnięto przycisk: H staje się Ready.`,
-  st_e_preempt:k=>`H ma wyższy priorytet, więc od razu wywłaszcza ${k}: ${k} wraca do Ready.`,
-  st_e_delay:(k,ms,u)=>`W ${ms} ${k} wywołuje vTaskDelay(3) i jest Blocked do ${u}: nie dostaje kwantów.`,
-  st_e_hdone:ms=>`W ${ms} H skończyło i znowu czeka na przycisk; reszta działa dalej.`,
-  st_empty:'pusto', st_l_run:'Running', st_l_r2:'Ready, priorytet 2', st_l_r1:'Ready, priorytet 1', st_l_blk:'Blocked',
-  st_w_btn:'czeka na przycisk', st_w_until:ms=>`do ${ms}`, st_cpu_empty:'Kliknij Dalej.',
-  st_c_p1:'priorytet 1', st_c_p2:'priorytet 2', st_c_at2:'w 2 ms:', st_c_blk:'Blocked na 3 ms', st_c_wait:'Blocked, dopóki nikt nie naciśnie', st_c_work:'około 1 ms pracy',
 
-  sc_h_setup:'Dwa zadania, jeden licznik', sc_note:'Oba zadania wykonują ten sam kod. Planista przełącza je w losowych chwilach. Najpierw przewiduj wynik, potem kliknij Uruchom kilka razy.',
-  sc_h_hist:'Wyniki', sc_s_adds:'Dodawań', sc_s_exp:'Oczekiwany wynik', sc_s_runs:'Uruchomień', sc_s_bad:'Złych wyników',
-  sc_task:n=>`Zadanie ${n}`, sc_task_s:'counter++ × 3', sc_empty:'Kliknij Uruchom.', sc_axis:'czas',
-  sc_lg_run:n=>`działa zadanie ${n}`, sc_lg_sw:'przełączenie przez planistę', sc_lg_plus:'+1: koniec jednego counter++',
-  sc_x0_t:'Przewiduj', sc_x0:'Dwa zadania, każde dodaje 1 do counter trzy razy. Licznik zaczyna od 0. Jaki będzie wynik?',
-  sc_xr_t:'Zadania działają', sc_xr:'Planista przełącza zadania w losowych chwilach.',
-  sc_xok_t:'counter = 6', sc_xok:'Tym razem wszystko się zgadza. Uruchom jeszcze kilka razy.',
-  sc_xbad_t:v=>`counter = ${v}`, sc_xbad:v=>`Sześć dodawań, a licznik pokazuje ${v}. Część dodawań zginęła. Dlaczego? Zatrzymaj to pytanie: wrócimy do niego.`,
-  sc_run:n=>`#${n}`, sc_hist_empty:'Jeszcze nic.', sc_run_btn:'Uruchom', sc_keys:'Od nowa czyści wyniki', sc_c_two:'dwa zadania z tym kodem',
 
   th_thread:k=>`Wątek ${k}`, th_own:k=>`własny rejestr ${k}`, th_run:k=>`${k}: wykonaj następną instrukcję`, th_mem:'pamięć', th_waits:'czeka (Blocked)', th_waits_for:m=>`czeka na ${m} (Blocked)`, th_step:k=>`${k}: następny krok`,
   th_keys:'Klawisze: A, B wykonują krok, R od nowa',
@@ -841,26 +657,21 @@ pl:{
 en:{
   doc_title:'Concurrency simulator: interrupts, scheduler, threads',
   title:'From a button to a thread pool',
-  intro:'Interactive exercises for Lectures 6, 7 and 8: polling and interrupts, the timer tick, time slices, the context switch, task states, the race, the mutex, deadlock, and the producer and consumer. Predict first, then check.',
+  intro:'Interactive exercises for Lectures 6, 7 and 8: interrupts, the timer tick, time slices, the race, the mutex, deadlock, and the producer and consumer. Predict first, then check.',
   h_topics:'Topic',
   g6:'Lecture 6: interrupts and the scheduler', g6n:'Interrupts and the scheduler', g7n:'Threads and synchronisation', g8n:'Deadlock and cooperation', lect6:'Lecture 6', lect7:'Lecture 7', lect8:'Lecture 8', g7:'Lecture 7: threads and synchronisation', g8:'Lecture 8: deadlock and cooperation',
   tp_intr:'An interrupt', tp_intr_s:'the board works, an interrupt breaks in',
-  tp_poll:'Polling vs interrupt', tp_poll_s:'Simulator 1: press and compare',
   tp_irq:'Interrupt step by step', tp_irq_s:'Simulator 1: mepc, ISR, mret',
   tp_tick:'Timer and tick', tp_tick_s:'Simulators 2 and 3: three LEDs',
-  tp_slice:'Time slice', tp_slice_s:'Simulator 4: A, B, C take turns',
-  tp_ctx:'Context switch', tp_ctx_s:'Simulators 5 and 7: stacks and TCBs',
-  tp_states:'States and priorities', tp_states_s:'Simulator 6: Ready, Blocked, IDLE',
-  tp_shared:'Shared counter', tp_shared_s:'Simulator 6: 3 + 3 = ?',
-  tp_race:'Race step by step', tp_race_s:'Simulator 8: lw, addi, sw',
-  tp_mutex:'Mutex', tp_mutex_s:'Simulator 9: one thread at a time',
-  tp_dead:'Deadlock', tp_dead_s:'Simulator 10: the wait-for graph',
-  tp_pc:'Producer-consumer', tp_pc_s:'Simulator 11: a buffer of 1 to 8',
+  tp_slice:'Time slice', tp_slice_s:'Simulator 4: three runners',
+  tp_race:'Race step by step', tp_race_s:'Simulator 5: lw, addi, sw',
+  tp_mutex:'Mutex', tp_mutex_s:'Simulator 6: one thread at a time',
+  tp_dead:'Deadlock', tp_dead_s:'Simulator 7: the wait-for graph',
+  tp_pc:'Producer-consumer', tp_pc_s:'Simulator 8: a buffer of 1 to 8',
   a_prev:'Back', a_next:'Next', a_play:'Play', a_pause:'Pause', a_reset:'Reset', a_start:'Start',
   step:(i,n)=>`step ${i} / ${n}`,
   keys_note:'Keys: ← → steps, space plays',
-  keys_note_poll:'Button A: hold with the mouse or space',
-  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'done',
+  st_run:'Running', st_ready:'Ready', st_blk:'Blocked', st_done:'done', cx_task:k=>`task ${k}`,
 
   in_h_setup:'The program', in_l_slow:'Speed', in_slow:'slow the ISR down to 0.6 s (really it takes a few µs)',
   in_main:'Main program: loop()', in_isr:'Interrupt: the ISR', in_hold:'press with the mouse or space', in_h_time:'Timeline: the last 10 seconds',
@@ -876,13 +687,7 @@ en:{
   in_lg_main:'main program runs', in_lg_wait:'main program suspended', in_lg_isr:'ISR', in_lg_btn:'button pressed',
   in_c_work:'work: count', in_c_lcd:'show it on the LCD', in_c_isr:'the ISR', lcd_work:'Work:', lcd_press:'Presses:',
   in_keys:'Button A: click with the mouse or space',
-  po_h_setup:'The program', po_l_mode:'What loop() does with polling', po_m_work:'2 s of work, then one check', po_m_spin:'only checks',
-  po_code_isr:'Interrupt', po_code_work:'Polling: 2 s of work, one check', po_code_spin:'Polling: only checks',
-  po_hold:'hold with the mouse or space', po_h_time:'Timeline: 10 seconds, the same presses for both programs',
-  po_r_btn:'Button A', po_r_poll:'CPU: polling', po_r_irq:'CPU: interrupts',
   lcd1:'Polling:', lcd2:'Interrupt:',
-  po_s_press:'Presses', po_s_poll:'Counted by polling', po_s_irq:'Counted by interrupt', po_s_isr:'CPU time in the ISR',
-  po_s_isr_sub:(n,us)=>`${n} × ${us} µs`, po_s_checks:n=>`checks: ${n}`,
   px_start_t:'Ready to start', px_start:'Click <b>Start</b> and press button A, for example 5 short clicks. Both programs get exactly the same presses.',
   px_run_t:'Measuring', px_run:'Press button A, short and long. Watch when the CPU checks the button and when it enters the ISR (a thin orange line).',
   px_end:'Result after 10 s',
@@ -927,69 +732,20 @@ en:{
   tk_th_want:'should change every', tk_th_n:'changes', tk_th_iv:'time between changes', tk_th_late:'most late', tk_range:(a,b)=>`from ${a} to ${b} ms`,
   tk_c_every:'every 100 ms', tk_c_lcd:'several ms', tk_c_empty:'nothing: the ISR handles the LEDs', tk_lbl:(i,s)=>`tick ${i} · ${s}`, tk_ticks:'ticks', tk_time:'time',
 
-  sl_h_setup:'The scheduler', sl_l_slice:'Time slice', sl_note:'Tasks A, B and C have the same priority and are always Ready. They take turns on the core (round robin). Task A starts at 0 ms.',
-  sl_h_core:'What the core really does', sl_h_us:'How it looks to us',
+  sl_runs:'runs', sl_waits:'waits', sl_h_setup:'The scheduler', sl_l_slice:'Time slice', sl_note:'Tasks A, B and C have the same priority and are always Ready. They take turns on the core (round robin). Each task moves its own runner, but only in its own time slice.',
+  sl_h_core:'Who has the core', sl_h_us:'Three runners',
   sl_a:'A blinks an LED', sl_b:'B counts', sl_c:'C reads buttons',
-  sl_zoom:'The first 12 ms', sl_zoom_s:'who has the core?', sl_reveal:'Show the answer', sl_core:'3 seconds', sl_core_s:'each bar is a time slice',
+  sl_zoom:'The first 12 ms', sl_zoom_s:'who has the core?', sl_reveal:'Show the answer', sl_core:'the core', sl_core_s:'each bar is a time slice',
   sl_s_slice:'Time slice', sl_s_per:'Switches per second', sl_s_done:'Switches so far', sl_s_now:'Running now',
   sl_press_hint:'Click the button while it plays.', sl_wait:'C has not noticed the press yet…', sl_seen:ms=>`C noticed the press after ${ms} ms.`,
   sl_r_led:'LED (A)', sl_r_cnt:'counter (B)', sl_r_btn:'buttons (C)',
   sl_x0_t:'Three tasks, one core', sl_x0:'Click <b>Start</b>. The core runs only one task at a time. Will you see it?',
-  sl_x_short_t:'It looks as if everything runs at the same time', sl_x_short:s=>`Each task gets the core for ${s} ms, then the next one. That is much shorter than anything we can notice: the LED blinks evenly, the counter grows smoothly, the button reacts at once.`,
-  sl_x_long_t:'Now you can see them take turns', sl_x_long:(s,w)=>`The time slice is ${s} ms. The LED blinks only in A's slice, then it stops for ${w} ms while B and C run. The counter grows in steps, and C notices the button only in its own slice.`,
-  sl_keys:'The button of C works while it plays',
+  sl_x_short_t:'It looks as if everything runs at the same time', sl_x_short:s=>`Each turn is only ${s} ms: too short to see. The runners seem to move together.`,
+  sl_x_long_t:'Now you can see them take turns', sl_x_long:s=>`The time slice is ${s} ms. Only one runner moves at a time, the other two wait for their turn.`,
+  sl_keys:'Change the time slice and click Start again.',
 
-  cx_h_setup:'Settings', cx_l_names:'Names', cx_fr:'FreeRTOS names', cx_note:'A context is 3 registers: PC, t0 and t1, 4 bytes each. Before each step, predict what will change, then click Next.',
-  cx_stacks:'Stacks', cx_h_asm:'Saving and restoring registers (simplified)', cx_asm_save:'Save the old task (step 2)', cx_asm_pick:'Choose (step 3)', cx_asm_rest:'Restore the new task (step 4)',
-  cx_asm_note:'Based on the FreeRTOS RISC-V port (portASM.S), cut down to our three registers.',
-  cx_sched:'scheduler', cx_task:k=>`task ${k}`, cx_cpu:'CPU', cx_sched_pc:'scheduler code', cx_savedpc:'saved PC', cx_top:'top', cx_data:k=>`data of ${k}`, cx_stack:k=>`Stack of task ${k}`,
-  cx_tbl:'Saved sp', cx_next_b:'Next task: B.', cx_next_q:'Next task: ?', cx_tcbs:'TCBs and pxCurrentTCB', cx_tcb_note:'pxTopOfStack is the first field of a TCB: the saved sp.',
-  cx_lg_rd:'read from here', cx_lg_wr:'written here',
-  cx_t0:'Task A runs', cx_t1:'1. Tick', cx_t2:'2. Save A', cx_t3:'3. Choose B', cx_t4:'4. Restore B',
-  cx_s0:'The CPU registers belong to A now: PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000. On stack B, the saved context of B is waiting.',
-  cx_s1:'The timer interrupt arrives. The CPU saves the PC of task A in mepc (0x0210) and jumps to the scheduler.',
-  cx_s2:'PC (from mepc), t0 and t1 go onto stack A: 3 registers × 4 bytes = 12 = 0xC. sp ← 0x2000 − 0xC = 0x1FF4. This new top of stack A goes into the table of saved stack pointers.',
-  cx_s3:'The scheduler picks the next task: B. Only the choice of the current task changes.',
-  cx_s4:'sp ← the saved sp of B = 0x2FF4. From stack B come back PC = 0x0308, t0 = 42, t1 = 9, and sp ← 0x2FF4 + 0xC = 0x3000. B continues as if nothing happened.',
-  cx_fr0:'A is running, so pxCurrentTCB points to TCB A (0x4000). PC = 0x0210, t0 = 7, t1 = 3, sp = 0x2000.',
-  cx_fr1:'The timer interrupt: mepc ← 0x0210 and a jump to the FreeRTOS interrupt handler.',
-  cx_fr2:'The code on the left: the registers and the PC (through csrr t0, mepc) go onto stack A, then <code>sw sp, 0(t0)</code> stores sp = 0x1FF4 in the field pxTopOfStack of TCB A. Note: t0 now holds the address of TCB A.',
-  cx_fr3:'<code>vTaskSwitchContext</code> picks the Ready task with the highest priority. It changes only pxCurrentTCB: now it points to TCB B (0x4100).',
-  cx_fr4:'<code>lw sp, 0(t0)</code>, with t0 = the address of TCB B: sp ← pxTopOfStack of B = 0x2FF4. Then PC (through mepc), t0 = 42 and t1 = 9 come back, and sp = 0x3000. mret: B continues.',
-  cx_q_s1:'<b>Predict:</b> where does the PC of task A go when the interrupt arrives?',
-  cx_q_s2:'<b>Predict:</b> which values go onto stack A? What is the saved sp of A?',
-  cx_q_s3:'<b>Predict:</b> what does choosing the next task change?',
-  cx_q_s4:'<b>Predict:</b> what are PC, t0, t1 and sp after B is restored? Where is A\'s t0 = 7 now?',
-  cx_q_fr1:'<b>Predict:</b> to which TCB does pxCurrentTCB point?',
-  cx_q_fr2:'<b>Predict:</b> what will pxTopOfStack in the TCB of A be?',
-  cx_q_fr3:'<b>Predict:</b> what does vTaskSwitchContext change?',
-  cx_q_fr4:'<b>Predict:</b> which line of the assembly gives sp its new value? What is that value?',
-  cx_q_end:'A\'s t0 = 7 waits on stack A. The scheduler restores it at the next switch back to A, exactly like B\'s values now.',
 
-  st_h_setup:'The tasks', st_l_scn:'Scenario', st_s_c:'C waits 3 ms', st_s_h:'+ button at 7.5 ms', st_s_all:'A, B and C wait',
-  st_l_btn:'Button for H', st_press:'Press the button',
-  st_h_lists:'The scheduler\'s lists', st_h_cpu:'CPU usage', st_prio:n=>`priority ${n}`, st_axis:'time; a tick every 1 ms, A, B and C take turns at every tick',
-  st_lg_run:'Running', st_lg_ready:'Ready', st_lg_blk:'Blocked', st_lg_idle:'IDLE', st_lg_press:'button pressed',
-  st_x0_t:'0 ms', st_x0:'A, B and C have priority 1 and take turns, 1 ms each. H has priority 2 and waits for the button (Blocked). Click Next, 1 ms at a time, or press the button.',
-  st_ran1:k=>`${k} ran.`, st_ran2:(a,b)=>`First ${a} ran, then ${b}.`, st_x_t:(a,b)=>`From ${a} to ${b} ms`,
-  st_x_idle:'Nobody was Ready, so the processor ran the IDLE task.',
-  st_e_wake:(k,ms)=>`At ${ms}, ${k} has finished waiting and is Ready again.`, st_e_press:ms=>`At ${ms}, the button is pressed: H becomes Ready.`,
-  st_e_preempt:k=>`H has a higher priority, so it stops ${k} at once: ${k} goes back to Ready.`,
-  st_e_delay:(k,ms,u)=>`At ${ms}, ${k} calls vTaskDelay(3) and is Blocked until ${u}: it gets no time slices.`,
-  st_e_hdone:ms=>`At ${ms}, H has finished and waits for the button again; the others continue.`,
-  st_empty:'empty', st_l_run:'Running', st_l_r2:'Ready, priority 2', st_l_r1:'Ready, priority 1', st_l_blk:'Blocked',
-  st_w_btn:'waits for the button', st_w_until:ms=>`until ${ms}`, st_cpu_empty:'Click Next.',
-  st_c_p1:'priority 1', st_c_p2:'priority 2', st_c_at2:'at 2 ms:', st_c_blk:'Blocked for 3 ms', st_c_wait:'Blocked until somebody presses it', st_c_work:'about 1 ms of work',
 
-  sc_h_setup:'Two tasks, one counter', sc_note:'Both tasks run the same code. The scheduler switches them at random moments. Predict the result first, then click Run a few times.',
-  sc_h_hist:'Results', sc_s_adds:'Additions', sc_s_exp:'Expected result', sc_s_runs:'Runs', sc_s_bad:'Wrong results',
-  sc_task:n=>`Task ${n}`, sc_task_s:'counter++ × 3', sc_empty:'Click Run.', sc_axis:'time',
-  sc_lg_run:n=>`task ${n} runs`, sc_lg_sw:'a switch by the scheduler', sc_lg_plus:'+1: one counter++ finished',
-  sc_x0_t:'Predict', sc_x0:'Two tasks, each adds 1 to counter three times. The counter starts at 0. What will the result be?',
-  sc_xr_t:'The tasks run', sc_xr:'The scheduler switches the tasks at random moments.',
-  sc_xok_t:'counter = 6', sc_xok:'This time everything adds up. Run it a few more times.',
-  sc_xbad_t:v=>`counter = ${v}`, sc_xbad:v=>`Six additions, but the counter shows ${v}. Some additions were lost. Why? Keep this question: we will come back to it.`,
-  sc_run:n=>`#${n}`, sc_hist_empty:'Nothing yet.', sc_run_btn:'Run', sc_keys:'Reset clears the results', sc_c_two:'two tasks with this code',
 
   th_thread:k=>`Thread ${k}`, th_own:k=>`${k}'s own register`, th_run:k=>`${k}: run the next instruction`, th_mem:'memory', th_waits:'waits (Blocked)', th_waits_for:m=>`waits for ${m} (Blocked)`, th_step:k=>`${k}: next step`,
   th_keys:'Keys: A, B run a step, R resets',
@@ -1186,163 +942,6 @@ function inInit(){
   IN.bar.on('reset',inReset);
   $('inSlow').addEventListener('change',e=>{IN.slow=e.target.checked;inRender();});
   $('inBtn').addEventListener('click',inPress);
-}
-
-/* =====================================================================
-   1. Polling a przerwanie / polling vs interrupt
-   ===================================================================== */
-const PDUR=10000,SPIN_RATE=40000,ISR_US=5;
-const P={t:0,playing:false,presses:[],hold:null,mode:'work',lastTs:0,raf:0,bar:null};
-function poCompute(tn){
-  const pr=P.presses.filter(p=>p.a<=tn).map(p=>({a:p.a,b:p.b===null?Infinity:p.b}));
-  const info=pr.map(()=>({poll:0}));
-  let poll=0,checks=0;const checkList=[];
-  if(P.mode==='work'){
-    for(let c=2000;c<=PDUR&&c<=tn;c+=2000){
-      const hit=pr.findIndex(p=>c>=p.a&&c<p.b);
-      checkList.push({t:c,hit:hit>=0});
-      if(hit>=0){poll++;info[hit].poll++;}
-    }
-    checks=checkList.length;
-  }else{
-    checks=Math.floor(tn/1000*SPIN_RATE);
-    pr.forEach((p,i)=>{poll++;info[i].poll=1;});
-  }
-  return {pr,irq:pr.length,poll,checks,checkList,info};
-}
-const PX=t0=>152+t0*0.082;
-function poSvg(C){
-  const tn=P.t;let o='';
-  const yH=32,yL=58,pY=84,iY=148,bh=30;
-  o+=txt(10,50,t('po_r_btn'),{'font-weight':600});
-  o+=txt(10,pY+20,t('po_r_poll'),{'font-weight':600});
-  o+=txt(10,iY+20,t('po_r_irq'),{'font-weight':600});
-  o+=svgEl('line',{x1:PX(0),y1:204,x2:PX(PDUR),y2:204,stroke:'var(--rule)','stroke-width':1.5});
-  for(let s=0;s<=10;s++){o+=svgEl('line',{x1:PX(s*1000),y1:200,x2:PX(s*1000),y2:208,stroke:'var(--muted)'});o+=txt(PX(s*1000),224,s+' s',{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});}
-  const pts=[[PX(0),yH]];
-  C.pr.forEach(p=>{
-    const x=PX(p.a);pts.push([x,yH],[x,yL]);
-    if(p.b!==Infinity&&p.b<=tn){const x2=PX(p.b);pts.push([x2,yL],[x2,yH]);}
-  });
-  pts.push([PX(tn),pts[pts.length-1][1]]);
-  o+=svgEl('polyline',{points:pts.map(p=>p.join(',')).join(' '),fill:'none',stroke:'var(--work)','stroke-width':2.4,'stroke-linejoin':'round'});
-  o+=txt(PX(0)-6,yH+4,'1',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
-  o+=txt(PX(0)-6,yL+4,'0',{'text-anchor':'end','font-size':10.5,fill:'var(--muted)',class:'m'});
-  const blk=(x1,x2,y,c,op,ex)=>rect(x1,y,x2-x1,bh,c,Object.assign({opacity:op},ex||{}));
-  if(P.mode==='work'){
-    for(let k=0;k<5;k++){
-      const a=k*2000,b=a+2000;
-      o+=blk(PX(a),PX(b),pY,'var(--work)',.18);
-      if(a<tn)o+=blk(PX(a),PX(Math.min(b,tn)),pY,'var(--work)',.9);
-      const cx=PX(b)-7;
-      o+=blk(cx,cx+7,pY,'var(--poll)',b<=tn?1:.3);
-    }
-    C.checkList.forEach(c=>{o+=txt(PX(c.t)-4,pY-5,c.hit?'+1':'✕',{'text-anchor':'middle','font-size':11.5,'font-weight':600,fill:c.hit?'var(--ok)':'var(--muted)'});});
-  }else{
-    o+=blk(PX(0),PX(PDUR),pY,'var(--poll)',.16);
-    if(tn>0){o+=blk(PX(0),PX(tn),pY,'var(--poll)',.9);o+=blk(PX(0),PX(tn),pY,'url(#poHatch)',1);}
-  }
-  o+=blk(PX(0),PX(PDUR),iY,'var(--work)',.18);
-  if(tn>0)o+=blk(PX(0),PX(tn),iY,'var(--work)',.9);
-  C.pr.forEach(p=>{const x=PX(p.a);o+=blk(x,x+5,iY,'var(--isr)',1);});
-  C.pr.forEach((p,i)=>{
-    const x=PX(p.a)+3,inf=C.info[i];
-    const nc=Math.ceil((p.a+1)/2000)*2000,decided=P.mode==='spin'||nc<=tn;
-    const pc=inf.poll>0?'var(--ok)':decided?'var(--bad)':'var(--muted)';
-    o+=svgEl('circle',{cx:x,cy:pY+bh+8,r:5,fill:pc});
-    o+=svgEl('circle',{cx:x,cy:iY+bh+8,r:5,fill:'var(--ok)'});
-    if(inf.poll>1)o+=txt(x+8,pY+bh+12,'×'+inf.poll,{'font-size':11,'font-weight':600,fill:'var(--isr)'});
-  });
-  o+=svgEl('line',{x1:PX(tn),y1:22,x2:PX(tn),y2:204,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
-  const defs=`<defs><pattern id="poHatch" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="1.5" height="6" fill="var(--surface)" opacity=".45"/></pattern></defs>`;
-  $('poSvg').innerHTML=defs+o;
-}
-function poLcd(C){
-  const l1=t('lcd1').padEnd(12)+String(C.poll).padStart(4),l2=t('lcd2').padEnd(12)+String(C.irq).padStart(4);
-  $('poLcd').textContent=l1.slice(0,16)+'\n'+l2.slice(0,16);
-}
-function poStats(C){
-  const n=C.pr.length;
-  const st=(k,v,cl,sub)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b>${sub?`<span>${sub}</span>`:''}</div>`;
-  const isrPct=P.t>0?C.irq*ISR_US/1000/P.t*100:0;
-  const sub=P.mode==='spin'?esc(t('po_s_checks',num(C.checks,0))):'';
-  $('poStats').innerHTML=st('po_s_press',n)+st('po_s_poll',C.poll,n===0?'':C.poll===n?'good':'bad',sub)+
-    st('po_s_irq',C.irq,n===0?'':'good')+st('po_s_isr',pct(isrPct),'',esc(t('po_s_isr_sub',C.irq,ISR_US)));
-}
-function poExpl(C){
-  let e;
-  if(P.t===0&&!P.playing)e=[t('px_start_t'),t('px_start')];
-  else if(P.t<PDUR)e=[t('px_run_t'),t('px_run')];
-  else{
-    const n=C.pr.length;let s='';
-    if(P.mode==='work'){s+=t('px_work',C.poll,n);if(C.info.some(x=>x.poll>1))s+=' '+t('px_twice');}
-    else s+=t('px_spin',num(C.checks,0),C.poll,pct(C.checks?C.poll/C.checks*100:0));
-    s+='<br>'+t('px_irq',C.irq,pct(C.irq*ISR_US/1000/PDUR*100));
-    s+=`<br><b>${esc(t('px_key'))}</b>`;
-    e=[t('px_end'),s];
-  }
-  $('poExpl').innerHTML=explHTML(e[0],e[1]);
-}
-function poCode(C){
-  const tn=P.t,lastCheck=C.checkList.length?C.checkList[C.checkList.length-1].t:-1e9;
-  const recentCheck=P.mode==='work'&&tn-lastCheck<350&&tn>0;
-  const running=P.playing||(tn>0&&tn<PDUR);
-  let L;
-  if(P.mode==='work'){
-    L=[['void loop() {',''],[`  delay(2000);                        // ${t('pc_work')}`,running&&!recentCheck?'act w':''],
-       [`  if (digitalRead(BUTTON_A) == LOW)   // ${t('pc_check')}`,recentCheck?'act p':''],['    count++;',recentCheck&&C.checkList[C.checkList.length-1].hit?'act p':''],
-       ['  lcd.setCursor(0, 1); lcd.print(count);',''],['}','']];
-  }else{
-    L=[['void loop() {',''],[`  int now = digitalRead(BUTTON_A);    // ${t('pc_spin')}`,running?'act p':''],['  checks++;',running?'act p':''],
-       ['  if (last == HIGH && now == LOW) count++;',''],['  last = now;',running?'act p':''],['}','']];
-  }
-  $('poCodeH1').textContent=t(P.mode==='work'?'po_code_work':'po_code_spin');
-  $('poCode1').innerHTML=codeLines(L);
-  const lp=C.pr.length?C.pr[C.pr.length-1]:null;
-  const hot=lp&&tn-lp.a<400?'act':'';
-  $('poCode2').innerHTML=codeLines([['volatile int presses = 0;',''],['',''],[`void IRAM_ATTR onButtonA() {    // ${t('pc_isr')}`,hot],['  presses++;',hot],['}',''],['',''],
-    ['attachInterrupt(digitalPinToInterrupt(BUTTON_A),',''],['                onButtonA, FALLING);','']]);
-}
-function poLegend(){
-  $('poLegend').innerHTML=legendItem('var(--work)',t('lg_work'))+legendItem('var(--poll)',t('lg_poll'))+legendItem('var(--isr)',t('lg_isr'))+
-    legendItem('',t('lg_hit'),'background:var(--ok);border-radius:50%')+legendItem('',t('lg_miss'),'background:var(--bad);border-radius:50%');
-}
-function poRender(){
-  const C=poCompute(P.t);
-  poSvg(C);poLcd(C);poStats(C);poExpl(C);poCode(C);
-  P.bar.sync(P.playing,P.t===0?'a_start':'a_play',fix(P.t/1000,1)+' / 10 s',P.t>=PDUR);
-  segSync($('poMode'),P.mode);
-}
-function poTick(ts){
-  if(!P.playing)return;
-  const dt=P.lastTs?Math.min(100,ts-P.lastTs):0;P.lastTs=ts;
-  P.t=Math.min(PDUR,P.t+dt);
-  if(P.t>=PDUR){if(P.hold){P.hold.b=PDUR;P.hold=null;$('poBtn').classList.remove('down');}P.playing=false;}
-  poRender();
-  if(P.playing)P.raf=requestAnimationFrame(poTick);
-}
-function poPlay(){if(P.t>=PDUR)return;P.playing=true;P.lastTs=0;cancelAnimationFrame(P.raf);P.raf=requestAnimationFrame(poTick);poRender();}
-function poPause(){P.playing=false;cancelAnimationFrame(P.raf);poRender();}
-function poReset(){poPause();P.t=0;P.hold=null;P.presses=[];poRender();}
-function poDown(){
-  if(P.hold||P.t>=PDUR)return;
-  if(!P.playing)poPlay();
-  P.hold={a:P.t,b:null};P.presses.push(P.hold);$('poBtn').classList.add('down');
-}
-function poUp(){
-  if(!P.hold)return;
-  P.hold.b=Math.max(P.t,P.hold.a+60);P.hold=null;$('poBtn').classList.remove('down');
-}
-function poInit(){
-  P.bar=RunBar(document.querySelector('[data-ctrl="poll"]'),'keys_note_poll');
-  P.bar.on('play',()=>P.playing?poPause():poPlay());
-  P.bar.on('reset',poReset);
-  segInit($('poMode'),v=>{P.mode=v;poRender();});
-  const b=$('poBtn');
-  b.addEventListener('pointerdown',e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}poDown();});
-  ['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,poUp));
-  b.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.repeat){e.preventDefault();poDown();}});
-  b.addEventListener('keyup',e=>{if(e.key==='Enter')poUp();});
 }
 
 /* =====================================================================
@@ -1598,23 +1197,13 @@ function tkInit(){
 /* =====================================================================
    4. Kwant czasu / time slice
    ===================================================================== */
-const SL_OPTS=[500,250,100,50,10,5,1],SL_DUR=3000;
-const SL={slice:1,t:0,playing:false,lastTs:0,raf:0,presses:[],zoom:false,bar:null};
+const SL_OPTS=[1000,500,100,50,10,1],SL_DUR=9000,SL_LAP=SL_DUR/3;
+const SL={slice:1000,t:0,playing:false,lastTs:0,raf:0,bar:null};
 const slOwner=ms=>['A','B','C'][Math.floor(ms/SL.slice)%3];
-function slCompute(T){
-  let led=false,cnt=0,due=false,next=100;
-  const tog=[],cntS=[],seen=SL.presses.map(p=>({p,seen:null}));
-  const n=Math.floor(T);
-  for(let ms=0;ms<n;ms++){
-    const o=slOwner(ms);
-    while(ms>=next){due=true;next+=100;}
-    if(o==='A'&&due){led=!led;tog.push(ms);due=false;}
-    if(o==='B')cnt++;
-    if(o==='C')seen.forEach(s=>{if(s.seen===null&&s.p<=ms)s.seen=ms;});
-    if(ms%10===0)cntS.push([ms,cnt]);
-  }
-  cntS.push([n,cnt]);
-  return {led,tog,cnt,cntS,seen};
+// how long task i (0, 1, 2) has had the core in [0, T)
+function slOwn(i,T){
+  const s=SL.slice,cyc=3*s,full=Math.floor(T/cyc);
+  return full*s+Math.max(0,Math.min(s,T-full*cyc-i*s));
 }
 function slSegs(a,b){
   const out=[];let ms=a;
@@ -1622,69 +1211,37 @@ function slSegs(a,b){
   return out;
 }
 function slRender(){
-  const T=SL.t,C=slCompute(T);
-  // zoom: the first 12 ms
+  const T=SL.t,now=T>0&&T<SL_DUR?slOwner(Math.floor(T)):null;
+  // the runners: each one moves only in its own time slices, from left to right
   {
-    const X0=150,W=830/12;let o='';
-    o+=txt(10,30,t('sl_zoom'),{'font-weight':600});
-    o+=txt(10,47,t('sl_zoom_s'),{'font-size':11.5,fill:'var(--muted)'});
-    for(let ms=0;ms<12;ms++){
-      const x=X0+ms*W,ow=slOwner(ms),show=SL.zoom;
-      o+=rect(x+1,14,W-2,40,show?TASKC[ow]:'var(--sunken)',{rx:4,stroke:show?'none':'var(--rule)','stroke-dasharray':'3 3'});
-      o+=txt(x+W/2,40,show?ow:'?',{'text-anchor':'middle','font-size':16,'font-weight':600,fill:show?'var(--on-color)':'var(--muted)'});
-    }
-    for(let ms=0;ms<=12;ms++)o+=txt(X0+ms*W,72,ms+' ms',{'text-anchor':'middle','font-size':11,fill:'var(--muted)'});
-    if(!SL.zoom)o+=`<g style="cursor:pointer" id="slReveal">${rect(X0+830/2-90,66,180,26,'var(--ink)',{rx:6})}${txt(X0+830/2,84,t('sl_reveal'),{'text-anchor':'middle','font-size':13,'font-weight':600,fill:'var(--surface)'})}</g>`;
-    $('slZoom').innerHTML=o;
-    const rv=$('slReveal');if(rv)rv.addEventListener('click',()=>{SL.zoom=true;slRender();});
+    const X0=150,X1=960;let o='';
+    ['A','B','C'].forEach((k,i)=>{
+      const y=30+i*52;
+      o+=txt(10,y+5,t('cx_task',k),{'font-weight':600});
+      if(now)o+=txt(10,y+22,now===k?t('sl_runs'):t('sl_waits'),{'font-size':11.5,fill:now===k?'var(--ok)':'var(--muted)'});
+      o+=svgEl('line',{x1:X0,y1:y,x2:X1,y2:y,stroke:'var(--rule)','stroke-width':6,'stroke-linecap':'round'});
+      const f=Math.min(1,slOwn(i,T)/SL_LAP),x=X0+f*(X1-X0);
+      o+=svgEl('line',{x1:X0,y1:y,x2:x,y2:y,stroke:TASKC[k],'stroke-width':6,'stroke-linecap':'round'});
+      o+=`<text x="${-(x+14)}" y="${y+9}" transform="scale(-1,1)" style="font-size:28px">\u{1F3C3}</text>`;
+    });
+    $('slRun').innerHTML=o;
   }
-  // the core over 3 s
+  // who has the core, over the whole run
   {
-    const X0=150,k=830/SL_DUR,X=ms=>X0+ms*k;let o='';
-    o+=txt(10,28,t('sl_core'),{'font-weight':600});
-    o+=txt(10,45,t('sl_core_s'),{'font-size':11.5,fill:'var(--muted)'});
-    o+=rect(X0,12,830,36,'var(--sunken)');
+    const X0=150,k=810/SL_DUR,X=ms=>X0+ms*k;let o='';
+    o+=txt(10,34,t('sl_core'),{'font-weight':600});
+    o+=rect(X0,12,810,36,'var(--sunken)');
     slSegs(0,Math.floor(T)).forEach(s=>{o+=rect(X(s.a),12,Math.max(X(s.b)-X(s.a),0.6),36,TASKC[s.o]);if(X(s.b)-X(s.a)>16)o+=txt((X(s.a)+X(s.b))/2,35,s.o,{'text-anchor':'middle','font-weight':600,fill:'var(--on-color)'});});
-    for(let s=0;s<=3;s++)o+=txt(X(s*1000),68,s+' s',{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
+    for(let q=0;q<=9;q++)o+=txt(X(q*1000),68,q+' s',{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
     o+=svgEl('line',{x1:X(T),y1:6,x2:X(T),y2:54,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
     $('slCore').innerHTML=o;
-  }
-  const st=(k,v)=>`<div class="stat"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
-  $('slStats').innerHTML=st('sl_s_slice',SL.slice+' ms')+st('sl_s_per',num(1000/SL.slice,1))+st('sl_s_done',num(Math.floor(T/SL.slice),0))+st('sl_s_now',T>0&&T<SL_DUR?slOwner(Math.floor(T)):'-');
-  // how it looks to us
-  const now=T>0&&T<SL_DUR?slOwner(Math.floor(T)):null;
-  ['A','B','C'].forEach(k=>{$('slSt'+k).innerHTML=now?pill(now===k?'run':'ready'):'';});
-  $('slLed').classList.toggle('on',C.led);
-  $('slCnt').textContent=num(C.cnt,0);
-  const lp=C.seen.length?C.seen[C.seen.length-1]:null;
-  $('slSeen').innerHTML=!lp?esc(t('sl_press_hint')):lp.seen===null?`<b>${esc(t('sl_wait'))}</b>`:esc(t('sl_seen',num(lp.seen-lp.p,0)));
-  {
-    const X0=150,k=830/SL_DUR,X=ms=>X0+ms*k;let o='';
-    const yL=10,yB=58,yC=106,H=30;
-    o+=txt(10,yL+19,t('sl_r_led'),{'font-weight':600});
-    o+=txt(10,yB+19,t('sl_r_cnt'),{'font-weight':600});
-    o+=txt(10,yC+19,t('sl_r_btn'),{'font-weight':600});
-    [yL,yB,yC].forEach(y=>{o+=rect(X0,y,830,H,'var(--sunken)');});
-    let on=false,prev=0;
-    C.tog.forEach(ms=>{if(on)o+=rect(X(prev),yL+4,X(ms)-X(prev),H-8,'var(--led1)',{rx:2});on=!on;prev=ms;});
-    if(on)o+=rect(X(prev),yL+4,X(T)-X(prev),H-8,'var(--led1)',{rx:2});
-    const maxC=SL_DUR/3;
-    o+=svgEl('polyline',{points:C.cntS.map(([ms,c])=>`${X(ms).toFixed(1)},${(yB+H-2-(H-4)*Math.min(1,c/maxC)).toFixed(1)}`).join(' '),fill:'none',stroke:'var(--tb)','stroke-width':2});
-    slSegs(0,Math.floor(T)).filter(s=>s.o==='C').forEach(s=>{o+=rect(X(s.a),yC+4,Math.max(X(s.b)-X(s.a),0.6),H-8,'var(--tc)',{opacity:.75});});
-    C.seen.forEach(s=>{
-      if(s.p>T)return;
-      o+=svgEl('circle',{cx:X(s.p),cy:yC+H/2,r:5,fill:'var(--surface)',stroke:'var(--ink)','stroke-width':2});
-      if(s.seen!==null){o+=svgEl('line',{x1:X(s.p),y1:yC+H/2,x2:X(s.seen),y2:yC+H/2,stroke:'var(--bad)','stroke-width':2.5});o+=svgEl('circle',{cx:X(s.seen),cy:yC+H/2,r:5,fill:'var(--ok)'});}
-    });
-    o+=svgEl('line',{x1:X(T),y1:4,x2:X(T),y2:yC+H+4,stroke:'var(--ink)','stroke-width':1.5,'stroke-dasharray':'3 3'});
-    $('slUs').innerHTML=o;
   }
   let e;
   if(T===0)e=[t('sl_x0_t'),t('sl_x0')];
   else if(SL.slice<=10)e=[t('sl_x_short_t'),t('sl_x_short',SL.slice)];
-  else e=[t('sl_x_long_t'),t('sl_x_long',SL.slice,SL.slice*2)];
+  else e=[t('sl_x_long_t'),t('sl_x_long',SL.slice)];
   $('slExpl').innerHTML=explHTML(e[0],e[1],'');
-  SL.bar.sync(SL.playing,T===0?'a_start':'a_play',fix(T/1000,2)+' / 3 s',T>=SL_DUR);
+  SL.bar.sync(SL.playing,T===0?'a_start':'a_play',fix(T/1000,2)+' / 9 s',T>=SL_DUR);
   segSync($('slSlice'),SL.slice);
 }
 function slTick(ts){
@@ -1697,290 +1254,13 @@ function slTick(ts){
 }
 function slPlay(){if(SL.t>=SL_DUR)return;SL.playing=true;SL.lastTs=0;cancelAnimationFrame(SL.raf);SL.raf=requestAnimationFrame(slTick);slRender();}
 function slPause(){SL.playing=false;cancelAnimationFrame(SL.raf);slRender();}
-function slReset(){slPause();SL.t=0;SL.presses=[];slRender();}
+function slReset(){slPause();SL.t=0;slRender();}
 function slInit(){
-  $('slSlice').innerHTML=SL_OPTS.map(v=>`<button data-v="${v}">${v} ms</button>`).join('');
+  $('slSlice').innerHTML=SL_OPTS.map(v=>`<button data-v="${v}">${v>=1000?v/1000+' s':v+' ms'}</button>`).join('');
   segInit($('slSlice'),v=>{SL.slice=+v;slReset();});
   SL.bar=RunBar(document.querySelector('[data-ctrl="slice"]'),'sl_keys');
   SL.bar.on('play',()=>SL.playing?slPause():slPlay());
   SL.bar.on('reset',slReset);
-  $('slBtn').addEventListener('click',()=>{if(SL.t>=SL_DUR)return;if(!SL.playing)slPlay();SL.presses.push(SL.t);slRender();});
-}
-
-/* =====================================================================
-   5. Przełączanie kontekstu / context switch
-   ===================================================================== */
-const CX={fr:false};
-const CX_CPU=[
-  {run:'A',pc:0x0210,t0:7,t1:3,sp:0x2000,mepc:null},
-  {run:'S',pc:null,t0:7,t1:3,sp:0x2000,mepc:0x0210},
-  {run:'S',pc:null,t0:7,t1:3,sp:0x1FF4,mepc:0x0210},
-  {run:'S',pc:null,t0:7,t1:3,sp:0x1FF4,mepc:0x0210},
-  {run:'B',pc:0x0308,t0:42,t1:9,sp:0x3000,mepc:0x0308}];
-const CX_SAVE=['addi sp, sp, -CONTEXT_SIZE  # 12 = 3 × 4 bytes','sw   t0, 1*4(sp)            # save registers','sw   t1, 2*4(sp)','csrr t0, mepc                # where it stopped','sw   t0, 0(sp)               # save the PC','lw   t0, pxCurrentTCB        # its TCB','sw   sp, 0(t0)               # pxTopOfStack = sp'];
-const CX_PICK=['call vTaskSwitchContext      # pxCurrentTCB = the TCB of the next task'];
-const CX_REST=['lw   t0, pxCurrentTCB        # the new TCB','lw   sp, 0(t0)               # sp = pxTopOfStack','lw   t0, 0(sp)               # its saved PC','csrw mepc, t0','lw   t0, 1*4(sp)             # restore registers','lw   t1, 2*4(sp)','addi sp, sp, CONTEXT_SIZE','mret                         # continue the task'];
-function cxRender(){
-  const i=S.ctx.i,c=CX_CPU[i],fr=CX.fr;
-  const t0v=fr&&(i===2||i===3)?0x4000:c.t0;
-  // highlight maps
-  const H={};
-  if(i===1){H.mepc='chg';H.pc='chg';}
-  if(i===2){H.pc='rd';H.t0=fr?'chg':'rd';H.t1='rd';H.sp='chg';H.mepc='rd';}
-  if(i===4){H.pc='chg';H.t0='chg';H.t1='chg';H.sp='chg';H.mepc='chg';}
-  const reg=(k,n,v)=>`<div class="reg ${H[k]||''}"><span>${n}</span><b>${esc(v)}</b></div>`;
-  const runName=c.run==='S'?t('cx_sched'):t('cx_task',c.run);
-  $('cxCpuH').innerHTML=esc(t('cx_cpu'))+' · '+`<span style="color:${c.run==='A'?'var(--ta)':c.run==='B'?'var(--tb)':'var(--sched)'}">${esc(runName)}</span>`;
-  const sv=v=>v===null?'-':hexN(v);
-  $('cxCpu').innerHTML=reg('pc','PC',c.pc===null?t('cx_sched_pc'):hexN(c.pc))+reg('t0','t0',fr&&(i===2||i===3)?hexN(t0v)+'  (TCB A)':String(t0v))+reg('t1','t1',String(c.t1))+reg('sp','sp',hexN(c.sp))+
-    reg('mepc',fr?'mepc':t('cx_savedpc')+' (mepc)',sv(c.mepc));
-  // stacks
-  const cell=(ad,v,cls,tag)=>`<div class="cell"><span class="ad">${hexN(ad)}</span><span class="v ${cls}">${esc(v)}</span><span class="tp">${tag||''}</span></div>`;
-  const topA=i>=2?0x1FF4:0x2000,topB=i>=4?0x3000:0x2FF4;
-  const tg=(who,ad,top)=>ad===top?`<span style="color:${who==='A'?'var(--ta)':'var(--tb)'}">← ${esc(t('cx_top'))}</span>`:'';
-  let sa='<div class="mem">';
-  [[0x1FF4,'PC',0x0210],[0x1FF8,'t0',7],[0x1FFC,'t1',3]].forEach(([ad,n,v])=>{
-    const has=i>=2;sa+=cell(ad,has?`${n} = ${n==='PC'?hexN(v):v}`:'',has?'a'+(i===2?' chg':''):'empty',tg('A',ad,topA));});
-  sa+=cell(0x2000,t('cx_data','A'),'a',tg('A',0x2000,topA))+'</div>';
-  let sb='<div class="mem">';
-  [[0x2FF4,'PC',0x0308],[0x2FF8,'t0',42],[0x2FFC,'t1',9]].forEach(([ad,n,v])=>{
-    sb+=cell(ad,`${n} = ${n==='PC'?hexN(v):v}`,'b'+(i===4?' rd':''),tg('B',ad,topB));});
-  sb+=cell(0x3000,t('cx_data','B'),'b',tg('B',0x3000,topB))+'</div>';
-  $('cxStacks').innerHTML=`<h3 style="color:var(--ta);font-size:13px">${esc(t('cx_stack','A'))}</h3>${sa}<h3 style="color:var(--tb);font-size:13px;margin-top:12px">${esc(t('cx_stack','B'))}</h3>${sb}`;
-  // table / TCBs
-  const spA=i>=2?hexN(0x1FF4):'-';
-  if(!fr){
-    $('cxTblH').textContent=t('cx_tbl');
-    $('cxTbl').innerHTML=`<div class="regs" style="grid-template-columns:minmax(0,1fr)">
-      <div class="reg ${i===2?'chg':''} ${i===3?'':''}"><span style="color:var(--ta)">${esc(t('cx_task','A'))}</span><b>${spA}</b></div>
-      <div class="reg ${i===3?'sel':i===4?'rd':''}"><span style="color:var(--tb)">${esc(t('cx_task','B'))}</span><b>${hexN(0x2FF4)}</b></div></div>
-      <p class="note">${esc(i>=3?t('cx_next_b'):t('cx_next_q'))}</p>`;
-  }else{
-    $('cxTblH').textContent=t('cx_tcbs');
-    const cur=i>=3?'B':'A';
-    $('cxTbl').innerHTML=`<div class="regs" style="grid-template-columns:minmax(0,1fr)">
-      <div class="reg ${i===3?'chg':''}"><span>pxCurrentTCB</span><b>${hexN(cur==='A'?0x4000:0x4100)} → TCB ${cur}</b></div>
-      <div class="reg ${i===2?'chg':''}"><span style="color:var(--ta)">TCB A  [0x4000] · pxTopOfStack</span><b>${spA}</b></div>
-      <div class="reg ${i===4?'rd':''}"><span style="color:var(--tb)">TCB B  [0x4100] · pxTopOfStack</span><b>${hexN(0x2FF4)}</b></div></div>
-      <p class="note">${esc(t('cx_tcb_note'))}</p>`;
-  }
-  $('cxLegend').innerHTML=legendItem('',t('cx_lg_rd'),'border:2px solid var(--rd)')+legendItem('',t('cx_lg_wr'),'border:2px solid var(--wr)')+
-    legendItem('var(--ta)',t('cx_task','A'))+legendItem('var(--tb)',t('cx_task','B'));
-  // assembly
-  $('cxAsmP').hidden=!fr;
-  const mark=(arr,on,key)=>arr.map(s=>[s,on?(s.startsWith(key)?'act k':'act'):'']);
-  $('cxAsm1').innerHTML=codeLines(mark(CX_SAVE,i===2,'sw   sp'));
-  $('cxAsm2').innerHTML=codeLines(mark(CX_PICK,i===3,'call'));
-  $('cxAsm3').innerHTML=codeLines(mark(CX_REST,i===4,'lw   sp'));
-  // explanation
-  const k=fr?'fr':'s';
-  $('cxExpl').innerHTML=explHTML(t('cx_t'+i),t('cx_'+k+i),i||'',i<4?t('cx_q_'+k+(i+1)):t('cx_q_end'));
-}
-function cxInit(){
-  S.ctx=Stepper(document.querySelector('[data-ctrl="ctx"]'),()=>5,cxRender,1600);
-  $('cxFr').addEventListener('change',e=>{CX.fr=e.target.checked;S.ctx.reset();});
-}
-
-/* =====================================================================
-   6. Stany i priorytety / states and priorities
-   ===================================================================== */
-const ST={scn:'c',presses:[],sim:null};
-const ST_MS=16,ST_U=ST_MS*2;
-function stSim(){
-  const D=(ST.scn==='all'?[['C',4],['A',16],['B',16],['C',16]]:[['C',4]]).map(([task,at])=>({task,at,done:false}));
-  const PR=new Set(ST.presses.concat(ST.scn==='h'?[15]:[]));
-  const st={A:'ready',B:'ready',C:'ready',H:'blk'};
-  const until={},q=['A','B','C'];let cur=null,hLeft=0;
-  const tl=[];
-  for(let u=0;u<ST_U;u++){
-    const ev=[];
-    ['A','B','C'].forEach(k=>{if(st[k]==='blk'&&until[k]===u){st[k]='ready';q.push(k);ev.push({k:'wake',task:k});}});
-    if(PR.has(u)&&st.H==='blk'){st.H='ready';hLeft=2;ev.push({k:'press'});}
-    if(u%2===0&&cur&&cur!=='H'&&cur!=='IDLE'){st[cur]='ready';q.push(cur);cur=null;}
-    if(cur==='IDLE')cur=null;
-    if(st.H==='ready'&&cur!=='H'){
-      if(cur){st[cur]='ready';q.unshift(cur);ev.push({k:'preempt',task:cur});}
-      cur='H';st.H='run';
-    }
-    while(!cur){
-      if(!q.length){cur='IDLE';break;}
-      const k=q.shift();
-      const d=D.find(d=>!d.done&&d.task===k&&d.at<=u);
-      if(d){d.done=true;st[k]='blk';until[k]=u+6;ev.push({k:'delay',task:k,until:u+6});continue;}
-      cur=k;st[k]='run';
-    }
-    const snap={run:cur,st:Object.assign({},st),ev,q:q.slice(),until:Object.assign({},until)};
-    tl.push(snap);
-    if(cur==='H'){hLeft--;if(hLeft<=0){st.H='blk';cur=null;ev.push({k:'hdone'});}}
-  }
-  ST.sim=tl;
-}
-const stMs=u=>num(u/2,1)+' ms';
-function stEvText(e,u){
-  if(e.k==='wake')return t('st_e_wake',e.task,stMs(u));
-  if(e.k==='press')return t('st_e_press',stMs(u));
-  if(e.k==='preempt')return t('st_e_preempt',e.task);
-  if(e.k==='delay')return t('st_e_delay',e.task,stMs(u),stMs(e.until));
-  if(e.k==='hdone')return t('st_e_hdone',stMs(u+1));
-  return '';
-}
-function stRender(){
-  const T=S.states.i,U=T*2,tl=ST.sim;
-  const X0=140,W=845/ST_U,X=u=>X0+u*W;
-  const rows=[['H',22],['A',72],['B',122],['C',172],['IDLE',222]],RH=34;
-  let o=`<defs>${HATCH('stH')}</defs>`;
-  rows.forEach(([k,y])=>{
-    o+=txt(10,y+15,k==='IDLE'?'IDLE':t('cx_task',k),{'font-weight':600,fill:TASKC[k]==='var(--idle)'?'var(--muted)':TASKC[k]});
-    o+=txt(10,y+30,k==='H'?t('st_prio',2):k==='IDLE'?t('st_prio',0):t('st_prio',1),{'font-size':11.5,fill:'var(--muted)'});
-    o+=rect(X0,y,845,RH,'var(--sunken)',{opacity:.6});
-  });
-  for(let u=0;u<U;u++){
-    const s=tl[u];
-    rows.forEach(([k,y])=>{
-      if(k==='IDLE'){if(s.run==='IDLE')o+=rect(X(u)+.5,y+2,W-1,RH-4,'var(--idle)',{rx:2});return;}
-      const v=s.run===k?'run':s.st[k];
-      if(v==='run')o+=rect(X(u)+.5,y+2,W-1,RH-4,TASKC[k],{rx:2});
-      else if(v==='ready')o+=rect(X(u)+.5,y+9,W-1,RH-18,'var(--ready-bg)',{stroke:'var(--ready)','stroke-width':1});
-      else o+=rect(X(u)+.5,y+9,W-1,RH-18,'url(#stH)');
-    });
-    s.ev.forEach(e=>{
-      if(e.k==='press')o+=svgEl('path',{d:`M${X(u)},${22-2} l-5,-10 h10 z`,fill:'var(--th)'});
-      if(e.k==='delay'){const y=rows.find(r=>r[0]===e.task)[1];o+=txt(X(u)+3,y-3,'vTaskDelay(3)',{'font-size':10.5,class:'m',fill:'var(--muted)'});}
-    });
-  }
-  for(let m=0;m<=ST_MS;m++){
-    o+=svgEl('line',{x1:X(m*2),y1:16,x2:X(m*2),y2:262,stroke:'var(--rule)','stroke-dasharray':'2 3'});
-    o+=txt(X(m*2),280,m+(m===ST_MS?' ms':''),{'text-anchor':'middle','font-size':11.5,fill:'var(--muted)'});
-  }
-  o+=txt(X0,296,t('st_axis'),{'font-size':11,fill:'var(--muted)'});
-  o+=svgEl('line',{x1:X(U),y1:10,x2:X(U),y2:266,stroke:'var(--ink)','stroke-width':1.6,'stroke-dasharray':'3 3'});
-  $('stSvg').innerHTML=o;
-  $('stLegend').innerHTML=legendItem('var(--ta)',t('st_lg_run'))+legendItem('',t('st_lg_ready'),'background:var(--ready-bg);border:1px solid var(--ready)')+
-    legendItem('',t('st_lg_blk'),'background:repeating-linear-gradient(45deg,var(--blk) 0 2px,var(--blk-bg) 2px 5px)')+legendItem('var(--idle)',t('st_lg_idle'))+legendItem('var(--th)',t('st_lg_press'));
-  // explanation of the last ms
-  let title,text;
-  if(T===0){title=t('st_x0_t');text=t('st_x0');}
-  else{
-    const a=tl[U-2],b=tl[U-1];
-    const who=a.run===b.run?t('st_ran1',a.run==='IDLE'?'IDLE':a.run):t('st_ran2',a.run,b.run);
-    const evs=[];[U-2,U-1].forEach(u=>tl[u].ev.forEach(e=>evs.push(stEvText(e,u))));
-    title=t('st_x_t',T-1,T);
-    text=who+(evs.length?' '+evs.join(' '):'');
-    if(a.run==='IDLE'||b.run==='IDLE')text+=' '+t('st_x_idle');
-  }
-  $('stExpl').innerHTML=explHTML(title,text,T||'');
-  // lists
-  const s=T===0?{run:null,st:{A:'ready',B:'ready',C:'ready',H:'blk'},q:['A','B','C'],until:{}}:tl[U-1];
-  const tk=k=>`<span class="chip" style="--c:${TASKC[k]}">${k}</span>`;
-  const run=T===0?'-':s.run;
-  const rdy2=s.st.H==='ready'?[tk('H')]:[];
-  const rdy1=['A','B','C'].filter(k=>s.st[k]==='ready'&&k!==s.run);
-  const blk=['H','A','B','C'].filter(k=>s.st[k]==='blk');
-  const row=(lbl,content)=>`<div style="display:flex;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--rule)"><span style="min-width:150px;font-size:13px;color:var(--muted)">${esc(lbl)}</span><div class="chips">${content||`<span class="note" style="margin:0">${esc(t('st_empty'))}</span>`}</div></div>`;
-  $('stLists').innerHTML=row(t('st_l_run'),run==='-'?'':run==='IDLE'?`<span class="chip" style="--c:var(--idle)">IDLE</span>`:tk(run))+
-    row(t('st_l_r2'),rdy2.join(''))+row(t('st_l_r1'),rdy1.map(tk).join(''))+
-    row(t('st_l_blk'),blk.map(k=>tk(k)+`<span class="note" style="margin:0 6px 0 0">${esc(k==='H'?t('st_w_btn'):t('st_w_until',stMs(s.until[k])))}</span>`).join(''));
-  // CPU usage
-  const cnt={H:0,A:0,B:0,C:0,IDLE:0};for(let u=0;u<U;u++)cnt[tl[u].run]++;
-  $('stBar').innerHTML=U?Object.keys(cnt).filter(k=>cnt[k]).map(k=>`<i style="width:${cnt[k]/U*100}%;background:${TASKC[k]}" title="${k}"></i>`).join(''):'';
-  $('stBarLegend').innerHTML=U?Object.keys(cnt).map(k=>legendItem(TASKC[k],`${k}: ${pct(cnt[k]/U*100)}`)).join(''):esc(t('st_cpu_empty'));
-  $('stPress').disabled=T>=ST_MS;
-  segSync($('stScn'),ST.scn);
-}
-function stCode(){
-  $('stCode').innerHTML=codeLines([
-    ['xTaskCreate(taskA, "A", 2048, NULL, 1, NULL);   // '+t('st_c_p1'),''],['xTaskCreate(taskB, "B", 2048, NULL, 1, NULL);',''],['xTaskCreate(taskC, "C", 2048, NULL, 1, NULL);',''],
-    ['xTaskCreate(taskH, "H", 2048, NULL, 2, NULL);   // '+t('st_c_p2'),''],['',''],
-    ['void taskC(void *p) {',''],['  // ... '+t('st_c_at2'),''],['  vTaskDelay(pdMS_TO_TICKS(3));                  // '+t('st_c_blk'),''],['}',''],
-    ['void taskH(void *p) {',''],['  for (;;) {',''],['    waitForButton();                             // '+t('st_c_wait'),''],['    handleButton();                              // '+t('st_c_work'),''],['  }',''],['}','']]);
-}
-function stInit(){
-  S.states=Stepper(document.querySelector('[data-ctrl="states"]'),()=>ST_MS+1,stRender,900,i=>i+' / '+ST_MS+' ms');
-  segInit($('stScn'),v=>{ST.scn=v;ST.presses=[];stSim();S.states.reset();});
-  $('stPress').addEventListener('click',()=>{const T=S.states.i;if(T>=ST_MS)return;const u=T*2+1;if(!ST.presses.includes(u))ST.presses.push(u);stSim();S.states.stop();S.states.go(T+1);});
-  stSim();
-}
-
-/* =====================================================================
-   7. Wspólny licznik / shared counter
-   ===================================================================== */
-const SC={runs:[],cur:null,shown:0,playing:false,raf:0,start:0,bar:null};
-// time slices in micro-steps (one counter++ = 3); chosen so that most runs give 6 and some give 4 or 5
-const SC_SLICES=[3,3,6,6,7,8];
-function scGen(){
-  const r=Math.random;
-  const tk=[{n:0,ph:0,reg:0},{n:0,ph:0,reg:0}];
-  let counter=0,u=0,who=r()<.5?0:1;const segs=[],plus=[],sw=[];
-  while(tk[0].n<3||tk[1].n<3){
-    if(tk[who].n>=3)who=1-who;
-    const len=SC_SLICES[Math.floor(r()*SC_SLICES.length)],a=u;
-    for(let k=0;k<len&&tk[who].n<3;k++){
-      const s=tk[who];
-      if(s.ph===0){s.reg=counter;s.ph=1;}
-      else if(s.ph===1){s.reg++;s.ph=2;}
-      else{counter=s.reg;s.ph=0;s.n++;plus.push({task:who,u:u+1});}
-      u++;
-    }
-    segs.push({task:who,a,b:u});
-    if((tk[0].n<3||tk[1].n<3)&&tk[1-who].n<3){sw.push(u);who=1-who;}
-  }
-  return {segs,plus,sw,final:counter,total:u};
-}
-function scRender(){
-  const R=SC.cur,sh=SC.shown;
-  const done=R&&sh>=R.total;
-  $('scVal').textContent=!R?'0':done?String(R.final):'…';
-  $('scVal').parentElement.style.borderColor=done?(R.final===6?'var(--ok)':'var(--bad)'):'';
-  const adds=R?R.plus.filter(p=>p.u<=sh).length:0;
-  const bad=SC.runs.filter(x=>x!==6).length;
-  const st=(k,v,cl)=>`<div class="stat ${cl||''}"><span>${esc(t(k))}</span><b>${esc(v)}</b></div>`;
-  $('scStats').innerHTML=st('sc_s_adds',adds+' / 6')+st('sc_s_exp','6')+st('sc_s_runs',SC.runs.length)+st('sc_s_bad',bad,bad?'bad':'');
-  // timeline
-  let o='';const X0=130,W=850;
-  const rows=[[0,22],[1,82]],RH=36;
-  rows.forEach(([k,y])=>{o+=txt(10,y+15,t('sc_task',k+1),{'font-weight':600,fill:k?'var(--tb)':'var(--ta)'});o+=txt(10,y+30,t('sc_task_s'),{'font-size':11.5,fill:'var(--muted)'});o+=rect(X0,y,W,RH,'var(--sunken)',{opacity:.6});});
-  if(R){
-    const k=W/Math.max(R.total,1),X=u=>X0+u*k;
-    R.segs.forEach(s=>{
-      const a=s.a,b=Math.min(s.b,sh);if(b<=a)return;
-      const y=rows[s.task][1];
-      o+=rect(X(a)+1,y+3,X(b)-X(a)-2,RH-6,s.task?'var(--tb)':'var(--ta)',{rx:4,opacity:.85});
-    });
-    R.sw.forEach(u=>{if(u<=sh){o+=svgEl('line',{x1:X(u),y1:14,x2:X(u),y2:126,stroke:'var(--sched)','stroke-width':2,'stroke-dasharray':'4 3'});}});
-    R.plus.forEach(p=>{if(p.u<=sh){const y=rows[p.task][1];o+=txt(X(p.u)-4,y+RH/2+5,'+1',{'text-anchor':'end','font-size':13,'font-weight':700,fill:'var(--on-color)'});}});
-  }else o+=txt(X0+W/2,72,t('sc_empty'),{'text-anchor':'middle',fill:'var(--muted)'});
-  o+=txt(X0,146,t('sc_axis'),{'font-size':11,fill:'var(--muted)'});
-  $('scSvg').innerHTML=o;
-  $('scLegend').innerHTML=legendItem('var(--ta)',t('sc_lg_run',1))+legendItem('var(--tb)',t('sc_lg_run',2))+legendItem('',t('sc_lg_sw'),'border-left:2px dashed var(--sched);border-radius:0;width:2px')+legendItem('',t('sc_lg_plus'),'background:none');
-  let e;
-  if(!R)e=[t('sc_x0_t'),t('sc_x0')];
-  else if(!done)e=[t('sc_xr_t'),t('sc_xr')];
-  else if(R.final===6)e=[t('sc_xok_t'),t('sc_xok')];
-  else e=[t('sc_xbad_t',R.final),t('sc_xbad',R.final)];
-  $('scExpl').innerHTML=explHTML(e[0],e[1],'');
-  $('scExpl').classList.toggle('bad',!!(R&&done&&R.final!==6));
-  $('scExpl').classList.toggle('good',!!(R&&done&&R.final===6));
-  $('scHist').innerHTML=SC.runs.length?SC.runs.map((v,i)=>`<span class="chip" style="--c:${v===6?'var(--ok)':'var(--bad)'}">${t('sc_run',i+1)}: ${v}</span>`).join(''):`<span class="note" style="margin:0">${esc(t('sc_hist_empty'))}</span>`;
-  SC.bar.sync(SC.playing,'sc_run_btn','',SC.playing);
-}
-function scFrame(ts){
-  if(!SC.playing)return;
-  if(!SC.start)SC.start=ts;
-  SC.shown=Math.min(SC.cur.total,(ts-SC.start)/110);
-  if(SC.shown>=SC.cur.total){SC.playing=false;SC.runs.push(SC.cur.final);}
-  scRender();
-  if(SC.playing)SC.raf=requestAnimationFrame(scFrame);
-}
-function scRun(){if(SC.playing)return;SC.cur=scGen();SC.shown=0;SC.start=0;SC.playing=true;cancelAnimationFrame(SC.raf);SC.raf=requestAnimationFrame(scFrame);scRender();}
-function scStop(){if(SC.playing){SC.playing=false;cancelAnimationFrame(SC.raf);SC.shown=SC.cur.total;SC.runs.push(SC.cur.final);}}
-function scCode(){
-  $('scCode').innerHTML=codeLines([['volatile int counter = 0;',''],['',''],['void task(void *p) {               // '+t('sc_c_two'),''],
-    ['  for (int i = 0; i < 3; i++)',''],['    counter++;',''],['  vTaskDelete(NULL);',''],['}','']]);
-}
-function scInit(){
-  SC.bar=RunBar(document.querySelector('[data-ctrl="shared"]'),'sc_keys');
-  SC.bar.on('play',scRun);
-  SC.bar.on('reset',()=>{cancelAnimationFrame(SC.raf);SC.playing=false;SC.runs=[];SC.cur=null;SC.shown=0;scRender();});
 }
 
 /* =====================================================================
@@ -2278,23 +1558,19 @@ function pcInit(){
 /* =====================================================================
    aplikacja / app
    ===================================================================== */
-const MODS=['poll','intr','irq','tick','slice','ctx','states','shared','race','mutex','dead','pc'];
-const GRPS={g6:['poll','intr','irq','tick','slice','ctx','states','shared'],g7:['race','mutex'],g8:['dead','pc']};
+const MODS=['intr','irq','tick','slice','race','mutex','dead','pc'];
+const GRPS={g6:['intr','irq','tick','slice'],g7:['race','mutex'],g8:['dead','pc']};
 const GRP_OF={};for(const g in GRPS)GRPS[g].forEach(m=>GRP_OF[m]=g);
-const lastIn={g6:'poll',g7:'race',g8:'dead'};
+const lastIn={g6:'intr',g7:'race',g8:'dead'};
 function openGrp(g){document.querySelectorAll('#topics .grp').forEach(el=>{const on=el.dataset.grp===g;el.classList.toggle('open',on);el.querySelector('.gh').setAttribute('aria-expanded',String(on));});}
 function modHead(){const g=GRP_OF[cur];$('mhGrp').textContent=t('lect'+g.slice(1))+' · '+t(g+'n');$('mhTitle').textContent=t('tp_'+cur);$('mhSub').textContent=t('tp_'+cur+'_s');}
-let cur='poll';
+let cur='intr';
 try{const h=location.hash.slice(1);if(MODS.includes(h))cur=h;else{const s=localStorage.getItem('ccSimMod');if(MODS.includes(s))cur=s;}}catch(e){}
 function renderAll(){
   inRender();
-  poLegend();poRender();
   irFill();S.irq.go(S.irq.i);
   tkCode();segSync($('tkHow'),TK.how);S.tick.go(S.tick.i);
   slRender();
-  S.ctx.go(S.ctx.i);
-  stCode();S.states.go(S.states.i);
-  scCode();scRender();
   rcRender();mxRender();dlRender();
   pcCode();pcRender();
 }
@@ -2305,11 +1581,9 @@ function applyLang(){
   renderAll();modHead();
 }
 function showMod(m){
-  ['irq','tick','ctx','states'].forEach(k=>S[k].stop());
-  if(cur==='poll'&&m!=='poll'){poUp();poPause();}
+  ['irq','tick'].forEach(k=>S[k].stop());
   if(cur==='intr'&&m!=='intr')inPause();
   if(cur==='slice'&&m!=='slice')slPause();
-  if(cur==='shared'&&m!=='shared'){scStop();scRender();}
   if(cur==='pc'&&m!=='pc')pcPause();
   cur=m;
   MODS.forEach(k=>{$('mod-'+k).hidden=k!==m;});
@@ -2330,7 +1604,6 @@ document.querySelectorAll('.langs button').forEach(b=>b.addEventListener('click'
 const typing=e=>{const tg=e.target;return tg&&(tg.tagName==='INPUT'||tg.tagName==='SELECT'||tg.tagName==='TEXTAREA'||tg.isContentEditable);};
 document.addEventListener('keydown',e=>{
   if(typing(e)||e.ctrlKey||e.metaKey||e.altKey)return;
-  if(cur==='poll'){if(e.key===' '){e.preventDefault();if(!e.repeat)poDown();}return;}
   if(cur==='intr'){if(e.key===' '&&!e.repeat){e.preventDefault();inPress();}return;}
   if(cur==='race'||cur==='mutex'||cur==='dead'){
     const k=e.key.toUpperCase();
@@ -2343,9 +1616,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowLeft'){e.preventDefault();s.prev();}
   else if(e.key===' '&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();s.toggle();}
 });
-document.addEventListener('keyup',e=>{if(cur==='poll'&&e.key===' '){e.preventDefault();poUp();}});
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(MODS.includes(h)&&h!==cur)showMod(h);});
-window.addEventListener('blur',()=>{if(cur==='poll')poUp();});
 
 /* reset buttons for the thread topics */
 function thrBar(id,reset,note){
@@ -2356,7 +1627,7 @@ function thrBar(id,reset,note){
 thrBar('race',rcReset,'th_keys');thrBar('mutex',mxReset,'th_keys');thrBar('dead',dlReset,'th_keys');
 segInit($('dlOrder'),v=>{DL.b=v;dlReset();});
 
-inInit();poInit();irInit();tkInit();slInit();cxInit();stInit();scInit();pcInit();
+inInit();irInit();tkInit();slInit();pcInit();
 rcReset();mxReset();dlReset();
 applyLang();
 showMod(cur);

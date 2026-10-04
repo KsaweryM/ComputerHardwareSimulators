@@ -103,20 +103,16 @@ const GROUPS=[
     {id:'io-mmio',sim:'device',mod:'mmio',pl:['Rejestry urządzeń','sw i lw do urządzenia, dekoder adresu'],en:['Device registers','sw and lw to a device, address decoder']},
     {id:'io-gpio',sim:'device',mod:'gpio',pl:['Kontroler GPIO','OUT, ENABLE, IN, driver i piny'],en:['GPIO controller','OUT, ENABLE, IN, driver and pins']}]},
   {n:6,pl:'Przerwania i planista',en:'Interrupts and the scheduler',items:[
-    {id:'cc-poll',sim:'concurrency',mod:'poll',pl:['Polling a przerwanie','Symulator 1: naciskaj i porównaj'],en:['Polling vs interrupt','Simulator 1: press and compare']},
     {id:'cc-intr',sim:'concurrency',mod:'intr',pl:['Przerwanie','płytka pracuje, przerwanie jej przerywa'],en:['An interrupt','the board works, an interrupt breaks in']},
     {id:'cc-irq',sim:'concurrency',mod:'irq',pl:['Przerwanie krok po kroku','Symulator 1: mepc, ISR, mret'],en:['Interrupt step by step','Simulator 1: mepc, ISR, mret']},
     {id:'cc-tick',sim:'concurrency',mod:'tick',pl:['Timer i tick','Symulatory 2 i 3: trzy diody'],en:['Timer and tick','Simulators 2 and 3: three LEDs']},
-    {id:'cc-slice',sim:'concurrency',mod:'slice',pl:['Kwant czasu','Symulator 4: A, B, C na zmianę'],en:['Time slice','Simulator 4: A, B, C take turns']},
-    {id:'cc-ctx',sim:'concurrency',mod:'ctx',pl:['Przełączanie kontekstu','Symulatory 5 i 7: stosy i TCB'],en:['Context switch','Simulators 5 and 7: stacks and TCBs']},
-    {id:'cc-states',sim:'concurrency',mod:'states',pl:['Stany i priorytety','Symulator 6: Ready, Blocked, IDLE'],en:['States and priorities','Simulator 6: Ready, Blocked, IDLE']},
-    {id:'cc-shared',sim:'concurrency',mod:'shared',pl:['Wspólny licznik','Symulator 6: 3 + 3 = ?'],en:['Shared counter','Simulator 6: 3 + 3 = ?']}]},
+    {id:'cc-slice',sim:'concurrency',mod:'slice',pl:['Kwant czasu','Symulator 4: trzech biegaczy'],en:['Time slice','Simulator 4: three runners']}]},
   {n:7,pl:'Wątki i synchronizacja',en:'Threads and synchronisation',items:[
-    {id:'cc-race',sim:'concurrency',mod:'race',pl:['Wyścig krok po kroku','Symulator 8: lw, addi, sw'],en:['Race step by step','Simulator 8: lw, addi, sw']},
-    {id:'cc-mutex',sim:'concurrency',mod:'mutex',pl:['Mutex','Symulator 9: jeden wątek naraz'],en:['Mutex','Simulator 9: one thread at a time']}]},
+    {id:'cc-race',sim:'concurrency',mod:'race',pl:['Wyścig krok po kroku','Symulator 5: lw, addi, sw'],en:['Race step by step','Simulator 5: lw, addi, sw']},
+    {id:'cc-mutex',sim:'concurrency',mod:'mutex',pl:['Mutex','Symulator 6: jeden wątek naraz'],en:['Mutex','Simulator 6: one thread at a time']}]},
   {n:8,pl:'Zakleszczenie i współpraca',en:'Deadlock and cooperation',items:[
-    {id:'cc-dead',sim:'concurrency',mod:'dead',pl:['Zakleszczenie','Symulator 10: graf oczekiwania'],en:['Deadlock','Simulator 10: the wait-for graph']},
-    {id:'cc-pc',sim:'concurrency',mod:'pc',pl:['Producent-konsument','Symulator 11: bufor o rozmiarze 1 do 8'],en:['Producer-consumer','Simulator 11: a buffer of 1 to 8']}]},
+    {id:'cc-dead',sim:'concurrency',mod:'dead',pl:['Zakleszczenie','Symulator 7: graf oczekiwania'],en:['Deadlock','Simulator 7: the wait-for graph']},
+    {id:'cc-pc',sim:'concurrency',mod:'pc',pl:['Producent-konsument','Symulator 8: bufor o rozmiarze 1 do 8'],en:['Producer-consumer','Simulator 8: a buffer of 1 to 8']}]},
 ];
 const T={
   pl:{title:'Symulatory: Computer Hardware',intro:'Interaktywne ćwiczenia do wykładów 3 do 8. Wybierz wykład i temat po lewej.',lect:n=>`Wykład ${n}`},
