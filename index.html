@@ -123,7 +123,7 @@ const T={
   en:{title:'Computer Hardware simulators',intro:'Interactive exercises for Lectures 3 to 8. Pick a lecture and a topic on the left.',lect:n=>`Lecture ${n}`},
 };
 // bump this after changing a simulator, so that browsers load the new copy instead of a cached one
-const VERSION='4';
+const VERSION='5';
 const ITEMS={};GROUPS.forEach(g=>g.items.forEach(it=>{it.g=g;ITEMS[it.id]=it;}));
 const lastIn={};GROUPS.forEach(g=>{lastIn[g.n]=g.items[0].id;});
 

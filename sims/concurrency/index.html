@@ -413,8 +413,7 @@ svg .m{font-family:var(--mono)}
     <section class="panel">
       <h2 data-i="tk_h_setup"></h2>
       <div class="opts">
-        <div class="opt"><label data-i="tk_l_how"></label><div class="seg" id="tkHow"><button data-v="timer" data-i="tk_m_timer"></button><button data-v="delay">delay()</button><button data-v="millis" data-i="tk_m_millis"></button></div></div>
-        <div class="opt"><label data-i="tk_l_lcd"></label><label class="chk"><input type="checkbox" id="tkLcd"><span data-i="tk_lcd"></span></label></div>
+        <div class="opt"><label data-i="tk_l_how"></label><div class="seg" id="tkHow"><button data-v="timer" data-i="tk_m_timer"></button><button data-v="millis" data-i="tk_m_millis"></button></div></div>
       </div>
       <pre class="code" id="tkCode" style="margin-top:14px"></pre>
     </section>
@@ -712,7 +711,7 @@ pl:{
   ir_c_room:'miejsce na stosie', ir_c_save0:'zapisz t0', ir_c_save1:'zapisz t1', ir_c_la:'t0 = adres presses', ir_c_load:'t1 = presses', ir_c_store:'presses = t1', ir_c_rest1:'przywróć t1', ir_c_rest0:'przywróć t0', ir_c_mret:'PC = mepc',
   ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x w pamięci ← t0 = ${v}.`, ir_e_j:'Skok z powrotem do 0x0104: pętla trwa dalej.',
   ir_e_room:sp=>`Prolog: robimy miejsce na stosie, sp ← sp − 16 = ${sp}. 16, a nie 8, bo sp musi być wielokrotnością 16.`,
-  ir_e_save:(r,v,a)=>`Zapisujemy ${r} programu głównego na stosie: [${a}] ← ${v}. ISR zaraz użyje ${r} do własnej pracy.`, ir_e_la:'t0 ← adres zmiennej presses (0x1004). ISR nie wie, co program główny trzyma w rejestrach, więc sama bierze adres. la to dwie prawdziwe instrukcje (8 bajtów).',
+  ir_e_save:(r,v,a)=>`Zapisujemy ${r} programu głównego na stosie: [${a}] ← ${v}. ISR zaraz użyje ${r} do własnej pracy.`, ir_e_la:'Ładujemy adres zmiennej presses: jest zapisana pod adresem 0x1004, więc t0 ← 0x1004. la to dwie prawdziwe instrukcje (8 bajtów).',
   ir_e_load:v=>`t1 ← presses = ${v}. Wartość t1 programu głównego zniknęła z rejestru, ale jest bezpieczna na stosie.`,
   ir_e_inc:v=>`t1 ← t1 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: naciśnięcie policzone.`,
   ir_e_rest:(r,v)=>`Epilog: przywracamy ${r} programu głównego ze stosu: ${r} ← ${v}.`, ir_e_free:sp=>`sp ← sp + 16 = ${sp}: stos jest taki jak przed przerwaniem.`,
@@ -731,7 +730,7 @@ pl:{
   tk_every:(n,ms)=>`co ${n} ticki (${ms} ms)`, tk_every_s:ms=>`co ${ms} ms`,
   tk_x0_t:'Tick 0', tk_x0:'Timer zgłasza przerwanie co 100 ms. Na każdym ticku ISR decyduje: LED 1 co 3 ticki, LED 2 co 5, LED 3 co 7. Na początku wszystkie są zgaszone. <b>Najpierw przewiduj</b>, potem sprawdzaj.',
   tk_x_tick_t:(n,s)=>`Tick ${n} (${s})`, tk_x_tick:p=>`ISR: ticks++, a potem ${p}.`, tk_x_changed:l=>`Zmienia się: <b>${l}</b>.`, tk_x_none:'Żadna dioda się nie zmienia.',
-  tk_x_all:'Wszystkie trzy zmieniają się razem: 3 × 5 × 7 = 105.',
+  tk_x_all:'Wszystkie trzy zmieniają się w tym samym ticku: NWW(3, 5, 7) = 105.',
   tk_x_time_t:s=>`Czas ${s}`, tk_x_in_delay:ms=>`loop() czeka w delay(${ms}): w tym czasie nic innego się nie dzieje.`, tk_x_in_lcd:'loop() pisze na LCD: przez kilka ms nikt nie patrzy na zegar.', tk_x_in_loop:'loop() kręci się i sprawdza millis().',
   tk_x_late:(l,ms)=>`LED ${l} zmieniła się ${ms} ms za późno.`,
   tk_x_start_delay:'Każde delay() zatrzymuje cały program. Czy LED 1 zmieni się po 300 ms, a potem po 600 ms?', tk_x_start_millis:'loop() w kółko pyta millis(), czy już czas. Spójrz, kiedy naprawdę zmieniają się diody.',
@@ -806,15 +805,15 @@ pl:{
 
   th_thread:k=>`Wątek ${k}`, th_own:k=>`własny rejestr ${k}`, th_run:k=>`${k}: wykonaj następną instrukcję`, th_mem:'pamięć', th_waits:'czeka (Blocked)', th_waits_for:m=>`czeka na ${m} (Blocked)`, th_step:k=>`${k}: następny krok`,
   th_keys:'Klawisze: A, B wykonują krok, R od nowa',
-  rc_h_setup:'Dwa wątki, jeden counter', rc_note:'Wątki A i B wykonują raz lw, addi, sw na counter = 5. Oba wątki wykonały już la t0, counter: t0 = 0x2000, adres counter. Każdy wątek ma własne rejestry t0 i t1. Ty wybierasz, który wątek wykona następną instrukcję.',
+  rc_h_setup:'Dwa wątki, jeden counter', rc_note:'Wątki A i B wykonują raz lw, addi, sw na counter = 5. Każdy wątek ma własny rejestr t0. Ty wybierasz, który wątek wykona następną instrukcję.',
   rc_h_tried:'Wypróbowane kolejności', rc_tried:'Wypróbowane kolejności', rc_k_of:(n,m)=>`${n} z ${m}`, rc_tried_empty:'Dokończ pierwszą kolejność.',
   rc_order:'Kolejność', rc_order_empty:'jeszcze nic', rc_ok:'counter = 7: poprawnie', rc_lost:v=>`counter = ${v}: zgubiona aktualizacja`,
   rc_x0_t:'Start: counter = 5', rc_x0:'Klikaj A albo B. Po sześciu instrukcjach zobaczysz wynik.', rc_q:'Znajdź kolejność, która daje 7, potem taką, która daje 6. Czy da się dostać 5?',
-  rc_e_lw:(k,v)=>`${k} czyta counter (adres w t0) do własnego t1: t1 = ${v}.`, rc_e_addi:(k,v)=>`${k} zwiększa własne t1: t1 = ${v}. counter w pamięci się nie zmienia.`,
-  rc_e_sw:(k,v,b)=>`${k} zapisuje t1 do pamięci: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Uwaga: ${o} ma już w t1 starą wartość (${v}) i zaraz ją zapisze.`,
+  rc_e_lw:(k,v)=>`${k} czyta counter do własnego t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} zwiększa własne t0: t0 = ${v}. counter w pamięci się nie zmienia.`,
+  rc_e_sw:(k,v,b)=>`${k} zapisuje t0 do pamięci: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Uwaga: ${o} ma już w t0 starą wartość (${v}) i zaraz ją zapisze.`,
   rc_e_ok:'Jeden wątek skończył, zanim drugi zaczął: wynik jest poprawny.', rc_e_lost:'Oba wątki przeczytały, zanim drugi zapisał: jedna aktualizacja zginęła.',
   rc_q_again:'Kliknij Od nowa (R) i spróbuj innej kolejności.', rc_res:v=>`counter = ${v}`,
-  mx_h_setup:'Te same wątki, ale z mutexem', mx_note:'Teraz każdy wątek wykonuje lock, lw, addi, sw, unlock. counter = 5, t0 = 0x2000 (adres counter). Jeśli wątek kliknie lock, gdy mutex trzyma drugi, staje się Blocked aż do unlock.',
+  mx_h_setup:'Te same wątki, ale z mutexem', mx_note:'Teraz każdy wątek wykonuje lock, lw, addi, sw, unlock. counter = 5. Jeśli wątek kliknie lock, gdy mutex trzyma drugi, staje się Blocked aż do unlock.',
   mx_done:v=>`counter = ${v}: poprawnie`, mx_held:k=>`trzyma ${k}`, mx_free:'wolny',
   mx_x0_t:'Start: counter = 5', mx_x0:'Klikaj A albo B.', mx_q:'Spróbuj znaleźć kolejność, która daje 6.',
   mx_e_blk:(k,o)=>`Mutex trzyma ${o}. ${k} staje się <b>Blocked</b>: nie dostaje czasu CPU, dopóki ${o} nie wywoła unlock.`, mx_q_blk:'Ile instrukcji wątku B może teraz wejść między lw a sw wątku A?',
@@ -900,7 +899,7 @@ en:{
   ir_c_room:'room on the stack', ir_c_save0:'save t0', ir_c_save1:'save t1', ir_c_la:'t0 = address of presses', ir_c_load:'t1 = presses', ir_c_store:'presses = t1', ir_c_rest1:'restore t1', ir_c_rest0:'restore t0', ir_c_mret:'PC = mepc',
   ir_e_li:'t0 ← 0.', ir_e_addi:v=>`t0 ← t0 + 1 = ${v}.`, ir_e_sw:v=>`x in memory ← t0 = ${v}.`, ir_e_j:'Jump back to 0x0104: the loop goes on.',
   ir_e_room:sp=>`Prologue: make room on the stack, sp ← sp − 16 = ${sp}. 16 and not 8, because sp must stay a multiple of 16.`,
-  ir_e_save:(r,v,a)=>`Save ${r} of the main program on the stack: [${a}] ← ${v}. The ISR is about to use ${r} for its own work.`, ir_e_la:'t0 ← the address of presses (0x1004). The ISR cannot know what the main program keeps in its registers, so it gets the address itself. la is two real instructions (8 bytes).',
+  ir_e_save:(r,v,a)=>`Save ${r} of the main program on the stack: [${a}] ← ${v}. The ISR is about to use ${r} for its own work.`, ir_e_la:'We load the address of the variable presses: it is stored at 0x1004, so t0 ← 0x1004. la is two real instructions (8 bytes).',
   ir_e_load:v=>`t1 ← presses = ${v}. The main program's t1 is gone from the register, but it is safe on the stack.`,
   ir_e_inc:v=>`t1 ← t1 + 1 = ${v}.`, ir_e_store:v=>`presses ← ${v}: the press is counted.`,
   ir_e_rest:(r,v)=>`Epilogue: restore ${r} of the main program from the stack: ${r} ← ${v}.`, ir_e_free:sp=>`sp ← sp + 16 = ${sp}: the stack is as before the interrupt.`,
@@ -919,7 +918,7 @@ en:{
   tk_every:(n,ms)=>`every ${n} ticks (${ms} ms)`, tk_every_s:ms=>`every ${ms} ms`,
   tk_x0_t:'Tick 0', tk_x0:'The timer raises an interrupt every 100 ms. At every tick, the ISR decides: LED 1 every 3 ticks, LED 2 every 5, LED 3 every 7. At the start all LEDs are off. <b>Predict first</b>, then check.',
   tk_x_tick_t:(n,s)=>`Tick ${n} (${s})`, tk_x_tick:p=>`ISR: ticks++, then ${p}.`, tk_x_changed:l=>`Changes: <b>${l}</b>.`, tk_x_none:'No LED changes.',
-  tk_x_all:'All three change together: 3 × 5 × 7 = 105.',
+  tk_x_all:'All three change in the same tick: LCM(3, 5, 7) = 105.',
   tk_x_time_t:s=>`Time ${s}`, tk_x_in_delay:ms=>`loop() waits in delay(${ms}): nothing else happens meanwhile.`, tk_x_in_lcd:'loop() writes to the LCD: for several ms nobody looks at the clock.', tk_x_in_loop:'loop() spins and checks millis().',
   tk_x_late:(l,ms)=>`LED ${l} changed ${ms} ms late.`,
   tk_x_start_delay:'Each delay() stops the whole program. Will LED 1 change after 300 ms, and again after 600 ms?', tk_x_start_millis:'loop() keeps asking millis() whether it is time yet. Watch when the LEDs really change.',
@@ -994,15 +993,15 @@ en:{
 
   th_thread:k=>`Thread ${k}`, th_own:k=>`${k}'s own register`, th_run:k=>`${k}: run the next instruction`, th_mem:'memory', th_waits:'waits (Blocked)', th_waits_for:m=>`waits for ${m} (Blocked)`, th_step:k=>`${k}: next step`,
   th_keys:'Keys: A, B run a step, R resets',
-  rc_h_setup:'Two threads, one counter', rc_note:'Threads A and B each run lw, addi, sw once on counter = 5. Both threads already ran la t0, counter: t0 = 0x2000, the address of counter. Each thread has its own registers t0 and t1. You choose which thread runs the next instruction.',
+  rc_h_setup:'Two threads, one counter', rc_note:'Threads A and B each run lw, addi, sw once on counter = 5. Each thread has its own register t0. You choose which thread runs the next instruction.',
   rc_h_tried:'Orders tried', rc_tried:'Orders tried', rc_k_of:(n,m)=>`${n} of ${m}`, rc_tried_empty:'Finish your first order.',
   rc_order:'Order', rc_order_empty:'nothing yet', rc_ok:'counter = 7: correct', rc_lost:v=>`counter = ${v}: lost update`,
   rc_x0_t:'Start: counter = 5', rc_x0:'Click A or B. After six instructions you will see the result.', rc_q:'Find an order that gives 7, then one that gives 6. Can you get 5?',
-  rc_e_lw:(k,v)=>`${k} reads counter (address in t0) into its own t1: t1 = ${v}.`, rc_e_addi:(k,v)=>`${k} increases its own t1: t1 = ${v}. counter in memory does not change.`,
-  rc_e_sw:(k,v,b)=>`${k} writes t1 to memory: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Note: ${o} already holds an old value in its t1 (${v}) and will write it soon.`,
+  rc_e_lw:(k,v)=>`${k} reads counter into its own t0: t0 = ${v}.`, rc_e_addi:(k,v)=>`${k} increases its own t0: t0 = ${v}. counter in memory does not change.`,
+  rc_e_sw:(k,v,b)=>`${k} writes t0 to memory: counter ${b} → ${v}.`, rc_e_stale:(o,v)=>`Note: ${o} already holds an old value in its t0 (${v}) and will write it soon.`,
   rc_e_ok:'One thread finished before the other started: the result is correct.', rc_e_lost:'Both threads read before the other wrote: one update was lost.',
   rc_q_again:'Click Reset (R) and try another order.', rc_res:v=>`counter = ${v}`,
-  mx_h_setup:'The same threads, with a mutex', mx_note:'Now each thread runs lock, lw, addi, sw, unlock. counter = 5, t0 = 0x2000 (the address of counter). If a thread clicks lock while the other one holds the mutex, it becomes Blocked until unlock.',
+  mx_h_setup:'The same threads, with a mutex', mx_note:'Now each thread runs lock, lw, addi, sw, unlock. counter = 5. If a thread clicks lock while the other one holds the mutex, it becomes Blocked until unlock.',
   mx_done:v=>`counter = ${v}: correct`, mx_held:k=>`held by ${k}`, mx_free:'free',
   mx_x0_t:'Start: counter = 5', mx_x0:'Click A or B.', mx_q:'Try to find an order that gives 6.',
   mx_e_blk:(k,o)=>`${o} holds the mutex. ${k} becomes <b>Blocked</b>: it gets no CPU time until ${o} calls unlock.`, mx_q_blk:'How many instructions of thread B can come between A\'s lw and A\'s sw now?',
@@ -1443,8 +1442,8 @@ function irInit(){
 /* =====================================================================
    3. Timer i tick / timer and tick
    ===================================================================== */
-const TK={how:'timer',lcd:false,ev:null};
-const TK_P=[300,500,700],TK_MAX=12000,TK_N=TK_MAX/100+1,TK_W=4000;
+const TK={how:'timer',lcd:true,ev:null};   // loop() always writes to the LCD
+const TK_P=[300,500,700],TK_MAX=32000,TK_N=TK_MAX/100+1,TK_W=4000;
 function tkBuild(){
   const r=rng(11);
   const ch=[[],[],[]],cpu=[];
@@ -1585,7 +1584,7 @@ function tkCode(){
     [lcd?'  showOnLcd();                     // '+t('tk_c_lcd'):'',lcd?'':'dim'],['}','']];
   $('tkCode').innerHTML=codeLines(L.filter(x=>x[0]!==''||x[1]!=='dim'));
 }
-function tkAll(){tkBuild();tkCode();segSync($('tkHow'),TK.how);$('tkLcd').checked=TK.lcd;S.tick.go(S.tick.i);}
+function tkAll(){tkBuild();tkCode();segSync($('tkHow'),TK.how);S.tick.go(S.tick.i);}
 function tkInit(){
   S.tick=Stepper(document.querySelector('[data-ctrl="tick"]'),()=>TK_N,tkRender,550,i=>TK.how==='timer'?t('tk_lbl',i,secs(i*100)):secs(i*100));
   const row=document.querySelector('[data-ctrl="tick"] .row');
@@ -1593,14 +1592,13 @@ function tkInit(){
   row.querySelector('[data-a="m10"]').onclick=()=>{S.tick.stop();S.tick.go(S.tick.i-10);};
   row.querySelector('[data-a="p10"]').onclick=()=>{S.tick.stop();S.tick.go(S.tick.i+10);};
   segInit($('tkHow'),v=>{TK.how=v;tkAll();});
-  $('tkLcd').addEventListener('change',e=>{TK.lcd=e.target.checked;tkAll();});
   tkBuild();
 }
 
 /* =====================================================================
    4. Kwant czasu / time slice
    ===================================================================== */
-const SL_OPTS=[1,5,10,50,100,250,500],SL_DUR=3000;
+const SL_OPTS=[500,250,100,50,10,5,1],SL_DUR=3000;
 const SL={slice:1,t:0,playing:false,lastTs:0,raf:0,presses:[],zoom:false,bar:null};
 const slOwner=ms=>['A','B','C'][Math.floor(ms/SL.slice)%3];
 function slCompute(T){
@@ -2013,7 +2011,7 @@ function triedHTML(map,total,fmtRes){
 const orderChips=o=>o.length?o.map(x=>`<span class="chip${x.endsWith('*')?' x':''}" style="--c:${THC[x[0]]}">${esc(x.endsWith('*')?x[0]+' ✕':x)}</span>`).join(''):`<span class="note" style="margin:0">${esc(t('rc_order_empty'))}</span>`;
 
 /* ---------- race step by step ---------- */
-const RC_INS=['lw   t1, 0(t0)','addi t1, t1, 1','sw   t1, 0(t0)'];
+const RC_INS=['lw   t0, counter','addi t0, t0, 1','sw   t0, counter'];
 const RC={pc:{A:0,B:0},t0:{A:null,B:null},counter:5,order:[],tried:new Map(),last:null};
 function rcReset(){RC.pc={A:0,B:0};RC.t0={A:null,B:null};RC.counter=5;RC.order=[];RC.last=null;rcRender();}
 function rcStep(k){
@@ -2027,7 +2025,7 @@ function rcStep(k){
 function rcRender(){
   const done=RC.pc.A===3&&RC.pc.B===3;
   const card=k=>thrCard(k,RC_INS,RC.pc[k],RC.pc[k]>=3?'done':'ready',
-    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>0x2000</b></div><div class="reg ${RC.last&&RC.last.k===k&&RC.last.i<2?'chg':''}"><span>t1 (${esc(t('th_own',k))})</span><b>${RC.t0[k]===null?'-':RC.t0[k]}</b></div>`,
+    `<div class="reg ${RC.last&&RC.last.k===k&&RC.last.i<2?'chg':''}"><span>t0 (${esc(t('th_own',k))})</span><b>${RC.t0[k]===null?'-':RC.t0[k]}</b></div>`,
     RC.pc[k]>=3,t('th_run',k),'rcGo'+k);
   const l=RC.last,flash=l&&l.i===0?'flash-r':l&&l.i===2?'flash-w':'';
   let banner='';
@@ -2052,7 +2050,7 @@ function rcRender(){
 }
 
 /* ---------- mutex ---------- */
-const MX_INS=['lock(m)','lw   t1, 0(t0)','addi t1, t1, 1','sw   t1, 0(t0)','unlock(m)'];
+const MX_INS=['lock(m)','lw   t0, counter','addi t0, t0, 1','sw   t0, counter','unlock(m)'];
 const MX={};
 function mxReset(){Object.assign(MX,{pc:{A:0,B:0},t0:{A:null,B:null},st:{A:'ready',B:'ready'},owner:null,counter:5,order:[],last:null});if(!MX.tried)MX.tried=new Map();mxRender();}
 function mxStep(k){
@@ -2074,7 +2072,7 @@ function mxStep(k){
 function mxRender(){
   const done=MX.pc.A>=5&&MX.pc.B>=5;
   const card=k=>thrCard(k,MX_INS,MX.pc[k],MX.st[k],
-    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>0x2000</b></div><div class="reg"><span>t1 (${esc(t('th_own',k))})</span><b>${MX.t0[k]===null?'-':MX.t0[k]}</b></div>`,
+    `<div class="reg"><span>t0 (${esc(t('th_own',k))})</span><b>${MX.t0[k]===null?'-':MX.t0[k]}</b></div>`,
     MX.st[k]!=='ready',MX.st[k]==='blk'?t('th_waits'):t('th_run',k),'mxGo'+k);
   const own=MX.owner;
   let banner='';
